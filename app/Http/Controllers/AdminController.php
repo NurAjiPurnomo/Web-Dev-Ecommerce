@@ -1,0 +1,1060 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\User;
+use App\Models\Product;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Voucher;
+use App\Models\Affiliate;
+use App\Models\Announcement;
+use App\Models\ProductReview;
+use App\Models\Banner;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
+
+class AdminController extends Controller
+{
+    /**
+     * Show Admin Login Form at /admin or /admin/login
+     */
+    public function showLogin()
+    {
+        if (Auth::guard('admin')->check() && Auth::guard('admin')->user()->is_admin) {
+            return redirect()->route('admin.dashboard');
+        }
+        return view('admin.login');
+    }
+
+    /**
+     * Authenticate Admin User
+     */
+    public function login(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required|string',
+        ]);
+
+        $credentials = $request->only('email', 'password');
+
+        if (Auth::guard('admin')->attempt($credentials, $request->has('remember'))) {
+            $user = Auth::guard('admin')->user();
+            if (!$user->is_admin) {
+                Auth::guard('admin')->logout();
+                return back()->withErrors(['email' => 'Akun ini tidak memiliki hak akses Administrator.']);
+            }
+            $request->session()->regenerate();
+            session(['admin_user' => $user->toArray()]);
+            return redirect()->route('admin.dashboard')->with('success', 'Selamat datang kembali, Administrator!');
+        }
+
+        return back()->withErrors(['email' => 'Email atau kata sandi admin salah.']);
+    }
+
+    /**
+     * Admin Logout
+     */
+    public function logout(Request $request)
+    {
+        Auth::guard('admin')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        return redirect()->route('admin.login')->with('info', 'Anda telah keluar dari Sistem Admin.');
+    }
+
+    /**
+     * Dashboard Overview
+     */
+    /**
+     * Dashboard Overview with Gross/Net Revenue Analytics & Monthly/Category Filters.
+     */
+    public function dashboard(Request $request)
+    {
+        $selectedMonth = $request->query('month', 'all'); // 'all', '1', '2', ..., '12'
+        $selectedCategory = $request->query('category', 'all'); // 'all', 'Pakaian', 'Sepatu', ...
+
+        // Base Orders Query
+        $orderQuery = Order::where('status', '!=', 'batal');
+
+        // Apply Month Filter
+        if ($selectedMonth !== 'all') {
+            $orderQuery->whereMonth('created_at', (int)$selectedMonth);
+        }
+
+        // Apply Category Filter
+        if ($selectedCategory !== 'all') {
+            $orderQuery->whereHas('items.product', function ($q) use ($selectedCategory) {
+                $q->where('category', $selectedCategory);
+            });
+        }
+
+        $filteredOrders = $orderQuery->get();
+
+        // Calculate Gross Revenue & Net Revenue (85% Net Profit Margin)
+        $grossRevenue = $filteredOrders->sum('total');
+        $netRevenue   = round($grossRevenue * 0.85);
+        $totalOrders  = $filteredOrders->count();
+        $avgOrderVal  = $totalOrders > 0 ? round($grossRevenue / $totalOrders) : 0;
+
+        $stats = [
+            'gross_revenue'   => $grossRevenue,
+            'net_revenue'     => $netRevenue,
+            'total_orders'    => $totalOrders,
+            'avg_order_val'   => $avgOrderVal,
+            'total_customers' => User::where('is_admin', false)->count(),
+            'total_products'  => Product::where('status', 'aktif')->count(),
+        ];
+
+        // 1. Category Breakdown Analysis
+        $categoriesList = ['Pakaian', 'Sepatu', 'Aksesoris', 'Gadget', 'Rumah Tangga'];
+        $categoryBreakdown = [];
+
+        foreach ($categoriesList as $cat) {
+            $catItems = OrderItem::whereHas('order', function ($q) use ($selectedMonth) {
+                $q->where('status', '!=', 'batal');
+                if ($selectedMonth !== 'all') {
+                    $q->whereMonth('created_at', (int)$selectedMonth);
+                }
+            })->whereHas('product', function ($q) use ($cat) {
+                $q->where('category', $cat);
+            })->get();
+
+            $catGross = $catItems->sum(function ($item) {
+                return $item->quantity * $item->price;
+            });
+            $catNet   = round($catGross * 0.85);
+            $catQty   = $catItems->sum('quantity');
+
+            $categoryBreakdown[] = [
+                'category' => $cat,
+                'quantity' => $catQty,
+                'gross'    => $catGross,
+                'net'      => $catNet,
+                'pct'      => $grossRevenue > 0 ? round(($catGross / $grossRevenue) * 100, 1) : 0,
+            ];
+        }
+
+        // 2. Monthly Revenue Trend Breakdown (12 Months)
+        $monthlyTrend = [];
+        $indonesianMonths = [
+            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+            5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+            9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+        ];
+
+        foreach ($indonesianMonths as $num => $name) {
+            $mOrders = Order::where('status', '!=', 'batal')
+                ->whereMonth('created_at', $num)
+                ->when($selectedCategory !== 'all', function ($q) use ($selectedCategory) {
+                    $q->whereHas('items.product', function ($pq) use ($selectedCategory) {
+                        $pq->where('category', $selectedCategory);
+                    });
+                })->get();
+
+            $mGross = $mOrders->sum('total');
+            $mNet   = round($mGross * 0.85);
+
+            $monthlyTrend[] = [
+                'month_num'  => $num,
+                'month_name' => $name,
+                'orders'     => $mOrders->count(),
+                'gross'      => $mGross,
+                'net'        => $mNet,
+            ];
+        }
+
+        $recentOrders = Order::with('user')->latest()->take(5)->get();
+
+        return view('admin.dashboard', compact(
+            'stats',
+            'recentOrders',
+            'selectedMonth',
+            'selectedCategory',
+            'categoryBreakdown',
+            'monthlyTrend',
+            'indonesianMonths'
+        ));
+    }
+
+    /**
+     * Management Produk (Product Management)
+     */
+    public function products(Request $request)
+    {
+        $search = $request->query('search');
+        $category = $request->query('category');
+
+        $query = Product::query();
+
+        if ($search) {
+            $query->where('name', 'like', "%{$search}%");
+        }
+
+        if ($category && $category !== 'all') {
+            $query->where('category', $category);
+        }
+
+        $products = $query->latest()->get();
+
+        return view('admin.products', compact('products'));
+    }
+
+    /**
+     * Store New Product
+     */
+    public function storeProduct(Request $request)
+    {
+        $validated = $request->validate([
+            'name'           => 'required|string|max:255',
+            'category'       => 'required|string',
+            'price'          => 'required|numeric|min:0',
+            'original_price' => 'nullable|numeric|min:0',
+            'stock'          => 'required|integer|min:0',
+            'image'          => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'size_guide_image'=> 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'description'    => 'nullable|string',
+        ]);
+
+        if (!empty($validated['original_price']) && (float)$validated['original_price'] > (float)$validated['price']) {
+            $discountPct = round((((float)$validated['original_price'] - (float)$validated['price']) / (float)$validated['original_price']) * 100);
+            $validated['discount'] = $discountPct . '%';
+        } else {
+            $validated['original_price'] = null;
+            $validated['discount'] = null;
+        }
+
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('products', 'public');
+            $validated['image'] = '/storage/' . $path;
+        } elseif (empty($validated['image'])) {
+            $validated['image'] = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80';
+        }
+
+        if ($request->hasFile('size_guide_image')) {
+            $path = $request->file('size_guide_image')->store('products/guides', 'public');
+            $validated['size_guide_image'] = '/storage/' . $path;
+        }
+
+        // Parse Structured Variants (Warna, Stok, Ukuran, Link Gambar)
+        $rawVariants = $request->variants;
+        if (is_string($rawVariants)) {
+            $rawVariants = json_decode($rawVariants, true);
+        }
+        
+        if (!empty($rawVariants) && is_array($rawVariants)) {
+            $parsedVariants = [];
+            $allColors = [];
+            $allSizes = [];
+            $allImages = [];
+            $variantImages = $request->file('variant_images', []);
+
+            foreach ($rawVariants as $index => $var) {
+                $color = trim($var['color'] ?? '');
+                $stock = max(0, (int) ($var['stock'] ?? 0));
+                $price = max(0, (float) ($var['price'] ?? 0));
+                $sizesRaw = $var['sizes'] ?? '';
+                $sizes = is_array($sizesRaw) ? array_values(array_filter(array_map('trim', $sizesRaw))) : array_values(array_filter(array_map('trim', explode(',', $sizesRaw))));
+                
+                $image = trim($var['existing_image'] ?? ($var['image'] ?? ($validated['image'] ?? '')));
+                if (isset($variantImages[$index])) {
+                    $path = $variantImages[$index]->store('products/variants', 'public');
+                    $image = '/storage/' . $path;
+                }
+
+                if (!empty($color) || !empty($sizes)) {
+                    $parsedVariants[] = [
+                        'color' => $color ?: 'Standar',
+                        'stock' => $stock,
+                        'price' => $price,
+                        'sizes' => $sizes,
+                        'image' => $image ?: $validated['image'],
+                    ];
+
+                    if (!empty($color)) {
+                        $allColors[] = [
+                            'name'  => $color,
+                            'image' => $image ?: $validated['image'],
+                        ];
+                    }
+
+                    foreach ($sizes as $s) {
+                        if (!in_array($s, $allSizes)) $allSizes[] = $s;
+                    }
+
+                    if ($image && !in_array($image, $allImages)) $allImages[] = $image;
+                }
+            }
+
+            if (!empty($parsedVariants)) {
+                $validated['variants'] = $parsedVariants;
+                $validated['colors']   = $allColors;
+                if (!empty($allSizes)) $validated['sizes'] = $allSizes;
+                if (!empty($allImages)) $validated['images'] = $allImages;
+            }
+        } else {
+            // Fallback: Parse text sizes
+            if (!empty($request->sizes)) {
+                $validated['sizes'] = is_array($request->sizes) 
+                    ? array_values(array_filter(array_map('trim', $request->sizes)))
+                    : array_values(array_filter(array_map('trim', explode(',', $request->sizes))));
+            }
+
+            // Fallback: Parse text images
+            if (!empty($request->images)) {
+                $validated['images'] = is_array($request->images) 
+                    ? array_values(array_filter(array_map('trim', $request->images)))
+                    : array_values(array_filter(array_map('trim', explode("\n", $request->images))));
+            }
+
+            // Fallback: Parse text colors
+            if (!empty($request->colors)) {
+                if (is_array($request->colors)) {
+                    $validated['colors'] = $request->colors;
+                } else {
+                    $colorLines = array_filter(array_map('trim', explode("\n", $request->colors)));
+                    $parsedColors = [];
+                    foreach ($colorLines as $line) {
+                        $parts = explode('|', $line);
+                        $cName = trim($parts[0] ?? '');
+                        $cImg  = trim($parts[1] ?? '');
+                        if (!empty($cName)) {
+                            $parsedColors[] = [
+                                'name'  => $cName,
+                                'image' => $cImg ?: $validated['image'],
+                            ];
+                        }
+                    }
+                    $validated['colors'] = !empty($parsedColors) ? $parsedColors : null;
+                }
+            }
+        }
+
+        $validated['status'] = 'aktif';
+        $validated['sold']   = 0;
+
+        Product::create($validated);
+
+        return redirect()->route('admin.products')->with('success', 'Produk baru "' . $validated['name'] . '" berhasil ditambahkan!');
+    }
+
+    /**
+     * Update Product
+     */
+    public function updateProduct(Request $request, $id)
+    {
+        $product = Product::findOrFail($id);
+
+        $validated = $request->validate([
+            'name'           => 'required|string|max:255',
+            'category'       => 'required|string',
+            'price'          => 'required|numeric|min:0',
+            'original_price' => 'nullable|numeric|min:0',
+            'stock'          => 'required|integer|min:0',
+            'image'          => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'size_guide_image'=> 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'description'    => 'nullable|string',
+            'status'         => 'required|string',
+        ]);
+
+        if (!empty($validated['original_price']) && (float)$validated['original_price'] > (float)$validated['price']) {
+            $discountPct = round((((float)$validated['original_price'] - (float)$validated['price']) / (float)$validated['original_price']) * 100);
+            $validated['discount'] = $discountPct . '%';
+        } else {
+            $validated['original_price'] = null;
+            $validated['discount'] = null;
+        }
+
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('products', 'public');
+            $validated['image'] = '/storage/' . $path;
+        } else {
+            // Keep existing image if no new file is uploaded
+            $validated['image'] = $product->image;
+        }
+
+        if ($request->hasFile('size_guide_image')) {
+            $path = $request->file('size_guide_image')->store('products/guides', 'public');
+            $validated['size_guide_image'] = '/storage/' . $path;
+        } else {
+            $validated['size_guide_image'] = $product->size_guide_image;
+        }
+
+        // Parse Structured Variants (Warna, Stok, Ukuran, Link Gambar)
+        $rawVariants = $request->variants;
+        if (is_string($rawVariants)) {
+            $rawVariants = json_decode($rawVariants, true);
+        }
+        
+        if (!empty($rawVariants) && is_array($rawVariants)) {
+            $parsedVariants = [];
+            $allColors = [];
+            $allSizes = [];
+            $allImages = [];
+            $variantImages = $request->file('variant_images', []);
+
+            foreach ($rawVariants as $index => $var) {
+                $color = trim($var['color'] ?? '');
+                $stock = max(0, (int) ($var['stock'] ?? 0));
+                $price = max(0, (float) ($var['price'] ?? 0));
+                $sizesRaw = $var['sizes'] ?? '';
+                $sizes = is_array($sizesRaw) ? array_values(array_filter(array_map('trim', $sizesRaw))) : array_values(array_filter(array_map('trim', explode(',', $sizesRaw))));
+                
+                $image = trim($var['existing_image'] ?? ($var['image'] ?? ($validated['image'] ?? $product->image)));
+                if (isset($variantImages[$index])) {
+                    $path = $variantImages[$index]->store('products/variants', 'public');
+                    $image = '/storage/' . $path;
+                }
+
+                if (!empty($color) || !empty($sizes)) {
+                    $parsedVariants[] = [
+                        'color' => $color ?: 'Standar',
+                        'stock' => $stock,
+                        'price' => $price,
+                        'sizes' => $sizes,
+                        'image' => $image ?: ($validated['image'] ?? $product->image),
+                    ];
+
+                    if (!empty($color)) {
+                        $allColors[] = [
+                            'name'  => $color,
+                            'image' => $image ?: ($validated['image'] ?? $product->image),
+                        ];
+                    }
+
+                    foreach ($sizes as $s) {
+                        if (!in_array($s, $allSizes)) $allSizes[] = $s;
+                    }
+
+                    if ($image && !in_array($image, $allImages)) $allImages[] = $image;
+                }
+            }
+
+            if (!empty($parsedVariants)) {
+                $validated['variants'] = $parsedVariants;
+                $validated['colors']   = $allColors;
+                if (!empty($allSizes)) $validated['sizes'] = $allSizes;
+                if (!empty($allImages)) $validated['images'] = $allImages;
+            }
+        } else {
+            // Fallback: Parse text sizes
+            if (!empty($request->sizes)) {
+                $validated['sizes'] = is_array($request->sizes) 
+                    ? array_values(array_filter(array_map('trim', $request->sizes)))
+                    : array_values(array_filter(array_map('trim', explode(',', $request->sizes))));
+            }
+
+            // Fallback: Parse text images
+            if (!empty($request->images)) {
+                $validated['images'] = is_array($request->images) 
+                    ? array_values(array_filter(array_map('trim', $request->images)))
+                    : array_values(array_filter(array_map('trim', explode("\n", $request->images))));
+            }
+
+            // Fallback: Parse text colors
+            if (!empty($request->colors)) {
+                if (is_array($request->colors)) {
+                    $validated['colors'] = $request->colors;
+                } else {
+                    $colorLines = array_filter(array_map('trim', explode("\n", $request->colors)));
+                    $parsedColors = [];
+                    foreach ($colorLines as $line) {
+                        $parts = explode('|', $line);
+                        $cName = trim($parts[0] ?? '');
+                        $cImg  = trim($parts[1] ?? '');
+                        if (!empty($cName)) {
+                            $parsedColors[] = [
+                                'name'  => $cName,
+                                'image' => $cImg ?: ($validated['image'] ?? $product->image),
+                            ];
+                        }
+                    }
+                    $validated['colors'] = !empty($parsedColors) ? $parsedColors : null;
+                }
+            }
+        }
+
+        $product->update($validated);
+
+        return redirect()->route('admin.products')->with('success', 'Data produk "' . $product->name . '" berhasil diperbarui!');
+    }
+
+    /**
+     * Delete Product
+     */
+    public function deleteProduct($id)
+    {
+        $product = Product::findOrFail($id);
+        $name = $product->name;
+
+        try {
+            // Delete child reviews associated with this product first
+            ProductReview::where('product_id', $id)->delete();
+
+            // Delete the product record
+            $product->delete();
+
+            return redirect()->route('admin.products')->with('success', 'Produk "' . $name . '" telah berhasil dihapus secara permanen dari katalog.');
+        } catch (\Exception $e) {
+            // Fallback if foreign key constraint restricts direct deletion
+            $product->update(['status' => 'nonaktif', 'stock' => 0]);
+            return redirect()->route('admin.products')->with('info', 'Produk "' . $name . '" diubah menjadi Nonaktif karena terdapat riwayat pesanan.');
+        }
+    }
+
+    /**
+     * Management User / Pelanggan
+     */
+    public function users(Request $request)
+    {
+        $search = $request->query('search');
+
+        $query = User::where('is_admin', false);
+
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+
+        $users = $query->latest()->get();
+
+        return view('admin.users', compact('users'));
+    }
+
+    /**
+     * Toggle User Status (active / suspended)
+     */
+    public function toggleUserStatus($id)
+    {
+        $user = User::findOrFail($id);
+        $user->status = ($user->status === 'active' || empty($user->status)) ? 'suspended' : 'active';
+        $user->save();
+
+        return redirect()->route('admin.users')->with('success', 'Status akun ' . $user->name . ' telah diubah menjadi ' . strtoupper($user->status) . '.');
+    }
+
+    /**
+     * Management Transaksi / Penjualan
+     */
+    public function orders(Request $request)
+    {
+        $status = $request->query('status', 'semua');
+
+        $query = Order::with(['user', 'items']);
+
+        if ($status !== 'semua') {
+            if ($status === 'belum_bayar' || $status === 'belum_dibayar') {
+                $query->whereIn('status', ['belum_bayar', 'belum_dibayar']);
+            } elseif ($status === 'dikemas' || $status === 'diproses') {
+                $query->whereIn('status', ['dikemas', 'diproses']);
+            } else {
+                $query->where('status', $status);
+            }
+        }
+
+        $orders = $query->latest()->get();
+
+        return view('admin.orders', compact('orders', 'status'));
+    }
+
+    /**
+     * Update Order Status & Resi
+     */
+    public function updateOrder(Request $request, $id)
+    {
+        $order = Order::findOrFail($id);
+
+        $validated = $request->validate([
+            'status'          => 'required|string',
+            'tracking_number' => 'nullable|string',
+        ]);
+
+        // Auto-generate resi/AWB code if empty when status is processing or shipping
+        if (empty($validated['tracking_number']) && in_array($validated['status'], ['dikemas', 'diproses', 'dikirim'])) {
+            $validated['tracking_number'] = 'JT' . date('Ymd') . rand(1000, 9999);
+        }
+
+        $order->update($validated);
+
+        // Automatic System Broadcast Notification for status changes
+        if ($validated['status'] === 'dikemas' || $validated['status'] === 'diproses') {
+            Announcement::create([
+                'user_id' => $order->user_id,
+                'title'   => '📦 Pesanan #' . $order->invoice_number . ' Sedang Dikemas',
+                'content' => 'Pesanan Anda dengan Invoice ' . $order->invoice_number . ' sedang dikemas oleh tim gudang penjual dan siap diserahkan ke kurir.',
+                'type'    => 'notifikasi',
+                'target'  => 'pelanggan',
+                'status'  => 'ditayangkan'
+            ]);
+        } elseif ($validated['status'] === 'dikirim') {
+            $resiText = !empty($validated['tracking_number']) ? ' dengan No. Resi: ' . $validated['tracking_number'] : '';
+            Announcement::create([
+                'user_id' => $order->user_id,
+                'title'   => '🚚 Pesanan #' . $order->invoice_number . ' Dalam Pengiriman',
+                'content' => 'Pesanan Anda dengan Invoice ' . $order->invoice_number . ' telah diserahkan ke kurir ' . strtoupper($order->courier ?: 'Ekspedisi') . $resiText . '. Silakan lacak pengiriman Anda.',
+                'type'    => 'notifikasi',
+                'target'  => 'pelanggan',
+                'status'  => 'ditayangkan'
+            ]);
+        } elseif ($validated['status'] === 'selesai') {
+            Announcement::create([
+                'user_id' => $order->user_id,
+                'title'   => '✅ Pesanan #' . $order->invoice_number . ' Telah Selesai',
+                'content' => 'Pesanan Anda dengan Invoice ' . $order->invoice_number . ' telah selesai. Terima kasih telah berbelanja di Toko Online!',
+                'type'    => 'notifikasi',
+                'target'  => 'pelanggan',
+                'status'  => 'ditayangkan'
+            ]);
+        }
+
+        return redirect()->route('admin.orders')->with('success', 'Status pesanan ' . $order->invoice_number . ' telah berhasil diperbarui menjadi "' . strtoupper(str_replace('_', ' ', $validated['status'])) . '"!');
+    }
+
+    /**
+     * Management Voucher
+     */
+    public function vouchers()
+    {
+        $vouchers = Voucher::latest()->get();
+        return view('admin.vouchers', compact('vouchers'));
+    }
+
+    /**
+     * Store New Voucher
+     */
+    public function storeVoucher(Request $request)
+    {
+        $validated = $request->validate([
+            'code' => 'required|string|unique:vouchers,code',
+            'type' => 'required|string',
+            'discount_value' => 'required|numeric|min:0',
+            'min_spend' => 'nullable|numeric|min:0',
+            'expires_at' => 'required|date',
+        ]);
+
+        $validated['code'] = strtoupper($validated['code']);
+        $validated['status'] = 'aktif';
+
+        Voucher::create($validated);
+
+        return redirect()->route('admin.vouchers')->with('success', 'Voucher baru "' . $validated['code'] . '" berhasil diterbitkan!');
+    }
+
+    /**
+     * Toggle Voucher Status
+     */
+    public function toggleVoucher($id)
+    {
+        $voucher = Voucher::findOrFail($id);
+        $voucher->status = $voucher->status === 'aktif' ? 'nonaktif' : 'aktif';
+        $voucher->save();
+
+        return redirect()->route('admin.vouchers')->with('success', 'Status voucher ' . $voucher->code . ' telah diubah.');
+    }
+
+    /**
+     * Management Affiliate
+     */
+    public function affiliates()
+    {
+        $affiliates = Affiliate::with('user')->latest()->get();
+        return view('admin.affiliates', compact('affiliates'));
+    }
+
+    /**
+     * Payout Affiliate Commission
+     */
+    public function payoutAffiliate($id)
+    {
+        $affiliate = Affiliate::findOrFail($id);
+        $amount = 'Rp ' . number_format($affiliate->commission_earned, 0, ',', '.');
+        $affiliate->commission_earned = 0;
+        $affiliate->save();
+
+        return redirect()->route('admin.affiliates')->with('success', 'Pencairan komisi ' . $amount . ' untuk ' . ($affiliate->user->name ?? 'mitra') . ' telah berhasil disetujui!');
+    }
+
+    /**
+     * Management Notifications / Broadcast Announcements
+     */
+    /**
+     * Management Notifications / Automatic Order Status Notifications Log
+     */
+    public function notifications()
+    {
+        // Only fetch automatic order status notifications generated by system
+        $notifications = Announcement::with('user')->where('type', 'notifikasi')->latest()->get();
+        return view('admin.notifications', compact('notifications'));
+    }
+
+    /**
+     * Store New Announcement / Broadcast Promo
+     */
+    public function storeNotification(Request $request)
+    {
+        $validated = $request->validate([
+            'title'   => 'required|string|max:255',
+            'type'    => 'required|string',
+            'target'  => 'required|string',
+            'content' => 'nullable|string',
+        ]);
+
+        $validated['status'] = 'ditayangkan';
+
+        Announcement::create($validated);
+
+        if ($request->has('redirect_to_promos')) {
+            return redirect()->route('admin.promos')->with('success', 'Broadcast promo "' . $validated['title'] . '" berhasil diterbitkan!');
+        }
+
+        return redirect()->route('admin.notifications')->with('success', 'Pengumuman "' . $validated['title'] . '" berhasil diterbitkan!');
+    }
+
+    /**
+     * Toggle Announcement Status
+     */
+    public function toggleNotification(Request $request, $id)
+    {
+        $announcement = Announcement::findOrFail($id);
+        $announcement->status = $announcement->status === 'ditayangkan' ? 'selesai' : 'ditayangkan';
+        $announcement->save();
+
+        if ($request->has('redirect_to_promos')) {
+            return redirect()->route('admin.promos')->with('info', 'Status broadcast promo berhasil diperbarui!');
+        }
+
+        return redirect()->route('admin.notifications')->with('info', 'Status pengumuman berhasil diperbarui!');
+    }
+
+    /**
+     * Manajemen Penilaian & Ulasan Produk
+     */
+    public function reviews(Request $request)
+    {
+        $search = $request->query('search');
+        $category = $request->query('category');
+        $rating = $request->query('rating');
+
+        $query = ProductReview::with(['user', 'product']);
+
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('comment', 'like', "%{$search}%")
+                  ->orWhere('order_id', 'like', "%{$search}%")
+                  ->orWhereHas('user', function($uq) use ($search) {
+                      $uq->where('name', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('product', function($pq) use ($search) {
+                      $pq->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        if ($category && $category !== 'all') {
+            $query->whereHas('product', function($pq) use ($category) {
+                $pq->where('category', $category);
+            });
+        }
+
+        if ($rating && $rating !== 'all') {
+            $query->where('rating', (int)$rating);
+        }
+
+        $reviews = $query->latest()->get();
+
+        $stats = [
+            'total_reviews' => ProductReview::count(),
+            'average_rating' => ProductReview::count() > 0 ? round(ProductReview::avg('rating'), 1) : 5.0,
+            'five_star' => ProductReview::where('rating', 5)->count(),
+            'low_rating' => ProductReview::whereIn('rating', [1, 2])->count(),
+        ];
+
+        return view('admin.reviews', compact('reviews', 'stats'));
+    }
+
+    /**
+     * Delete Product Review
+     */
+    public function deleteReview($id)
+    {
+        $review = ProductReview::findOrFail($id);
+        $review->delete();
+
+        return redirect()->route('admin.reviews')->with('success', 'Ulasan & penilaian produk berhasil dihapus!');
+    }
+
+    /**
+     * Manajemen Banner Promo Halaman Utama
+     */
+    public function banners()
+    {
+        $banners = Banner::orderBy('order_column', 'asc')->latest()->get();
+        return view('admin.banners', compact('banners'));
+    }
+
+    /**
+     * Simpan Banner Baru
+     */
+    public function storeBanner(Request $request)
+    {
+        $validated = $request->validate([
+            'title'          => 'required|string|max:255',
+            'subtitle'       => 'nullable|string|max:255',
+            'highlight_text' => 'nullable|string|max:255',
+            'description'    => 'nullable|string',
+            'image'          => 'required|url',
+            'button_text'    => 'nullable|string|max:100',
+            'button_url'     => 'nullable|string|max:255',
+            'category_tag'   => 'nullable|string|max:100',
+            'order_column'   => 'nullable|integer',
+        ]);
+
+        $validated['status'] = 'aktif';
+        $validated['button_text'] = $validated['button_text'] ?: 'Belanja Sekarang';
+        $validated['button_url']  = $validated['button_url'] ?: '/catalog';
+
+        Banner::create($validated);
+
+        return redirect()->route('admin.banners')->with('success', 'Banner promo "' . $validated['title'] . '" berhasil ditambahkan!');
+    }
+
+    /**
+     * Update Banner Promo
+     */
+    public function updateBanner(Request $request, $id)
+    {
+        $banner = Banner::findOrFail($id);
+
+        $validated = $request->validate([
+            'title'          => 'required|string|max:255',
+            'subtitle'       => 'nullable|string|max:255',
+            'highlight_text' => 'nullable|string|max:255',
+            'description'    => 'nullable|string',
+            'image'          => 'required|url',
+            'button_text'    => 'nullable|string|max:100',
+            'button_url'     => 'nullable|string|max:255',
+            'category_tag'   => 'nullable|string|max:100',
+            'status'         => 'required|string',
+            'order_column'   => 'nullable|integer',
+        ]);
+
+        $banner->update($validated);
+
+        return redirect()->route('admin.banners')->with('success', 'Banner promo "' . $banner->title . '" berhasil diperbarui!');
+    }
+
+    /**
+     * Toggle Status Banner (Aktif / Nonaktif)
+     */
+    public function toggleBannerStatus($id)
+    {
+        $banner = Banner::findOrFail($id);
+        $banner->status = $banner->status === 'aktif' ? 'nonaktif' : 'aktif';
+        $banner->save();
+
+        return redirect()->route('admin.banners')->with('info', 'Status banner promo berhasil diubah!');
+    }
+
+    /**
+     * Delete Banner
+     */
+    public function deleteBanner($id)
+    {
+        $banner = Banner::findOrFail($id);
+        $banner->delete();
+
+        return redirect()->route('admin.banners')->with('success', 'Banner promo berhasil dihapus!');
+    }
+
+    /**
+     * Halaman Khusus Manajemen Promo & Campaign Toko
+     */
+    public function promos()
+    {
+        $banners = Banner::latest()->get();
+        $vouchers = Voucher::latest()->get();
+        $promoProducts = Product::where('status', 'aktif')
+            ->where(function($q) {
+                $q->where(function($sub) {
+                    $sub->whereNotNull('original_price')->whereColumn('original_price', '>', 'price');
+                })->orWhere(function($sub) {
+                    $sub->whereNotNull('discount')->where('discount', '!=', '');
+                });
+            })->latest()->get();
+        $announcements = Announcement::where('type', '!=', 'notifikasi')->latest()->get();
+
+        return view('admin.promos', compact('banners', 'vouchers', 'promoProducts', 'announcements'));
+    }
+
+    /**
+     * ==========================================
+     * MANAJEMEN HALAMAN (CMS CUSTOM PAGES)
+     * ==========================================
+     */
+
+    public function pages()
+    {
+        $pages = \App\Models\Page::latest()->get();
+        return view('admin.pages', compact('pages'));
+    }
+
+    public function storePage(Request $request)
+    {
+        $validated = $request->validate([
+            'title'          => 'required|string|max:255',
+            'content'        => 'nullable|string',
+            'template'       => 'nullable|string|max:50',
+            'show_in_navbar' => 'nullable',
+            'footer_column'  => 'nullable|string|max:100',
+            'banner_image'   => 'nullable|image|max:2048',
+        ]);
+
+        if ($request->hasFile('banner_image')) {
+            $path = $request->file('banner_image')->store('pages', 'public');
+            $validated['banner_image'] = '/storage/' . $path;
+        }
+
+        $validated['slug'] = \Illuminate\Support\Str::slug($validated['title']);
+        $validated['show_in_navbar'] = $request->has('show_in_navbar') ? true : false;
+        
+        // Handle blocks JSON
+        if ($request->has('page_blocks')) {
+            $validated['blocks'] = json_decode($request->input('page_blocks'), true);
+        }
+
+        $validated['status'] = 'aktif';
+        if (empty($validated['template'])) $validated['template'] = 'default';
+
+        \App\Models\Page::create($validated);
+
+        return redirect()->route('admin.pages')->with('success', 'Halaman "' . $validated['title'] . '" berhasil dibuat!');
+    }
+
+    public function updatePage(Request $request, $id)
+    {
+        $page = \App\Models\Page::findOrFail($id);
+
+        $validated = $request->validate([
+            'title'          => 'required|string|max:255',
+            'content'        => 'nullable|string',
+            'template'       => 'nullable|string|max:50',
+            'show_in_navbar' => 'nullable',
+            'footer_column'  => 'nullable|string|max:100',
+            'banner_image'   => 'nullable|image|max:2048',
+        ]);
+
+        if ($request->hasFile('banner_image')) {
+            $path = $request->file('banner_image')->store('pages', 'public');
+            $validated['banner_image'] = '/storage/' . $path;
+        }
+
+        $validated['slug'] = \Illuminate\Support\Str::slug($validated['title']);
+        $validated['show_in_navbar'] = $request->has('show_in_navbar') ? true : false;
+        
+        // Handle blocks JSON
+        if ($request->has('page_blocks')) {
+            $validated['blocks'] = json_decode($request->input('page_blocks'), true);
+        }
+
+        if (empty($validated['template'])) $validated['template'] = 'default';
+
+        $page->update($validated);
+
+        return redirect()->route('admin.pages')->with('success', 'Halaman "' . $page->title . '" berhasil diperbarui!');
+    }
+
+    public function togglePageStatus($id)
+    {
+        $page = \App\Models\Page::findOrFail($id);
+        $page->status = $page->status === 'aktif' ? 'draft' : 'aktif';
+        $page->save();
+
+        return redirect()->route('admin.pages')->with('info', 'Status halaman berhasil diubah!');
+    }
+
+    public function deletePage($id)
+    {
+        $page = \App\Models\Page::findOrFail($id);
+        $page->delete();
+
+        return redirect()->route('admin.pages')->with('success', 'Halaman berhasil dihapus!');
+    }
+
+    /**
+     * ==========================================
+     * MANAJEMEN ARTIKEL (BERITA / BLOG)
+     * ==========================================
+     */
+
+    public function articles()
+    {
+        $articles = \App\Models\Article::latest()->get();
+        return view('admin.articles', compact('articles'));
+    }
+
+    public function storeArticle(Request $request)
+    {
+        $validated = $request->validate([
+            'title'     => 'required|string|max:255',
+            'summary'   => 'nullable|string|max:1000',
+            'content'   => 'required|string',
+            'thumbnail' => 'nullable|image|max:2048',
+            'status'    => 'required|in:draft,published',
+        ]);
+
+        if ($request->hasFile('thumbnail')) {
+            $path = $request->file('thumbnail')->store('articles', 'public');
+            $validated['thumbnail'] = '/storage/' . $path;
+        }
+
+        $validated['slug'] = \Illuminate\Support\Str::slug($validated['title']) . '-' . time();
+
+        \App\Models\Article::create($validated);
+
+        return redirect()->route('admin.articles')->with('success', 'Artikel berhasil dibuat!');
+    }
+
+    public function updateArticle(Request $request, $id)
+    {
+        $article = \App\Models\Article::findOrFail($id);
+
+        $validated = $request->validate([
+            'title'     => 'required|string|max:255',
+            'summary'   => 'nullable|string|max:1000',
+            'content'   => 'required|string',
+            'thumbnail' => 'nullable|image|max:2048',
+            'status'    => 'required|in:draft,published',
+        ]);
+
+        if ($request->hasFile('thumbnail')) {
+            $path = $request->file('thumbnail')->store('articles', 'public');
+            $validated['thumbnail'] = '/storage/' . $path;
+        }
+
+        $article->update($validated);
+
+        return redirect()->route('admin.articles')->with('success', 'Artikel berhasil diperbarui!');
+    }
+
+    public function toggleArticleStatus($id)
+    {
+        $article = \App\Models\Article::findOrFail($id);
+        $article->status = $article->status === 'published' ? 'draft' : 'published';
+        $article->save();
+
+        return redirect()->route('admin.articles')->with('info', 'Status artikel berhasil diubah!');
+    }
+
+    public function deleteArticle($id)
+    {
+        $article = \App\Models\Article::findOrFail($id);
+        $article->delete();
+
+        return redirect()->route('admin.articles')->with('success', 'Artikel berhasil dihapus!');
+    }
+}
