@@ -46,15 +46,43 @@ class Product extends Model
                 $price = !empty($variant['price']) ? $variant['price'] : $this->price;
                 $formattedPrice = 'Rp ' . number_format($price, 0, ',', '.');
                 
-                if (isset($variant['sizes']) && is_array($variant['sizes'])) {
+                if (!empty($variant['size'])) {
+                    $result[$variant['size']] = $formattedPrice;
+                } elseif (isset($variant['sizes']) && is_array($variant['sizes'])) {
+                    // Backward compatibility for old data
                     foreach ($variant['sizes'] as $size) {
-                        // Simpan harga dengan format Rupiah untuk setiap ukuran
                         $result[$size] = $formattedPrice;
                     }
                 }
             }
         }
         return $result;
+    }
+
+    /**
+     * Helper to get variants list with guaranteed unique IDs for each variant item
+     */
+    public function getVariantsWithIdsAttribute()
+    {
+        $list = $this->variants ?? [];
+        if (!is_array($list)) return [];
+
+        $index = 0;
+        return array_map(function ($var) use (&$index) {
+            if (is_array($var)) {
+                if (empty($var['id'])) {
+                    $var['id'] = 'var_' . $this->id . '_' . $index;
+                }
+                if (empty($var['variant_id'])) {
+                    $var['variant_id'] = $var['id'];
+                }
+                if (!empty($var['image']) && empty($var['image_id'])) {
+                    $var['image_id'] = 'img_' . $this->id . '_' . md5($var['image']);
+                }
+            }
+            $index++;
+            return $var;
+        }, $list);
     }
 
     /**

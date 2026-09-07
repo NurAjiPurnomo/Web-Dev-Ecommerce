@@ -109,15 +109,17 @@
         <!-- RIGHT CONTENT AREA (~70% / 8 cols) -->
         <div class="lg:col-span-8">
 
-            <!-- TAB 1: BIODATA DIRI -->
-            <div x-show="activeTab === 'biodata'" class="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xs space-y-6">
-                <div class="border-b border-slate-100 pb-3">
-                    <h2 class="text-base sm:text-lg font-bold text-slate-900">Ubah Biodata Diri</h2>
-                    <p class="text-xs text-slate-500">Kelola informasi profil akun Toko Online Anda</p>
-                </div>
+            <form action="{{ route('profile.update') }}" method="POST" class="space-y-6">
+                @csrf
 
-                <form action="{{ route('profile.update') }}" method="POST" class="space-y-4">
-                    @csrf
+                <!-- TAB 1: BIODATA DIRI -->
+                <div x-show="activeTab === 'biodata'" class="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xs space-y-6">
+                    <div class="border-b border-slate-100 pb-3">
+                        <h2 class="text-base sm:text-lg font-bold text-slate-900">Ubah Biodata Diri</h2>
+                        <p class="text-xs text-slate-500">Kelola informasi profil akun Toko Online Anda</p>
+                    </div>
+
+                    <div class="space-y-4">
 
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">
@@ -184,11 +186,7 @@
                         </div>
                     </div>
 
-                    <!-- Hidden Keep Address -->
-                    <input type="hidden" name="address" value="{{ $user->address }}">
-                    <input type="hidden" name="city" value="{{ $user->city }}">
-                    <input type="hidden" name="province" value="{{ $user->province }}">
-                    <input type="hidden" name="postal_code" value="{{ $user->postal_code }}">
+                    </div>
 
                     <div class="pt-2">
                         <button 
@@ -198,24 +196,16 @@
                             Simpan Perubahan Biodata
                         </button>
                     </div>
-                </form>
-            </div>
-
-            <!-- TAB 2: ALAMAT PENGIRIMAN UTAMA -->
-            <div x-show="activeTab === 'alamat'" class="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xs space-y-6">
-                <div class="border-b border-slate-100 pb-3">
-                    <h2 class="text-base sm:text-lg font-bold text-slate-900">Alamat Pengiriman Utama</h2>
-                    <p class="text-xs text-slate-500">Alamat ini akan otomatis terpasang saat Anda melakukan pembelian / checkout</p>
                 </div>
 
-                <form action="{{ route('profile.update') }}" method="POST" class="space-y-4">
-                    @csrf
+                <!-- TAB 2: ALAMAT TUJUAN PENGIRIMAN (RUMAH ANDA) -->
+                <div x-show="activeTab === 'alamat'" class="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xs space-y-6">
+                    <div class="border-b border-slate-100 pb-3">
+                        <h2 class="text-base sm:text-lg font-bold text-slate-900">Alamat Tujuan Pengiriman (Rumah Anda)</h2>
+                        <p class="text-xs text-slate-500">Alamat ini akan otomatis terpasang saat Anda melakukan pembelian / checkout</p>
+                    </div>
 
-                    <!-- Hidden Keep Biodata -->
-                    <input type="hidden" name="name" value="{{ $user->name }}">
-                    <input type="hidden" name="phone" value="{{ $user->phone }}">
-                    <input type="hidden" name="gender" value="{{ $user->gender }}">
-                    <input type="hidden" name="birth_date" value="{{ $user->birth_date }}">
+                    <div class="space-y-4">
 
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">
@@ -231,26 +221,32 @@
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Kota / Kabupaten</label>
-                            <input 
-                                type="text" 
-                                name="city" 
-                                value="{{ old('city', $user->city) }}" 
-                                placeholder="Jakarta Selatan"
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Pilih Kota / Kabupaten Tujuan (Untuk Ongkir) <span class="text-red-500">*</span></label>
+                            <select 
+                                name="city_id" 
+                                required
                                 class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none"
                             >
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Provinsi</label>
-                            <input 
-                                type="text" 
-                                name="province" 
-                                value="{{ old('province', $user->province) }}" 
-                                placeholder="DKI Jakarta"
-                                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none"
-                            >
+                                <option value="">-- Pilih Kota / Kabupaten --</option>
+                                <option value="153" {{ old('city_id', $user->city_id) == '153' ? 'selected' : '' }}>DKI Jakarta - Kota Jakarta Selatan</option>
+                                <option value="152" {{ old('city_id', $user->city_id) == '152' ? 'selected' : '' }}>DKI Jakarta - Kota Jakarta Pusat</option>
+                                <option value="151" {{ old('city_id', $user->city_id) == '151' ? 'selected' : '' }}>DKI Jakarta - Kota Jakarta Barat</option>
+                                <option value="154" {{ old('city_id', $user->city_id) == '154' ? 'selected' : '' }}>DKI Jakarta - Kota Jakarta Timur</option>
+                                <option value="155" {{ old('city_id', $user->city_id) == '155' ? 'selected' : '' }}>DKI Jakarta - Kota Jakarta Utara</option>
+                                <option value="22" {{ old('city_id', $user->city_id) == '22' ? 'selected' : '' }}>Jawa Barat - Kota Bandung</option>
+                                <option value="54" {{ old('city_id', $user->city_id) == '54' ? 'selected' : '' }}>Jawa Barat - Kota Bekasi</option>
+                                <option value="78" {{ old('city_id', $user->city_id) == '78' ? 'selected' : '' }}>Jawa Barat - Kota Bogor</option>
+                                <option value="115" {{ old('city_id', $user->city_id) == '115' ? 'selected' : '' }}>Jawa Barat - Kota Depok</option>
+                                <option value="444" {{ old('city_id', $user->city_id) == '444' ? 'selected' : '' }}>Jawa Timur - Kota Surabaya</option>
+                                <option value="256" {{ old('city_id', $user->city_id) == '256' ? 'selected' : '' }}>Jawa Timur - Kota Malang</option>
+                                <option value="399" {{ old('city_id', $user->city_id) == '399' ? 'selected' : '' }}>Jawa Tengah - Kota Semarang</option>
+                                <option value="427" {{ old('city_id', $user->city_id) == '427' ? 'selected' : '' }}>Jawa Tengah - Kota Surakarta / Solo</option>
+                                <option value="501" {{ old('city_id', $user->city_id) == '501' ? 'selected' : '' }}>DI Yogyakarta - Kota Yogyakarta</option>
+                                <option value="114" {{ old('city_id', $user->city_id) == '114' ? 'selected' : '' }}>Bali - Kota Denpasar</option>
+                                <option value="278" {{ old('city_id', $user->city_id) == '278' ? 'selected' : '' }}>Sumatera Utara - Kota Medan</option>
+                                <option value="254" {{ old('city_id', $user->city_id) == '254' ? 'selected' : '' }}>Sulawesi Selatan - Kota Makassar</option>
+                            </select>
                         </div>
 
                         <div>
@@ -259,7 +255,7 @@
                                 type="text" 
                                 name="postal_code" 
                                 value="{{ old('postal_code', $user->postal_code) }}" 
-                                placeholder="12190"
+                                placeholder="12345"
                                 class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none"
                             >
                         </div>
@@ -270,11 +266,11 @@
                             type="submit" 
                             class="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs sm:text-sm px-6 py-3 rounded-xl transition-colors shadow-2xs cursor-pointer"
                         >
-                            Simpan Alamat Pengiriman Utama
+                            Simpan Alamat Tujuan Pengiriman
                         </button>
                     </div>
-                </form>
-            </div>
+                </div>
+            </form>
 
             <!-- TAB 3: KEAMANAN & KATA SANDI -->
             <div x-show="activeTab === 'keamanan'" class="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xs space-y-6">

@@ -16,10 +16,15 @@ class CartController extends Controller
         // Jika keranjang di session masih kosong, kita inisialisasi dengan data contoh default jika user sudah login
         if (empty($cart) && (session()->has('user') || auth()->check()) && !session()->has('cart_initialized')) {
             $cart = [
-                1 => [
-                    'id'             => 1,
+                '1_default' => [
+                    'id'             => '1_default',
+                    'product_id'     => 1,
+                    'variant_id'     => 'v1',
+                    'image_id'       => 'img1',
                     'name'           => 'Kemeja Linen Casual Premium Slim Fit - Navy',
                     'variant'        => 'Varian: Ukuran L, Warna Navy',
+                    'color'          => 'Navy',
+                    'size'           => 'L',
                     'price'          => 149000,
                     'original_price' => 249000,
                     'discount'       => '40%',
@@ -27,10 +32,15 @@ class CartController extends Controller
                     'selected'       => true,
                     'image'          => 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=600&auto=format&fit=crop&q=80',
                 ],
-                2 => [
-                    'id'             => 2,
+                '2_default' => [
+                    'id'             => '2_default',
+                    'product_id'     => 2,
+                    'variant_id'     => 'v2',
+                    'image_id'       => 'img2',
                     'name'           => 'Sepatu Sneakers Running Lightweight Air Breathable',
                     'variant'        => 'Varian: Ukuran 42, Warna Red Chili',
+                    'color'          => 'Red Chili',
+                    'size'           => '42',
                     'price'          => 215000,
                     'original_price' => 350000,
                     'discount'       => '39%',
@@ -54,25 +64,46 @@ class CartController extends Controller
     public function add(Request $request)
     {
         $productId = $request->input('product_id');
+        $variantId = $request->input('variant_id');
+        $imageId   = $request->input('image_id');
         $name      = $request->input('name', 'Produk Pilihan');
         $price     = (int) str_replace(['Rp', '.', ' ', ','], '', $request->input('price', '100000'));
         $image     = $request->input('image', 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=600&auto=format&fit=crop&q=80');
         $variant   = $request->input('variant', 'Varian Standar');
+        $color     = $request->input('color', null);
+        $size      = $request->input('size', null);
         $qty       = max(1, (int) $request->input('qty', 1));
 
         $dbProduct = \App\Models\Product::find($productId);
         $originalPrice = $dbProduct ? $dbProduct->original_price : (int) str_replace(['Rp', '.', ' ', ','], '', $request->input('original_price', 0));
         $discount = $dbProduct ? $dbProduct->discount : $request->input('discount');
 
+        // Buat kunci unik per kombinasi produk & varian
+        $keyParts = [
+            $productId,
+            $variantId ?? '',
+            $imageId ?? '',
+            $color ?? '',
+            $size ?? '',
+            $variant ?? '',
+            $image ?? ''
+        ];
+        $cartKey = $productId . '_' . substr(md5(implode('|', $keyParts)), 0, 10);
+
         $cart = session()->get('cart', []);
 
-        if (isset($cart[$productId])) {
-            $cart[$productId]['qty'] += $qty;
+        if (isset($cart[$cartKey])) {
+            $cart[$cartKey]['qty'] += $qty;
         } else {
-            $cart[$productId] = [
-                'id'             => $productId,
+            $cart[$cartKey] = [
+                'id'             => $cartKey,
+                'product_id'     => (int) $productId,
+                'variant_id'     => $variantId,
+                'image_id'       => $imageId,
                 'name'           => $name,
                 'variant'        => $variant,
+                'color'          => $color,
+                'size'           => $size,
                 'price'          => $price,
                 'original_price' => ($originalPrice && $originalPrice > $price) ? $originalPrice : null,
                 'discount'       => ($originalPrice && $originalPrice > $price) ? $discount : null,
@@ -113,20 +144,40 @@ class CartController extends Controller
     public function buyNow(Request $request)
     {
         $productId = $request->input('product_id', 1);
+        $variantId = $request->input('variant_id');
+        $imageId   = $request->input('image_id');
         $name      = $request->input('name', 'Produk Pilihan');
         $price     = (int) str_replace(['Rp', '.', ' ', ','], '', $request->input('price', '100000'));
-        $image     = $request->input('image', 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=600&auto=format&fit=crop&q=80');
+        $image     = $request->input('image');
         $variant   = $request->input('variant', 'Varian Standar');
+        $color     = $request->input('color', null);
+        $size      = $request->input('size', null);
         $qty       = max(1, (int) $request->input('qty', 1));
 
+        $keyParts = [
+            $productId,
+            $variantId ?? '',
+            $imageId ?? '',
+            $color ?? '',
+            $size ?? '',
+            $variant ?? '',
+            $image ?? ''
+        ];
+        $cartKey = $productId . '_' . substr(md5(implode('|', $keyParts)), 0, 10);
+
         $buyNowItem = [
-            'id'       => $productId,
-            'name'     => $name,
-            'variant'  => $variant,
-            'price'    => $price,
-            'qty'      => $qty,
-            'selected' => true,
-            'image'    => $image,
+            'id'         => $cartKey,
+            'product_id' => (int) $productId,
+            'variant_id' => $variantId,
+            'image_id'   => $imageId,
+            'name'       => $name,
+            'variant'    => $variant,
+            'color'      => $color,
+            'size'       => $size,
+            'price'      => $price,
+            'qty'        => $qty,
+            'selected'   => true,
+            'image'      => $image,
         ];
 
         session()->put('buy_now_item', $buyNowItem);
@@ -146,13 +197,13 @@ class CartController extends Controller
      */
     public function update(Request $request)
     {
-        $productId = $request->input('product_id');
-        $qty       = max(1, (int) $request->input('qty', 1));
+        $cartKey = $request->input('cart_key') ?? $request->input('id') ?? $request->input('product_id');
+        $qty     = max(1, (int) $request->input('qty', 1));
 
         $cart = session()->get('cart', []);
 
-        if (isset($cart[$productId])) {
-            $cart[$productId]['qty'] = $qty;
+        if (isset($cart[$cartKey])) {
+            $cart[$cartKey]['qty'] = $qty;
             session()->put('cart', $cart);
         }
 
@@ -173,12 +224,12 @@ class CartController extends Controller
      */
     public function remove(Request $request)
     {
-        $productId = $request->input('product_id');
+        $cartKey = $request->input('cart_key') ?? $request->input('id') ?? $request->input('product_id');
 
         $cart = session()->get('cart', []);
 
-        if (isset($cart[$productId])) {
-            unset($cart[$productId]);
+        if (isset($cart[$cartKey])) {
+            unset($cart[$cartKey]);
             session()->put('cart', $cart);
         }
 
@@ -199,11 +250,11 @@ class CartController extends Controller
      */
     public function removeSelected(Request $request)
     {
-        $productIds = $request->input('product_ids', []);
+        $cartKeys = $request->input('cart_keys') ?? $request->input('product_ids') ?? $request->input('ids') ?? [];
 
         $cart = session()->get('cart', []);
 
-        foreach ($productIds as $id) {
+        foreach ($cartKeys as $id) {
             if (isset($cart[$id])) {
                 unset($cart[$id]);
             }
@@ -221,6 +272,34 @@ class CartController extends Controller
         }
 
         return redirect()->back()->with('success', 'Produk yang dipilih berhasil dihapus.');
+    }
+
+    /**
+     * Update status centang (selected) item keranjang.
+     */
+    public function updateSelected(Request $request)
+    {
+        $items = $request->input('items', []);
+        $cart = session()->get('cart', []);
+
+        if (is_array($items)) {
+            foreach ($items as $item) {
+                $id = $item['id'] ?? null;
+                if ($id && isset($cart[$id])) {
+                    $cart[$id]['selected'] = (bool) ($item['selected'] ?? true);
+                }
+            }
+            session()->put('cart', $cart);
+        }
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'status' => 'success',
+                'cart'   => array_values($cart),
+            ]);
+        }
+
+        return redirect()->back();
     }
 
     /**

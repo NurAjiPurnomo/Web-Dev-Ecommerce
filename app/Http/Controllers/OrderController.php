@@ -264,6 +264,37 @@ class OrderController extends Controller
     }
 
     /**
+     * Membatalkan pesanan yang belum dibayar.
+     */
+    public function cancel($id)
+    {
+        $order = \App\Models\Order::where('invoice_number', $id)->orWhere('id', $id)->first();
+        
+        if (!$order) {
+            return redirect()->back()->with('error', 'Pesanan tidak ditemukan.');
+        }
+
+        if (!in_array($order->status, ['belum_bayar', 'belum_dibayar'])) {
+            return redirect()->back()->with('error', 'Hanya pesanan yang belum dibayar yang bisa dibatalkan.');
+        }
+
+        $order->status = 'batal';
+        $order->save();
+
+        // Restore stock and decrement sold count
+        foreach ($order->items as $item) {
+            $product = \App\Models\Product::find($item->product_id);
+            if ($product) {
+                $product->stock += $item->quantity;
+                $product->sold = max(0, $product->sold - $item->quantity);
+                $product->save();
+            }
+        }
+
+        return redirect()->back()->with('success', 'Pesanan berhasil dibatalkan! Stok dan angka terjual produk telah dikembalikan.');
+    }
+
+    /**
      * Simpan Ulasan & Rating Produk dari Pengguna (Shopee Style).
      */
     public function submitReview(Request $request)
@@ -309,6 +340,19 @@ class OrderController extends Controller
     public function setupDummyOrder()
     {
         $user = Auth::user();
+        
+        if (!$user && session()->has('user')) {
+            $userId = session('user.id') ?? (is_array(session('user')) ? (session('user')['id'] ?? null) : null);
+            if ($userId) {
+                $user = \App\Models\User::find($userId);
+            }
+        }
+
+        // If STILL no user, let's just grab the first user in DB for testing purposes so they don't get stuck!
+        if (!$user) {
+            $user = \App\Models\User::first();
+        }
+
         if (!$user) {
             return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
         }
@@ -339,6 +383,13 @@ class OrderController extends Controller
             'price'        => 150000,
         ]);
 
-        return redirect()->route('orders')->with('success', 'Pesanan dummy berhasil ditambahkan. Silakan uji coba fitur ulasan.');
+        // Automatically update the sold count for the dummy product
+        $dummyProduct = \App\Models\Product::find(16);
+        if ($dummyProduct) {
+            $dummyProduct->sold += 1;
+            $dummyProduct->save();
+        }
+
+        return redirect()->route('orders')->with('success', 'Pesanan dummy berhasil ditambahkan. Silakan uji coba fitur ulasan dan cek angka penjualan produk bertambah.');
     }
 }

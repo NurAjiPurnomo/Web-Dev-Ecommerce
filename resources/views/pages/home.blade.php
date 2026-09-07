@@ -183,7 +183,7 @@
             <div class="grid grid-cols-5 gap-3 sm:gap-6 justify-items-center">
                 @foreach($categories as $category)
                     @php $isActive = isset($selectedCategory) && strcasecmp($selectedCategory, $category['name']) === 0; @endphp
-                    <a href="{{ route('catalog', ['category' => $category['name']]) }}" class="flex flex-col items-center group cursor-pointer w-full">
+                    <a href="{{ route('catalog', ['category' => strtolower($category['name'])]) }}" class="flex flex-col items-center group cursor-pointer w-full">
                         <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border transition-all duration-300 transform group-hover:-translate-y-1 group-hover:scale-105 flex items-center justify-center mb-2 {{ $isActive ? 'bg-blue-700 text-white border-blue-700 ring-4 ring-blue-700/20 shadow-md' : ($category['bgLight'] ?? 'bg-blue-50 text-blue-700 border-slate-200 group-hover:bg-blue-700 group-hover:text-white') }}">
                             @if(isset($category['icon']))
                                 <svg class="w-6 h-6 sm:w-7 sm:h-7 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">

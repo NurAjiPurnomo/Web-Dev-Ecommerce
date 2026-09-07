@@ -42,8 +42,7 @@ class ProfileController extends Controller
             'gender'      => ['nullable', 'in:Laki-laki,Perempuan'],
             'birth_date'  => ['nullable', 'date'],
             'address'     => ['nullable', 'string', 'max:500'],
-            'city'        => ['nullable', 'string', 'max:100'],
-            'province'    => ['nullable', 'string', 'max:100'],
+            'city_id'     => ['nullable', 'string', 'max:50'],
             'postal_code' => ['nullable', 'string', 'max:10'],
         ], [
             'name.required'        => 'Nama lengkap wajib diisi.',
@@ -53,14 +52,43 @@ class ProfileController extends Controller
             'phone.regex'          => 'Nomor HP tidak valid. Diawali 08 atau 628.',
         ]);
 
+        // Mapping city_id ke nama kota & provinsi
+        $citiesMap = [
+            '153' => ['city' => 'Kota Jakarta Selatan', 'province' => 'DKI Jakarta'],
+            '152' => ['city' => 'Kota Jakarta Pusat', 'province' => 'DKI Jakarta'],
+            '151' => ['city' => 'Kota Jakarta Barat', 'province' => 'DKI Jakarta'],
+            '154' => ['city' => 'Kota Jakarta Timur', 'province' => 'DKI Jakarta'],
+            '155' => ['city' => 'Kota Jakarta Utara', 'province' => 'DKI Jakarta'],
+            '22'  => ['city' => 'Kota Bandung', 'province' => 'Jawa Barat'],
+            '54'  => ['city' => 'Kota Bekasi', 'province' => 'Jawa Barat'],
+            '78'  => ['city' => 'Kota Bogor', 'province' => 'Jawa Barat'],
+            '115' => ['city' => 'Kota Depok', 'province' => 'Jawa Barat'],
+            '444' => ['city' => 'Kota Surabaya', 'province' => 'Jawa Timur'],
+            '256' => ['city' => 'Kota Malang', 'province' => 'Jawa Timur'],
+            '399' => ['city' => 'Kota Semarang', 'province' => 'Jawa Tengah'],
+            '427' => ['city' => 'Kota Surakarta / Solo', 'province' => 'Jawa Tengah'],
+            '501' => ['city' => 'Kota Yogyakarta', 'province' => 'DI Yogyakarta'],
+            '114' => ['city' => 'Kota Denpasar', 'province' => 'Bali'],
+            '278' => ['city' => 'Kota Medan', 'province' => 'Sumatera Utara'],
+            '254' => ['city' => 'Kota Makassar', 'province' => 'Sulawesi Selatan'],
+        ];
+
+        $cityName = '';
+        $provinceName = '';
+        if (!empty($request->city_id) && isset($citiesMap[$request->city_id])) {
+            $cityName = $citiesMap[$request->city_id]['city'];
+            $provinceName = $citiesMap[$request->city_id]['province'];
+        }
+
         $user->update([
             'name'        => trim($request->name),
             'phone'       => trim($request->phone),
             'gender'      => $request->gender,
             'birth_date'  => $request->birth_date,
             'address'     => trim($request->address),
-            'city'        => trim($request->city),
-            'province'    => trim($request->province),
+            'city_id'     => trim($request->city_id),
+            'city'        => $cityName,
+            'province'    => $provinceName,
             'postal_code' => trim($request->postal_code),
         ]);
 

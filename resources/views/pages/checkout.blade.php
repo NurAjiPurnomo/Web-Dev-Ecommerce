@@ -35,10 +35,10 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                                 </svg>
                             </div>
-                            <h2 class="text-base sm:text-lg font-bold text-slate-900">Alamat Pengiriman</h2>
+                            <h2 class="text-base sm:text-lg font-bold text-slate-900">Alamat Tujuan Pengiriman (Rumah Anda)</h2>
                         </div>
                         <div class="flex items-center gap-2">
-                            <span class="bg-blue-100 text-blue-700 text-[11px] font-bold px-2.5 py-0.5 rounded-full">Alamat Utama</span>
+                            <span class="bg-blue-100 text-blue-700 text-[11px] font-bold px-2.5 py-0.5 rounded-full">{{ $address['address_label'] }}</span>
                             <a 
                                 href="{{ route('profile') }}" 
                                 class="text-xs font-bold text-blue-700 hover:text-blue-800 hover:underline border border-blue-200 px-3 py-1 rounded-lg transition-colors cursor-pointer"
@@ -59,53 +59,11 @@
                         </p>
                     </div>
 
-                    <!-- Info Rute Pengiriman: Lokasi Toko ➔ Lokasi Pembeli -->
-                    <div class="p-3 bg-blue-50/70 border border-blue-100 rounded-xl text-xs space-y-1">
-                        <div class="flex items-center justify-between font-bold text-slate-800 flex-wrap gap-2">
-                            <span class="flex items-center gap-1.5 text-blue-800">
-                                <span class="w-2 h-2 rounded-full bg-blue-600"></span>
-                                Lokasi Asal Toko: <strong class="font-extrabold">{{ $storeOrigin['city_name'] ?? 'Kota Jakarta Pusat' }}</strong>
-                            </span>
-                            <span class="text-blue-600 font-extrabold text-sm">➔</span>
-                            <span class="flex items-center gap-1.5 text-indigo-800">
-                                Lokasi Tujuan Pembeli: <strong class="font-extrabold" x-text="getSelectedCityName()"></strong>
-                                <span class="w-2 h-2 rounded-full bg-indigo-600"></span>
-                            </span>
-                        </div>
-                        <p class="text-[11px] text-slate-500">
-                            Tarif ekspedisi JNE, POS, dan TIKI dihitung secara realtime berdasarkan rute lokasi toko ke kota tujuan pembeli.
-                        </p>
-                    </div>
+                    <!-- Info Rute Pengiriman dihapus agar tampilan lebih profesional untuk pembeli -->
 
-                    <!-- Pilihan Kota Tujuan RajaOngkir -->
-                    <div class="pt-2 border-t border-slate-100">
-                        <label class="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
-                            <span>Pilih Kota / Kabupaten Tujuan Pembeli:</span>
-                            <span class="text-[11px] text-blue-700 font-semibold" x-text="'Total Berat Paket: ' + totalWeight + ' gram'"></span>
-                        </label>
-                        <select 
-                            x-model="selectedCityId" 
-                            @change="fetchShippingRates()" 
-                            class="w-full bg-slate-50 text-slate-800 text-xs sm:text-sm rounded-xl px-3.5 py-2.5 border border-slate-300 focus:border-blue-700 focus:bg-white focus:outline-none transition-all"
-                        >
-                            <option value="153">DKI Jakarta - Kota Jakarta Selatan (ID: 153)</option>
-                            <option value="152">DKI Jakarta - Kota Jakarta Pusat (ID: 152)</option>
-                            <option value="151">DKI Jakarta - Kota Jakarta Barat (ID: 151)</option>
-                            <option value="154">DKI Jakarta - Kota Jakarta Timur (ID: 154)</option>
-                            <option value="155">DKI Jakarta - Kota Jakarta Utara (ID: 155)</option>
-                            <option value="22">Jawa Barat - Kota Bandung (ID: 22)</option>
-                            <option value="54">Jawa Barat - Kota Bekasi (ID: 54)</option>
-                            <option value="78">Jawa Barat - Kota Bogor (ID: 78)</option>
-                            <option value="115">Jawa Barat - Kota Depok (ID: 115)</option>
-                            <option value="444">Jawa Timur - Kota Surabaya (ID: 444)</option>
-                            <option value="256">Jawa Timur - Kota Malang (ID: 256)</option>
-                            <option value="399">Jawa Tengah - Kota Semarang (ID: 399)</option>
-                            <option value="427">Jawa Tengah - Kota Surakarta / Solo (ID: 427)</option>
-                            <option value="501">DI Yogyakarta - Kota Yogyakarta (ID: 501)</option>
-                            <option value="114">Bali - Kota Denpasar (ID: 114)</option>
-                            <option value="278">Sumatera Utara - Kota Medan (ID: 278)</option>
-                            <option value="254">Sulawesi Selatan - Kota Makassar (ID: 254)</option>
-                        </select>
+                    <!-- Pilihan Kota Tujuan RajaOngkir (Hidden, diambil otomatis dari Profil) -->
+                    <div class="pt-2 border-t border-slate-100 hidden">
+                        <input type="hidden" x-model="selectedCityId" value="{{ $address['city_id'] }}">
                     </div>
 
                 </div>
@@ -162,7 +120,7 @@
                             </div>
                             <div>
                                 <h2 class="text-base sm:text-lg font-bold text-slate-900">Pilih Jasa Pengiriman</h2>
-                                <p class="text-[11px] text-slate-500">Tarif Realtime RajaOngkir Starter (JNE, POS, TIKI)</p>
+                                <p class="text-[11px] text-slate-500">Pilih kurir ekspedisi untuk pengiriman paket Anda</p>
                             </div>
                         </div>
                         <template x-if="loadingShipping">
@@ -384,9 +342,6 @@
                         class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold text-sm py-3.5 rounded-xl transition-all shadow-md cursor-pointer flex items-center justify-center gap-2"
                     >
                         <span>Konfirmasi &amp; Bayar Pesanan</span>
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
-                        </svg>
                     </button>
 
                     <div class="text-center text-[11px] text-slate-400 flex items-center justify-center gap-1 pt-1">
@@ -415,10 +370,10 @@ function checkoutApp() {
         subtotal: {{ array_sum(array_map(fn($i) => $i['price'] * $i['qty'], $checkoutItems)) }},
         selectedCityId: '{{ $address["city_id"] ?? "153" }}',
         totalWeight: {{ $totalWeight ?? 1000 }},
-        couriers: @json($couriers),
-        selectedCourier: '{{ $couriers[0]["id"] ?? "jne_reg" }}',
-        selectedCourierCost: {{ $couriers[0]["price"] ?? 15000 }},
-        selectedCourierName: '{{ $couriers[0]["name"] ?? "JNE Express (Reguler)" }}',
+        couriers: [],
+        selectedCourier: null,
+        selectedCourierCost: 0,
+        selectedCourierName: '',
         selectedPayment: 'bca_va',
         loadingShipping: false,
         shippingErrorMsg: '',
@@ -566,6 +521,11 @@ function checkoutApp() {
                         this.selectedCourierCost = this.couriers[0].price;
                         this.selectedCourierName = this.couriers[0].name;
                     }
+                } else {
+                    this.couriers = [];
+                    this.selectedCourier = null;
+                    this.selectedCourierCost = 0;
+                    this.selectedCourierName = '';
                 }
 
                 if (data.source === 'api') {
@@ -578,7 +538,11 @@ function checkoutApp() {
 
             } catch (error) {
                 console.error('Error fetching RajaOngkir rates:', error);
-                this.shippingErrorMsg = 'Koneksi RajaOngkir API tidak merespon. Menggunakan tarif standar.';
+                this.shippingErrorMsg = 'Gagal menghubungi server ongkos kirim. Silakan coba lagi.';
+                this.couriers = [];
+                this.selectedCourier = null;
+                this.selectedCourierCost = 0;
+                this.selectedCourierName = '';
             } finally {
                 this.loadingShipping = false;
             }

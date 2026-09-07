@@ -75,27 +75,39 @@
                     Pembayaran & Logistik
                 </h3>
                 <div class="grid grid-cols-4 gap-2 mb-2">
-                    <div class="bg-white border border-slate-200 rounded-lg p-1.5 flex items-center justify-center shadow-2xs"><img src="{{ asset('assets/Bca.png') }}" alt="BCA" class="h-3 object-contain"></div>
-                    <div class="bg-white border border-slate-200 rounded-lg p-1.5 flex items-center justify-center shadow-2xs"><img src="{{ asset('assets/Visa.png') }}" alt="VISA" class="h-2.5 object-contain"></div>
-                    <div class="bg-white border border-slate-200 rounded-lg p-1.5 flex items-center justify-center shadow-2xs"><img src="{{ asset('assets/Mandiri.png') }}" alt="MANDIRI" class="h-3 object-contain"></div>
-                    <div class="bg-white border border-slate-200 rounded-lg p-1.5 flex items-center justify-center shadow-2xs"><img src="{{ asset('assets/Qris.png') }}" alt="QRIS" class="h-3 object-contain"></div>
+                    <div class="bg-white border border-slate-200 rounded-lg p-1.5 flex items-center justify-center shadow-2xs" title="BCA">
+                        <span class="font-black italic text-[13px] tracking-tighter" style="color: #003399;">BCA</span>
+                    </div>
+                    <div class="bg-white border border-slate-200 rounded-lg p-1.5 flex items-center justify-center shadow-2xs" title="VISA">
+                        <span class="font-black italic text-[14px] tracking-tighter" style="color: #1a1f71;">VISA</span>
+                    </div>
+                    <div class="bg-white border border-slate-200 rounded-lg p-1.5 flex items-center justify-center shadow-2xs" title="MANDIRI">
+                        <span class="font-black text-[12px] tracking-tight" style="color: #0f4c81;">mandiri</span>
+                    </div>
+                    <div class="bg-white border border-slate-200 rounded-lg p-1.5 flex items-center justify-center shadow-2xs" title="QRIS">
+                        <span class="font-extrabold italic text-[12px]"><span style="color: #ed1c24;">Q</span><span style="color: #003399;">RIS</span></span>
+                    </div>
                 </div>
                 <div class="grid grid-cols-4 gap-2">
-                    <div class="bg-white border border-slate-200 rounded-lg p-1 flex items-center justify-center shadow-2xs"><img src="{{ asset('assets/Jne.png') }}" alt="JNE" class="h-3.5 object-contain"></div>
-                    <div class="bg-white border border-slate-200 rounded-lg p-1 flex items-center justify-center shadow-2xs"><img src="{{ asset('assets/J&T.png') }}" alt="J&T" class="h-3.5 object-contain"></div>
-                    <div class="bg-white border border-slate-200 rounded-lg p-1 flex items-center justify-center shadow-2xs"><img src="{{ asset('assets/Sicepat.png') }}" alt="SiCepat" class="h-3.5 object-contain"></div>
-                    <div class="bg-white border border-slate-200 rounded-lg p-1 flex items-center justify-center shadow-2xs"><img src="{{ asset('assets/Gosend.png') }}" alt="GoSend" class="h-3.5 object-contain"></div>
+                    <div class="bg-white border border-slate-200 rounded-lg p-1 flex items-center justify-center shadow-2xs" title="JNE">
+                        <span class="font-black italic text-[13px] tracking-tighter" style="color: #c90000;">JNE</span>
+                    </div>
+                    <div class="bg-white border border-slate-200 rounded-lg p-1 flex items-center justify-center shadow-2xs" title="J&T">
+                        <span class="font-black text-[12px] tracking-tighter" style="color: #e50012;">J&T</span>
+                    </div>
+                    <div class="bg-white border border-slate-200 rounded-lg p-1 flex items-center justify-center shadow-2xs" title="SiCepat">
+                        <span class="font-bold text-[11px] tracking-tight" style="color: #d11218;">SiCepat</span>
+                    </div>
+                    <div class="bg-white border border-slate-200 rounded-lg p-1 flex items-center justify-center shadow-2xs" title="GoSend">
+                        <span class="font-bold text-[11px] tracking-tight" style="color: #00a550;">GoSend</span>
+                    </div>
                 </div>
             </div>
 
         </div>
 
-        <div class="border-t border-slate-200 pt-6 mt-4 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+        <div class="border-t border-slate-200 pt-6 mt-4 flex items-center justify-center text-xs text-slate-500">
             <p>&copy; {{ date('Y') }} TokoOnline. All rights reserved.</p>
-            <div class="flex items-center gap-4">
-                <a href="#" class="hover:text-blue-700 transition-colors">Kebijakan Privasi</a>
-                <a href="#" class="hover:text-blue-700 transition-colors">Syarat & Ketentuan</a>
-            </div>
         </div>
     </div>
 </footer>

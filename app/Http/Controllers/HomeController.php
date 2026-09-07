@@ -93,35 +93,35 @@ class HomeController extends Controller
                 'slug'    => 'Pakaian',
                 'icon'    => 'M9 2a1 1 0 00-.894.553L6.382 6H3a1 1 0 00-1 1v4a1 1 0 001 1h2v8a1 1 0 001 1h12a1 1 0 001-1v-8h2a1 1 0 001-1V7a1 1 0 00-1-1h-3.382l-1.724-3.447A1 1 0 0015 2H9z',
                 'emoji'   => '👕',
-                'bgLight' => 'bg-gradient-to-br from-blue-50 to-indigo-100 text-blue-700 border-blue-200 group-hover:from-blue-600 group-hover:to-indigo-700 group-hover:text-white group-hover:border-blue-600 shadow-2xs'
+                'bgLight' => 'bg-blue-50 text-blue-700 border-blue-200 group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 shadow-2xs'
             ],
             [
                 'name'    => 'Sepatu',
                 'slug'    => 'Sepatu',
                 'icon'    => 'M3 17a3 3 0 003 3h12a3 3 0 003-3v-3a2 2 0 00-2-2H5a2 2 0 00-2 2v3zM14 7l-4 5m0-5l4 5',
                 'emoji'   => '👟',
-                'bgLight' => 'bg-gradient-to-br from-emerald-50 to-teal-100 text-emerald-700 border-emerald-200 group-hover:from-emerald-600 group-hover:to-teal-700 group-hover:text-white group-hover:border-emerald-600 shadow-2xs'
+                'bgLight' => 'bg-emerald-50 text-emerald-700 border-emerald-200 group-hover:bg-emerald-600 group-hover:text-white group-hover:border-emerald-600 shadow-2xs'
             ],
             [
                 'name'    => 'Aksesoris',
                 'slug'    => 'Aksesoris',
                 'icon'    => 'M2 10a4 4 0 014-4h2a4 4 0 014 4v1a4 4 0 01-4 4H6a4 4 0 01-4-4v-1zm10 0a4 4 0 014-4h2a4 4 0 014 4v1a4 4 0 01-4 4h-2a4 4 0 01-4-4v-1zm-2 0h2',
                 'emoji'   => '🕶️',
-                'bgLight' => 'bg-gradient-to-br from-purple-50 to-pink-100 text-purple-700 border-purple-200 group-hover:from-purple-600 group-hover:to-pink-700 group-hover:text-white group-hover:border-purple-600 shadow-2xs'
+                'bgLight' => 'bg-purple-50 text-purple-700 border-purple-200 group-hover:bg-purple-600 group-hover:text-white group-hover:border-purple-600 shadow-2xs'
             ],
             [
                 'name'    => 'Gadget',
                 'slug'    => 'Gadget',
                 'icon'    => 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z',
                 'emoji'   => '📱',
-                'bgLight' => 'bg-gradient-to-br from-amber-50 to-orange-100 text-amber-700 border-amber-200 group-hover:from-amber-500 group-hover:to-orange-600 group-hover:text-white group-hover:border-amber-500 shadow-2xs'
+                'bgLight' => 'bg-amber-50 text-amber-700 border-amber-200 group-hover:bg-amber-500 group-hover:text-white group-hover:border-amber-500 shadow-2xs'
             ],
             [
                 'name'    => 'Rumah Tangga',
                 'slug'    => 'Rumah Tangga',
                 'icon'    => 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
                 'emoji'   => '🏠',
-                'bgLight' => 'bg-gradient-to-br from-rose-50 to-red-100 text-rose-700 border-rose-200 group-hover:from-rose-600 group-hover:to-red-700 group-hover:text-white group-hover:border-rose-600 shadow-2xs'
+                'bgLight' => 'bg-rose-50 text-rose-700 border-rose-200 group-hover:bg-rose-600 group-hover:text-white group-hover:border-rose-600 shadow-2xs'
             ]
         ];
 
@@ -189,7 +189,14 @@ class HomeController extends Controller
         $query = Product::where('status', 'aktif')->withAvg('reviews', 'rating');
 
         if ($search) {
-            $query->where('name', 'like', "%{$search}%");
+            // Memecah kata pencarian berdasarkan spasi (contoh: "jaket negeri" jadi "jaket" dan "negeri")
+            $searchWords = explode(' ', $search);
+            foreach ($searchWords as $word) {
+                if (!empty($word)) {
+                    // Cari masing-masing kata (harus ada semua kata tersebut di nama produk, urutan bebas)
+                    $query->where('name', 'like', "%{$word}%");
+                }
+            }
         }
 
         if ($selectedCategory && $selectedCategory !== 'all') {
@@ -205,8 +212,7 @@ class HomeController extends Controller
         } else {
             $query->latest();
         }
-
-        $paginatedProducts = $query->paginate(12)->withQueryString();
+        $paginatedProducts = $query->paginate(15)->withQueryString();
 
         $paginatedProducts->getCollection()->transform(function($p) {
             return [
@@ -368,9 +374,11 @@ class HomeController extends Controller
     /**
      * Display Promo Page.
      */
-    public function promo()
+    public function promo(\Illuminate\Http\Request $request)
     {
-        $promoModels = Product::where('status', 'aktif')
+        $selectedCategory = $request->query('category', 'all');
+
+        $query = Product::where('status', 'aktif')
             ->withAvg('reviews', 'rating')
             ->where(function($q) {
                 $q->where(function($sub) {
@@ -379,14 +387,19 @@ class HomeController extends Controller
                     $sub->whereNotNull('discount')->where('discount', '!=', '');
                 });
             })
-            ->latest('updated_at')
-            ->get();
+            ->latest('updated_at');
 
-        if ($promoModels->isEmpty()) {
-            $promoModels = Product::where('status', 'aktif')->withAvg('reviews', 'rating')->latest()->take(8)->get();
+        if ($selectedCategory !== 'all') {
+            $query->where('category', $selectedCategory);
         }
 
-        $allProducts = $promoModels->map(function($p) {
+        $paginatedPromo = $query->paginate(15)->withQueryString();
+
+        if ($paginatedPromo->isEmpty() && $selectedCategory === 'all') {
+            $paginatedPromo = Product::where('status', 'aktif')->withAvg('reviews', 'rating')->latest()->paginate(15)->withQueryString();
+        }
+
+        $paginatedPromo->getCollection()->transform(function($p) {
             return [
                 'id' => $p->id,
                 'title' => $p->name,
@@ -400,6 +413,8 @@ class HomeController extends Controller
                 'variants' => $p->formatted_variants,
             ];
         });
+
+        $allProducts = $paginatedPromo;
 
         $dbVouchers = \App\Models\Voucher::where('status', 'aktif')->get();
 
@@ -425,9 +440,10 @@ class HomeController extends Controller
         $heroBanner = \App\Models\Banner::where('status', 'aktif')->orderBy('order_column', 'asc')->first();
 
         return view('pages.promo', [
-            'heroBanner'    => $heroBanner,
-            'promoProducts' => $allProducts,
-            'vouchers'      => $vouchers,
+            'heroBanner'       => $heroBanner,
+            'promoProducts'    => $allProducts,
+            'vouchers'         => $vouchers,
+            'selectedCategory' => $selectedCategory
         ]);
     }
 

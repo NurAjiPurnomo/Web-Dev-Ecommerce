@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-<div x-data="promoApp()" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
 
     <!-- Breadcrumb -->
     <nav class="text-xs text-gray-500 flex items-center gap-1.5">
@@ -117,44 +117,37 @@
                 </div>
                 <!-- Filter Category Tabs -->
                 <div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 text-xs font-semibold">
-                    <button 
-                        @click="selectedTab = 'all'" 
-                        :class="selectedTab === 'all' ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
-                        class="px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+                    <a 
+                        href="{{ route('promo', ['category' => 'all']) }}" 
+                        class="{{ $selectedCategory === 'all' ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200' }} px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
                     >
                         Semua Promo
-                    </button>
-                    <button 
-                        @click="selectedTab = 'Pakaian'" 
-                        :class="selectedTab === 'Pakaian' ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
-                        class="px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+                    </a>
+                    <a 
+                        href="{{ route('promo', ['category' => 'pakaian']) }}" 
+                        class="{{ strcasecmp($selectedCategory, 'Pakaian') === 0 ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200' }} px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
                     >
                         Fashion
-                    </button>
-                    <button 
-                        @click="selectedTab = 'Gadget'" 
-                        :class="selectedTab === 'Gadget' ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
-                        class="px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+                    </a>
+                    <a 
+                        href="{{ route('promo', ['category' => 'gadget']) }}" 
+                        class="{{ strcasecmp($selectedCategory, 'Gadget') === 0 ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200' }} px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
                     >
                         Gadget
-                    </button>
-                    <button 
-                        @click="selectedTab = 'Rumah Tangga'" 
-                        :class="selectedTab === 'Rumah Tangga' ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
-                        class="px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+                    </a>
+                    <a 
+                        href="{{ route('promo', ['category' => 'rumah tangga']) }}" 
+                        class="{{ strcasecmp($selectedCategory, 'Rumah Tangga') === 0 ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200' }} px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
                     >
                         Rumah Tangga
-                    </button>
+                    </a>
                 </div>
             </div>
 
             <!-- Product Grid (5 Columns) -->
             <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                @foreach($promoProducts as $product)
-                    <div 
-                        x-show="selectedTab === 'all' || selectedTab === '{{ $product['category'] ?? '' }}'"
-                        x-transition
-                    >
+                @forelse($promoProducts as $product)
+                    <div>
                         <x-product-card 
                             :id="$product['id']"
                             :title="$product['title']"
@@ -167,8 +160,23 @@
                             :variants="$product['variants'] ?? []"
                         />
                     </div>
-                @endforeach
+                @empty
+                    <div class="col-span-full py-12 text-center">
+                        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 text-slate-400 mb-4">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-900">Belum ada promo</h3>
+                        <p class="text-slate-500 text-sm mt-1">Nantikan penawaran menarik dari kami segera.</p>
+                    </div>
+                @endforelse
             </div>
+            
+            <!-- Pagination -->
+            @if($promoProducts->hasPages())
+                <div class="pt-6">
+                    {{ $promoProducts->links('pagination::tailwind') }}
+                </div>
+            @endif
         </div>
     </div>
 
@@ -209,12 +217,4 @@
     </div>
 
 </div>
-
-<script>
-function promoApp() {
-    return {
-        selectedTab: 'all',
-    }
-}
-</script>
 @endsection

@@ -32,6 +32,7 @@ Route::post('/cart/buy-now', [CartController::class, 'buyNow'])->name('cart.buyN
 Route::post('/cart/update', [CartController::class, 'update'])->name('cart.update');
 Route::post('/cart/remove', [CartController::class, 'remove'])->name('cart.remove');
 Route::post('/cart/remove-selected', [CartController::class, 'removeSelected'])->name('cart.removeSelected');
+Route::post('/cart/update-selected', [CartController::class, 'updateSelected'])->name('cart.updateSelected');
 Route::post('/cart/clear', [CartController::class, 'clear'])->name('cart.clear');
 
 // Checkout Routes
@@ -47,8 +48,9 @@ Route::get('/profile', [ProfileController::class, 'show'])->name('profile')->mid
 Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update')->middleware('auth');
 Route::post('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password')->middleware('auth');
 Route::get('/orders', [OrderController::class, 'index'])->name('orders')->middleware('auth');
+Route::post('/orders/{id}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel')->where('id', '.*')->middleware('auth');
 Route::post('/orders/review', [OrderController::class, 'submitReview'])->name('orders.review')->middleware('auth');
-Route::get('/setup-dummy-order', [\App\Http\Controllers\OrderController::class, 'setupDummyOrder'])->middleware('auth');
+Route::get('/setup-dummy-order', [\App\Http\Controllers\OrderController::class, 'setupDummyOrder']);
 
 // Wishlist Routes
 Route::get('/wishlist', [WishlistController::class, 'index'])->name('wishlist')->middleware('auth');
@@ -147,6 +149,9 @@ Route::middleware([AdminMiddleware::class])->prefix('admin')->group(function () 
 
 // Dynamic Pages Route (must be at the end to avoid conflicts)
 Route::get('/page/{slug}', [HomeController::class, 'dynamicPage'])->name('page.show');
+
+// DOKU Webhook Route
+Route::post('/api/doku/webhook', [App\Http\Controllers\DokuWebhookController::class, 'handle'])->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
 
 
 

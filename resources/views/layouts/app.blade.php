@@ -118,6 +118,31 @@
         @include('components.footer')
     @endif
 
+    <!-- GLOBAL CONFIRM MODAL -->
+    <div x-data="{ show: false, title: 'Konfirmasi', message: '', confirmText: 'Ya, Lanjutkan', action: null }"
+         @open-confirm.window="show = true; title = $event.detail.title || 'Konfirmasi'; message = $event.detail.message; confirmText = $event.detail.confirmText || 'Ya, Lanjutkan'; action = $event.detail.action"
+         x-show="show" 
+         style="display: none;"
+         class="fixed inset-0 z-[100] flex items-center justify-center px-4"
+    >
+        <div x-show="show" x-transition.opacity class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="show = false"></div>
+        <div x-show="show" x-transition.scale.origin.bottom class="relative bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
+            <div class="p-6 text-center space-y-4">
+                <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-extrabold text-slate-900" x-text="title"></h3>
+                <p class="text-sm text-slate-500 leading-relaxed" x-text="message"></p>
+                <div class="flex items-center gap-3 pt-2">
+                    <button type="button" @click="show = false" class="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition-colors cursor-pointer">Batal</button>
+                    <button type="button" @click="show = false; action()" class="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl transition-colors cursor-pointer shadow-md shadow-red-200" x-text="confirmText"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     @stack('scripts')
 </body>
 </html>

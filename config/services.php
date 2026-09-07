@@ -47,5 +47,10 @@ return [
         'origin_city' => env('RAJAONGKIR_ORIGIN_CITY', '152'),
     ],
 
+    'komerce' => [
+        'payment_key' => env('KOMERCE_PAYMENT_API_KEY'),
+        'payment_base_url' => env('KOMERCE_PAYMENT_BASE_URL', 'https://api-sandbox.collaborator.komerce.id/user/api/v1'),
+    ],
+
 ];
 

@@ -28,9 +28,9 @@
                 Semua Kategori
             </a>
             @foreach($categories as $cat)
-                <a href="{{ route('catalog', ['category' => $cat]) }}" 
+                <a href="{{ route('catalog', ['category' => strtolower($cat)]) }}" 
                    class="whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-colors shadow-2xs border
-                   {{ isset($selectedCategory) && $selectedCategory === $cat ? 'bg-blue-700 text-white border-blue-700' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' }}">
+                   {{ isset($selectedCategory) && strcasecmp($selectedCategory, $cat) === 0 ? 'bg-blue-700 text-white border-blue-700' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' }}">
                     {{ $cat }}
                 </a>
             @endforeach
@@ -53,22 +53,6 @@
 
         <!-- Right Side: Local Search & Sort Dropdown -->
         <div class="flex items-center gap-3">
-            <!-- Local Search Input with Icon -->
-            <form action="{{ route('catalog') }}" method="GET" class="relative flex items-center flex-1 sm:flex-none">
-                <input 
-                    type="text" 
-                    name="search"
-                    value="{{ request('search') }}"
-                    placeholder="Cari di katalog..." 
-                    class="w-full sm:w-64 bg-white border border-gray-300 rounded-lg pl-9 pr-8 py-2 text-xs sm:text-sm text-slate-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-700/20 focus:border-blue-700 transition-all"
-                >
-                <svg class="w-4 h-4 text-gray-400 absolute left-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                </svg>
-                @if(request('search'))
-                    <a href="{{ route('catalog') }}" class="absolute right-2.5 text-gray-400 hover:text-gray-600 font-bold text-xs cursor-pointer">✕</a>
-                @endif
-            </form>
 
             <!-- Sort Select Dropdown -->
             <form action="{{ route('catalog') }}" method="GET" class="m-0">
@@ -97,8 +81,7 @@
                     <div class="aspect-square bg-gray-100 relative overflow-hidden">
                         <!-- Solid Blue DISKON Badge (Absolute top-left) -->
                         <template x-if="item.hasDiscount">
-                            <div class="absolute top-0 left-0 bg-blue-700 text-white font-bold text-[10px] sm:text-xs px-2.5 py-1 rounded-br-lg shadow-2xs z-10 uppercase">
-                                DISKON
+                            <div class="absolute top-0 left-0 bg-blue-700 text-white font-bold text-[10px] sm:text-xs px-2.5 py-1 rounded-br-lg shadow-2xs z-10 uppercase" x-text="item.discount">
                             </div>
                         </template>
                         <img 

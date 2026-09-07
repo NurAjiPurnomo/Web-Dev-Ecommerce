@@ -251,12 +251,9 @@ class AdminController extends Controller
             $allImages = [];
             $variantImages = $request->file('variant_images', []);
 
+            $totalStock = 0;
             foreach ($rawVariants as $index => $var) {
                 $color = trim($var['color'] ?? '');
-                $stock = max(0, (int) ($var['stock'] ?? 0));
-                $price = max(0, (float) ($var['price'] ?? 0));
-                $sizesRaw = $var['sizes'] ?? '';
-                $sizes = is_array($sizesRaw) ? array_values(array_filter(array_map('trim', $sizesRaw))) : array_values(array_filter(array_map('trim', explode(',', $sizesRaw))));
                 
                 $image = trim($var['existing_image'] ?? ($var['image'] ?? ($validated['image'] ?? '')));
                 if (isset($variantImages[$index])) {
@@ -264,31 +261,46 @@ class AdminController extends Controller
                     $image = '/storage/' . $path;
                 }
 
-                if (!empty($color) || !empty($sizes)) {
-                    $parsedVariants[] = [
-                        'color' => $color ?: 'Standar',
-                        'stock' => $stock,
-                        'price' => $price,
-                        'sizes' => $sizes,
-                        'image' => $image ?: $validated['image'],
-                    ];
+                if (isset($var['sizes']) && is_array($var['sizes'])) {
+                    foreach ($var['sizes'] as $sz) {
+                        $size = trim($sz['name'] ?? '');
+                        $stock = max(0, (int) ($sz['stock'] ?? 0));
+                        $price = max(0, (float) ($sz['price'] ?? 0));
+                        
+                        if (!empty($color) || !empty($size)) {
+                            $parsedVariants[] = [
+                                'color' => $color ?: 'Standar',
+                                'stock' => $stock,
+                                'price' => $price,
+                                'size'  => $size,
+                                'image' => $image ?: $validated['image'],
+                            ];
 
-                    if (!empty($color)) {
-                        $allColors[] = [
-                            'name'  => $color,
-                            'image' => $image ?: $validated['image'],
-                        ];
+                            $totalStock += $stock;
+
+                            $colorFound = false;
+                            foreach ($allColors as $c) {
+                                if ($c['name'] === ($color ?: 'Standar')) {
+                                    $colorFound = true; break;
+                                }
+                            }
+                            if (!$colorFound) {
+                                $allColors[] = [
+                                    'name'  => $color ?: 'Standar',
+                                    'image' => $image ?: $validated['image'],
+                                ];
+                            }
+
+                            if (!empty($size) && !in_array($size, $allSizes)) $allSizes[] = $size;
+
+                            if ($image && !in_array($image, $allImages)) $allImages[] = $image;
+                        }
                     }
-
-                    foreach ($sizes as $s) {
-                        if (!in_array($s, $allSizes)) $allSizes[] = $s;
-                    }
-
-                    if ($image && !in_array($image, $allImages)) $allImages[] = $image;
                 }
             }
 
             if (!empty($parsedVariants)) {
+                $validated['stock'] = $totalStock > 0 ? $totalStock : $validated['stock'];
                 $validated['variants'] = $parsedVariants;
                 $validated['colors']   = $allColors;
                 if (!empty($allSizes)) $validated['sizes'] = $allSizes;
@@ -395,12 +407,9 @@ class AdminController extends Controller
             $allImages = [];
             $variantImages = $request->file('variant_images', []);
 
+            $totalStock = 0;
             foreach ($rawVariants as $index => $var) {
                 $color = trim($var['color'] ?? '');
-                $stock = max(0, (int) ($var['stock'] ?? 0));
-                $price = max(0, (float) ($var['price'] ?? 0));
-                $sizesRaw = $var['sizes'] ?? '';
-                $sizes = is_array($sizesRaw) ? array_values(array_filter(array_map('trim', $sizesRaw))) : array_values(array_filter(array_map('trim', explode(',', $sizesRaw))));
                 
                 $image = trim($var['existing_image'] ?? ($var['image'] ?? ($validated['image'] ?? $product->image)));
                 if (isset($variantImages[$index])) {
@@ -408,31 +417,46 @@ class AdminController extends Controller
                     $image = '/storage/' . $path;
                 }
 
-                if (!empty($color) || !empty($sizes)) {
-                    $parsedVariants[] = [
-                        'color' => $color ?: 'Standar',
-                        'stock' => $stock,
-                        'price' => $price,
-                        'sizes' => $sizes,
-                        'image' => $image ?: ($validated['image'] ?? $product->image),
-                    ];
+                if (isset($var['sizes']) && is_array($var['sizes'])) {
+                    foreach ($var['sizes'] as $sz) {
+                        $size = trim($sz['name'] ?? '');
+                        $stock = max(0, (int) ($sz['stock'] ?? 0));
+                        $price = max(0, (float) ($sz['price'] ?? 0));
+                        
+                        if (!empty($color) || !empty($size)) {
+                            $parsedVariants[] = [
+                                'color' => $color ?: 'Standar',
+                                'stock' => $stock,
+                                'price' => $price,
+                                'size'  => $size,
+                                'image' => $image ?: ($validated['image'] ?? $product->image),
+                            ];
 
-                    if (!empty($color)) {
-                        $allColors[] = [
-                            'name'  => $color,
-                            'image' => $image ?: ($validated['image'] ?? $product->image),
-                        ];
+                            $totalStock += $stock;
+
+                            $colorFound = false;
+                            foreach ($allColors as $c) {
+                                if ($c['name'] === ($color ?: 'Standar')) {
+                                    $colorFound = true; break;
+                                }
+                            }
+                            if (!$colorFound) {
+                                $allColors[] = [
+                                    'name'  => $color ?: 'Standar',
+                                    'image' => $image ?: ($validated['image'] ?? $product->image),
+                                ];
+                            }
+
+                            if (!empty($size) && !in_array($size, $allSizes)) $allSizes[] = $size;
+
+                            if ($image && !in_array($image, $allImages)) $allImages[] = $image;
+                        }
                     }
-
-                    foreach ($sizes as $s) {
-                        if (!in_array($s, $allSizes)) $allSizes[] = $s;
-                    }
-
-                    if ($image && !in_array($image, $allImages)) $allImages[] = $image;
                 }
             }
 
             if (!empty($parsedVariants)) {
+                $validated['stock'] = $totalStock > 0 ? $totalStock : $validated['stock'];
                 $validated['variants'] = $parsedVariants;
                 $validated['colors']   = $allColors;
                 if (!empty($allSizes)) $validated['sizes'] = $allSizes;

@@ -54,7 +54,7 @@
                                 <span class="bg-emerald-50 text-emerald-700 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-emerald-200">● {{ $a->status }}</span>
                             </td>
                             <td class="px-5 py-4 text-right space-x-1">
-                                <form action="{{ route('admin.affiliates.payout', $a->id) }}" method="POST" class="inline" onsubmit="return confirm('Cairkan komisi Rp {{ number_format($a->commission_earned, 0, ',', '.') }} untuk {{ $a->user->name }}?')">
+                                <form action="{{ route('admin.affiliates.payout', $a->id) }}" method="POST" class="inline" @submit.prevent="$dispatch('open-confirm', { title: 'Konfirmasi Pencairan', message: 'Proses pencairan dana komisi sebesar Rp {{ number_format($a->commission_earned, 0, ',', '.') }} ke pengguna {{ $a->user->name }}?', confirmText: 'Ya, Cairkan', action: () => $el.submit() })">
                                     @csrf
                                     <button type="submit" {{ $a->commission_earned <= 0 ? 'disabled' : '' }} class="text-xs font-bold {{ $a->commission_earned > 0 ? 'text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100 cursor-pointer' : 'text-slate-400 bg-slate-100 border-slate-200 opacity-50 cursor-not-allowed' }} px-3 py-1.5 rounded-lg border transition-colors">
                                         Cairkan Komisi

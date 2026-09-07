@@ -174,7 +174,7 @@
                                         Edit
                                     </button>
 
-                                    <form action="{{ route('admin.products.delete', $p->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus produk ini?')">
+                                    <form action="{{ route('admin.products.delete', $p->id) }}" method="POST" @submit.prevent="$dispatch('open-confirm', { message: 'Hapus produk ini? Produk yang dihapus akan ditarik dari katalog secara permanen.', action: () => $el.submit() })">
                                         @csrf
                                         <button type="submit" class="text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg border border-red-200 transition-colors cursor-pointer">
                                             Hapus
@@ -249,7 +249,7 @@
                         <span>Edit Produk</span>
                     </button>
 
-                    <form action="{{ route('admin.products.delete', $p->id) }}" method="POST" class="flex-1" onsubmit="return confirm('Apakah Anda yakin ingin menghapus produk ini?')">
+                    <form action="{{ route('admin.products.delete', $p->id) }}" method="POST" class="flex-1" @submit.prevent="$dispatch('open-confirm', { message: 'Hapus produk ini? Produk yang dihapus akan ditarik dari katalog secara permanen.', action: () => $el.submit() })">
                         @csrf
                         <button type="submit" class="w-full text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 py-2 rounded-xl border border-red-200 transition-colors text-center cursor-pointer flex items-center justify-center gap-1.5">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -345,35 +345,50 @@
                     <!-- Dynamic Variant Rows -->
                     <div class="space-y-2.5 max-h-60 overflow-y-auto pr-1">
                         <template x-for="(varItem, index) in addVariants" :key="index">
-                            <div class="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs space-y-2">
+                            <div class="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs space-y-3">
                                 <div class="flex items-center justify-between border-b border-slate-100 pb-1.5">
-                                    <span class="text-[11px] font-semibold text-blue-700" x-text="'Varian #' + (index + 1)"></span>
-                                    <button type="button" @click="removeVariantRow('add', index)" class="text-red-500 hover:text-red-700 font-bold text-xs px-2 py-0.5 bg-red-50 hover:bg-red-100 rounded transition-colors cursor-pointer" title="Hapus Varian">
+                                    <span class="text-[11px] font-semibold text-blue-700" x-text="'Warna/Varian #' + (index + 1)"></span>
+                                    <button type="button" @click="removeVariantRow('add', index)" class="text-red-500 hover:text-red-700 font-bold text-xs px-2 py-0.5 bg-red-50 hover:bg-red-100 rounded transition-colors cursor-pointer" title="Hapus Warna">
                                         ✕ Hapus
                                     </button>
                                 </div>
-                                <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
-                                    <div class="sm:col-span-2">
-                                        <label class="block text-[10px] font-bold text-slate-500 uppercase">Warna</label>
-                                        <input type="text" :name="'variants[' + index + '][color]'" x-model="varItem.color" placeholder="Kuning" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-500 uppercase">Nama Warna</label>
+                                        <input type="text" :name="'variants[' + index + '][color]'" x-model="varItem.color" placeholder="Misal: Kuning" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none">
                                     </div>
-                                    <div class="sm:col-span-2">
-                                        <label class="block text-[10px] font-bold text-slate-500 uppercase">Ukuran</label>
-                                        <input type="text" :name="'variants[' + index + '][sizes]'" x-model="varItem.sizes" placeholder="M / 42" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none">
-                                    </div>
-                                    <div class="sm:col-span-3">
-                                        <label class="block text-[10px] font-bold text-slate-500 uppercase">Harga (Rp)</label>
-                                        <input type="number" :name="'variants[' + index + '][price]'" min="0" x-model.number="varItem.price" placeholder="50000" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none">
-                                    </div>
-                                    <div class="sm:col-span-2">
-                                        <label class="block text-[10px] font-bold text-slate-500 uppercase">Stok</label>
-                                        <input type="number" :name="'variants[' + index + '][stock]'" min="0" x-model.number="varItem.stock" placeholder="15" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none">
-                                    </div>
-                                    <div class="sm:col-span-3">
-                                        <label class="block text-[10px] font-bold text-slate-500 uppercase">Gambar Varian</label>
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-500 uppercase">Gambar Khusus Warna</label>
                                         <input type="file" :name="'variant_images[' + index + ']'" accept="image/*" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-1.5 py-1 text-[10px] font-medium text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none file:mr-1 file:py-0.5 file:px-1 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
                                         <input type="hidden" :name="'variants[' + index + '][existing_image]'" :value="varItem.image">
                                     </div>
+                                </div>
+                                
+                                <!-- Nested Sizes -->
+                                <div class="bg-slate-50 rounded-lg p-2 border border-slate-200 space-y-2">
+                                    <div class="flex items-center justify-between">
+                                        <label class="block text-[10px] font-bold text-slate-500 uppercase">Daftar Ukuran & Harga</label>
+                                        <button type="button" @click="varItem.sizes.push({name: '', price: 0, stock: 10})" class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-[10px] font-bold hover:bg-blue-200 transition-colors cursor-pointer">
+                                            + Tambah Ukuran
+                                        </button>
+                                    </div>
+                                    
+                                    <template x-for="(sz, szIndex) in varItem.sizes" :key="szIndex">
+                                        <div class="flex items-center gap-2">
+                                            <div class="flex-1">
+                                                <input type="text" :name="'variants[' + index + '][sizes][' + szIndex + '][name]'" x-model="sz.name" placeholder="Ukuran (S/40)" class="w-full bg-white border border-slate-200 rounded text-xs px-2 py-1 focus:border-blue-700 focus:outline-none font-bold">
+                                            </div>
+                                            <div class="flex-1">
+                                                <input type="number" min="0" :name="'variants[' + index + '][sizes][' + szIndex + '][price]'" x-model.number="sz.price" placeholder="Harga" class="w-full bg-white border border-slate-200 rounded text-xs px-2 py-1 focus:border-blue-700 focus:outline-none font-bold">
+                                            </div>
+                                            <div class="w-20">
+                                                <input type="number" min="0" :name="'variants[' + index + '][sizes][' + szIndex + '][stock]'" x-model.number="sz.stock" placeholder="Stok" class="w-full bg-white border border-slate-200 rounded text-xs px-2 py-1 focus:border-blue-700 focus:outline-none font-bold">
+                                            </div>
+                                            <button type="button" @click="varItem.sizes.splice(szIndex, 1)" class="text-red-500 hover:text-red-700 p-1 cursor-pointer">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                            </button>
+                                        </div>
+                                    </template>
                                 </div>
                             </div>
                         </template>
@@ -491,32 +506,20 @@
                     <!-- Dynamic Variant Rows -->
                     <div class="space-y-2.5 max-h-60 overflow-y-auto pr-1">
                         <template x-for="(varItem, index) in editVariants" :key="index">
-                            <div class="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs space-y-2">
+                            <div class="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs space-y-3">
                                 <div class="flex items-center justify-between border-b border-slate-100 pb-1.5">
-                                    <span class="text-[11px] font-semibold text-blue-700" x-text="'Varian #' + (index + 1)"></span>
-                                    <button type="button" @click="removeVariantRow('edit', index)" class="text-red-500 hover:text-red-700 font-bold text-xs px-2 py-0.5 bg-red-50 hover:bg-red-100 rounded transition-colors cursor-pointer" title="Hapus Varian">
+                                    <span class="text-[11px] font-semibold text-blue-700" x-text="'Warna/Varian #' + (index + 1)"></span>
+                                    <button type="button" @click="removeVariantRow('edit', index)" class="text-red-500 hover:text-red-700 font-bold text-xs px-2 py-0.5 bg-red-50 hover:bg-red-100 rounded transition-colors cursor-pointer" title="Hapus Warna">
                                         ✕ Hapus
                                     </button>
                                 </div>
-                                <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
-                                    <div class="sm:col-span-2">
-                                        <label class="block text-[10px] font-bold text-slate-500 uppercase">Warna</label>
-                                        <input type="text" :name="'variants[' + index + '][color]'" x-model="varItem.color" placeholder="Kuning" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-500 uppercase">Nama Warna</label>
+                                        <input type="text" :name="'variants[' + index + '][color]'" x-model="varItem.color" placeholder="Misal: Kuning" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none">
                                     </div>
-                                    <div class="sm:col-span-2">
-                                        <label class="block text-[10px] font-bold text-slate-500 uppercase">Ukuran</label>
-                                        <input type="text" :name="'variants[' + index + '][sizes]'" x-model="varItem.sizes" placeholder="M / 42" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none">
-                                    </div>
-                                    <div class="sm:col-span-3">
-                                        <label class="block text-[10px] font-bold text-slate-500 uppercase">Harga (Rp)</label>
-                                        <input type="number" :name="'variants[' + index + '][price]'" min="0" x-model.number="varItem.price" placeholder="50000" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none">
-                                    </div>
-                                    <div class="sm:col-span-2">
-                                        <label class="block text-[10px] font-bold text-slate-500 uppercase">Stok</label>
-                                        <input type="number" :name="'variants[' + index + '][stock]'" min="0" x-model.number="varItem.stock" placeholder="15" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none">
-                                    </div>
-                                    <div class="sm:col-span-3">
-                                        <label class="block text-[10px] font-bold text-slate-500 uppercase">Gambar Varian</label>
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-500 uppercase">Gambar Khusus Warna</label>
                                         <input type="file" :name="'variant_images[' + index + ']'" accept="image/*" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-1.5 py-1 text-[10px] font-medium text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none file:mr-1 file:py-0.5 file:px-1 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
                                         <input type="hidden" :name="'variants[' + index + '][existing_image]'" :value="varItem.image">
                                         <template x-if="varItem.image">
@@ -526,6 +529,33 @@
                                             </div>
                                         </template>
                                     </div>
+                                </div>
+                                
+                                <!-- Nested Sizes -->
+                                <div class="bg-slate-50 rounded-lg p-2 border border-slate-200 space-y-2">
+                                    <div class="flex items-center justify-between">
+                                        <label class="block text-[10px] font-bold text-slate-500 uppercase">Daftar Ukuran & Harga</label>
+                                        <button type="button" @click="varItem.sizes.push({name: '', price: 0, stock: 10})" class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-[10px] font-bold hover:bg-blue-200 transition-colors cursor-pointer">
+                                            + Tambah Ukuran
+                                        </button>
+                                    </div>
+                                    
+                                    <template x-for="(sz, szIndex) in varItem.sizes" :key="szIndex">
+                                        <div class="flex items-center gap-2">
+                                            <div class="flex-1">
+                                                <input type="text" :name="'variants[' + index + '][sizes][' + szIndex + '][name]'" x-model="sz.name" placeholder="Ukuran (S/40)" class="w-full bg-white border border-slate-200 rounded text-xs px-2 py-1 focus:border-blue-700 focus:outline-none font-bold">
+                                            </div>
+                                            <div class="flex-1">
+                                                <input type="number" min="0" :name="'variants[' + index + '][sizes][' + szIndex + '][price]'" x-model.number="sz.price" placeholder="Harga" class="w-full bg-white border border-slate-200 rounded text-xs px-2 py-1 focus:border-blue-700 focus:outline-none font-bold">
+                                            </div>
+                                            <div class="w-20">
+                                                <input type="number" min="0" :name="'variants[' + index + '][sizes][' + szIndex + '][stock]'" x-model.number="sz.stock" placeholder="Stok" class="w-full bg-white border border-slate-200 rounded text-xs px-2 py-1 focus:border-blue-700 focus:outline-none font-bold">
+                                            </div>
+                                            <button type="button" @click="varItem.sizes.splice(szIndex, 1)" class="text-red-500 hover:text-red-700 p-1 cursor-pointer">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                            </button>
+                                        </div>
+                                    </template>
                                 </div>
                             </div>
                         </template>
@@ -553,7 +583,7 @@ function productManager() {
         showAddModal: false,
         showEditModal: false,
         addVariants: [
-            { color: 'Kuning', stock: 15, sizes: 'S', price: 150000, image: '' }
+            { color: 'Standar', image: '', sizes: [{ name: '', price: 0, stock: 10 }] }
         ],
         editVariants: [],
         editModalData: {
@@ -571,9 +601,9 @@ function productManager() {
         },
         addVariantRow(type) {
             if (type === 'add') {
-                this.addVariants.push({ color: '', stock: 10, sizes: '', price: 0, image: '' });
+                this.addVariants.push({ color: '', image: '', sizes: [{ name: '', price: 0, stock: 10 }] });
             } else {
-                this.editVariants.push({ color: '', stock: 10, sizes: '', price: 0, image: '' });
+                this.editVariants.push({ color: '', image: '', sizes: [{ name: '', price: 0, stock: 10 }] });
             }
         },
         removeVariantRow(type, index) {
@@ -602,24 +632,30 @@ function productManager() {
 
             // Format editVariants
             if (Array.isArray(p.variants) && p.variants.length > 0) {
-                this.editVariants = p.variants.map(v => ({
-                    color: v.color || '',
-                    stock: v.stock !== undefined ? v.stock : 10,
-                    sizes: Array.isArray(v.sizes) ? v.sizes.join(', ') : (v.sizes || ''),
-                    price: v.price || p.price || 0,
-                    image: v.image || ''
-                }));
+                let grouped = {};
+                p.variants.forEach(v => {
+                    let col = v.color || 'Standar';
+                    if (!grouped[col]) grouped[col] = { color: col, image: v.image || '', sizes: [] };
+                    grouped[col].sizes.push({
+                        name: v.size || (Array.isArray(v.sizes) ? v.sizes[0] : v.sizes) || '',
+                        price: v.price || p.price || 0,
+                        stock: v.stock !== undefined ? v.stock : 10
+                    });
+                });
+                this.editVariants = Object.values(grouped);
             } else if (Array.isArray(p.colors) && p.colors.length > 0) {
                 this.editVariants = p.colors.map(c => ({
                     color: typeof c === 'object' ? c.name : c,
-                    stock: p.stock || 10,
-                    sizes: Array.isArray(p.sizes) ? p.sizes.join(', ') : (p.sizes || ''),
-                    price: p.price || 0,
-                    image: typeof c === 'object' ? c.image : ''
+                    image: typeof c === 'object' ? c.image : '',
+                    sizes: [{
+                        name: Array.isArray(p.sizes) ? p.sizes.join(', ') : (p.sizes || ''),
+                        price: p.price || 0,
+                        stock: p.stock || 10
+                    }]
                 }));
             } else {
                 this.editVariants = [
-                    { color: 'Standar', stock: p.stock || 10, sizes: 'S', price: p.price || 0, image: p.image || '' }
+                    { color: 'Standar', image: p.image || '', sizes: [{ name: 'S', price: p.price || 0, stock: p.stock || 10 }] }
                 ];
             }
 

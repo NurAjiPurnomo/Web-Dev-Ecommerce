@@ -163,7 +163,7 @@
                             </td>
 
                             <td class="px-5 py-4 text-right whitespace-nowrap">
-                                <form action="{{ route('admin.reviews.delete', $r->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus ulasan penilaian produk ini?')">
+                                <form action="{{ route('admin.reviews.delete', $r->id) }}" method="POST" @submit.prevent="$dispatch('open-confirm', { message: 'Hapus ulasan ini? Ulasan akan disembunyikan dari halaman produk.', action: () => $el.submit() })">
                                     @csrf
                                     <button type="submit" class="text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg border border-red-200 transition-colors cursor-pointer">
                                         Hapus Ulasan

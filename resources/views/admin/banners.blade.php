@@ -84,7 +84,7 @@
                         >
                             Edit
                         </button>
-                        <form action="{{ route('admin.banners.delete', $b->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus banner promo ini?')">
+                        <form action="{{ route('admin.banners.delete', $b->id) }}" method="POST" @submit.prevent="$dispatch('open-confirm', { message: 'Hapus banner promo ini? Banner tidak akan lagi tampil di halaman utama.', action: () => $el.submit() })">
                             @csrf
                             <button type="submit" class="text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 px-2.5 py-1.5 rounded-lg border border-rose-200 transition-colors cursor-pointer">
                                 Hapus

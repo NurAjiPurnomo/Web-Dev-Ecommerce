@@ -149,7 +149,7 @@
                                 <template x-for="sz in sizes" :key="sz">
                                     <button 
                                         type="button" 
-                                        @click="selectedSize = sz"
+                                        @click="selectSize(sz)"
                                         class="px-3.5 py-1.5 text-xs sm:text-sm rounded-lg transition-all cursor-pointer select-none font-bold"
                                         :class="selectedSize === sz ? 'border-2 border-blue-700 text-blue-700 bg-blue-50/70 shadow-2xs' : 'border border-gray-300 text-slate-700 hover:border-gray-400 bg-white'"
                                     >
@@ -404,7 +404,7 @@
                                 <div class="space-y-2">
                                     @foreach(['Kualitas Barang', 'Pelayanan Penjual', 'Kemasan Barang', 'Harga Barang'] as $topic)
                                     <label class="flex items-center gap-2 cursor-pointer">
-                                        <input type="checkbox" class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                                        <input type="checkbox" value="{{ $topic }}" x-model="filterTopics" class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
                                         <span class="text-sm text-slate-600">{{ $topic }}</span>
                                     </label>
                                     @endforeach
@@ -593,6 +593,12 @@ function productDetailApp() {
         activeTab: 'specs',
         reviewFilters: ['Semua', '5 Bintang', '4 Bintang', 'Dengan Foto', 'Dengan Komentar'],
 
+        init() {
+            if (this.selectedColor) {
+                this.selectColor(this.selectedColor, 0);
+            }
+        },
+
         get totalPrice() {
             return this.unitPrice * (this.qty || 1);
         },
@@ -615,19 +621,44 @@ function productDetailApp() {
             this.selectedColor = color;
             
             // Check structured variants match
-            let matchVar = Array.isArray(this.variantsList) ? this.variantsList.find(v => (v.color || '').toLowerCase() === (color || '').toLowerCase()) : null;
-            if (matchVar) {
-                if (matchVar.image) this.activeImage = matchVar.image;
-                if (matchVar.stock !== undefined && matchVar.stock !== null) this.remainingStock = matchVar.stock;
-                if (Array.isArray(matchVar.sizes) && matchVar.sizes.length > 0) {
-                    this.sizes = matchVar.sizes;
-                    this.selectedSize = matchVar.sizes[0];
+            let colorVars = Array.isArray(this.variantsList) ? this.variantsList.filter(v => (v.color || '').toLowerCase() === (color || '').toLowerCase()) : [];
+            if (colorVars.length > 0) {
+                let firstMatch = colorVars[0];
+                if (firstMatch.image) this.activeImage = firstMatch.image;
+                
+                // Get available sizes for this color
+                let availableSizes = colorVars.map(v => v.size || (Array.isArray(v.sizes) ? v.sizes[0] : v.sizes)).filter(Boolean);
+                // unique sizes
+                this.sizes = [...new Set(availableSizes)];
+                
+                if (this.sizes.length > 0) {
+                    if (!this.sizes.includes(this.selectedSize)) {
+                        this.selectSize(this.sizes[0]);
+                    } else {
+                        this.selectSize(this.selectedSize);
+                    }
+                } else {
+                    if (firstMatch.stock !== undefined && firstMatch.stock !== null) this.remainingStock = firstMatch.stock;
+                    if (firstMatch.price !== undefined && firstMatch.price !== null) {
+                        this.unitPrice = parseInt(String(firstMatch.price).replace(/[^0-9]/g, ''), 10);
+                    }
                 }
             } else {
                 if (this.colorVariants && this.colorVariants[index] && this.colorVariants[index].image) {
                     this.activeImage = this.colorVariants[index].image;
                 } else if (this.images && this.images[index]) {
                     this.activeImage = this.images[index];
+                }
+            }
+        },
+        selectSize(sz) {
+            this.selectedSize = sz;
+            let matchVar = Array.isArray(this.variantsList) ? this.variantsList.find(v => (v.color || '').toLowerCase() === (this.selectedColor || '').toLowerCase() && (v.size === sz || (Array.isArray(v.sizes) && v.sizes.includes(sz)) || v.sizes === sz)) : null;
+            
+            if (matchVar) {
+                if (matchVar.stock !== undefined && matchVar.stock !== null) this.remainingStock = matchVar.stock;
+                if (matchVar.price !== undefined && matchVar.price !== null) {
+                    this.unitPrice = parseInt(String(matchVar.price).replace(/[^0-9]/g, ''), 10);
                 }
             }
         },
@@ -653,6 +684,10 @@ function productDetailApp() {
         },
 
         addToCart() {
+            let matchVar = Array.isArray(this.variantsList) ? this.variantsList.find(v => (v.color || '').toLowerCase() === (this.selectedColor || '').toLowerCase() && (v.size === this.selectedSize || (Array.isArray(v.sizes) && v.sizes.includes(this.selectedSize)) || v.sizes === this.selectedSize)) : null;
+            let variantId = matchVar ? (matchVar.id || matchVar.variant_id) : null;
+            let imageId = matchVar ? (matchVar.image_id || null) : null;
+
             fetch("{{ route('cart.add') }}", {
                 method: 'POST',
                 headers: {
@@ -662,10 +697,14 @@ function productDetailApp() {
                 },
                 body: JSON.stringify({
                     product_id: {{ $product['id'] }},
+                    variant_id: variantId,
+                    image_id: imageId,
                     name: @json($product['title']),
-                    price: @json($product['price']),
+                    price: this.unitPrice,
                     image: this.activeImage,
                     variant: this.variantString,
+                    color: this.selectedColor,
+                    size: this.selectedSize,
                     qty: this.qty
                 })
             }).then(res => res.json()).then(data => {
@@ -690,6 +729,10 @@ function productDetailApp() {
         },
 
         buyNow() {
+            let matchVar = Array.isArray(this.variantsList) ? this.variantsList.find(v => (v.color || '').toLowerCase() === (this.selectedColor || '').toLowerCase() && (v.size === this.selectedSize || (Array.isArray(v.sizes) && v.sizes.includes(this.selectedSize)) || v.sizes === this.selectedSize)) : null;
+            let variantId = matchVar ? (matchVar.id || matchVar.variant_id) : null;
+            let imageId = matchVar ? (matchVar.image_id || null) : null;
+
             fetch("{{ route('cart.buyNow') }}", {
                 method: 'POST',
                 headers: {
@@ -699,10 +742,14 @@ function productDetailApp() {
                 },
                 body: JSON.stringify({
                     product_id: {{ $product['id'] }},
+                    variant_id: variantId,
+                    image_id: imageId,
                     name: @json($product['title']),
-                    price: @json($product['price']),
+                    price: this.unitPrice,
                     image: this.activeImage,
                     variant: this.variantString,
+                    color: this.selectedColor,
+                    size: this.selectedSize,
                     qty: this.qty
                 })
             }).then(res => res.json()).then(data => {
@@ -758,6 +805,7 @@ function productReviews(reviewsData) {
         allReviews: reviewsData || [],
         filterMedia: false,
         filterRatings: [], // array of selected ratings, e.g. ["5", "4"]
+        filterTopics: [], // array of selected topics
         sortBy: 'terbaru',
         
         get filteredReviews() {
@@ -772,8 +820,25 @@ function productReviews(reviewsData) {
                     // Alpine bindings for checkbox array are strings
                     matchRating = this.filterRatings.includes(String(review.rating));
                 }
+
+                let matchTopic = true;
+                if (this.filterTopics.length > 0) {
+                    const comment = (review.comment || '').toLowerCase();
+                    matchTopic = this.filterTopics.some(topic => {
+                        if (topic === 'Kualitas Barang') {
+                            return comment.includes('kualitas') || comment.includes('bagus') || comment.includes('bahan') || comment.includes('deskripsi') || comment.includes('awet');
+                        } else if (topic === 'Pelayanan Penjual') {
+                            return comment.includes('pelayanan') || comment.includes('pengiriman') || comment.includes('respon') || comment.includes('ramah') || comment.includes('toko');
+                        } else if (topic === 'Kemasan Barang') {
+                            return comment.includes('kemasan') || comment.includes('packing') || comment.includes('rapi') || comment.includes('aman');
+                        } else if (topic === 'Harga Barang') {
+                            return comment.includes('harga') || comment.includes('murah') || comment.includes('mahal') || comment.includes('worth');
+                        }
+                        return false;
+                    });
+                }
                 
-                return matchMedia && matchRating;
+                return matchMedia && matchRating && matchTopic;
             });
 
             // Sorting logic

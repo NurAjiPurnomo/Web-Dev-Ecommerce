@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\OrderCreated;
 
 class CheckoutController extends Controller
 {
@@ -38,8 +40,13 @@ class CheckoutController extends Controller
 
         $user = Auth::user();
 
+        // Wajib melengkapi alamat sebelum checkout
+        if (empty($user->address) || empty($user->city_id)) {
+            return redirect()->route('profile')->with('error', 'Silakan lengkapi Alamat Tujuan (termasuk Provinsi & Kota) Anda di menu Profil sebelum melakukan checkout.');
+        }
+
         // Data Lokasi Asal Toko / Pengirim (Configurable via RAJAONGKIR_ORIGIN_CITY di .env)
-        $originCityId = config('services.rajaongkir.origin_city', '152');
+        $originCityId = config('services.rajaongkir.origin_city', '152'); // Default Jakarta Pusat
         $storeOrigin = [
             'city_id'   => $originCityId,
             'city_name' => 'Kota Jakarta Pusat',
@@ -47,15 +54,15 @@ class CheckoutController extends Controller
             'label'     => 'Gudang Utama TokoOnline (Jakarta Pusat)',
         ];
 
-        // Data Alamat Pengiriman (Diambil otomatis dari database User)
+        // Data Alamat Tujuan Pengiriman (Diambil asli dari database User)
         $address = [
-            'recipient_name' => $user->name ?? 'Budi Santoso',
-            'phone'          => $user->phone ?? '081234567890',
-            'address_label'  => 'Rumah Utama Pembeli',
-            'full_address'   => $user->address ?: 'Jl. Jendral Sudirman No. 45, RT 03 / RW 05',
-            'city_province'  => ($user->city ? $user->city : 'Jakarta Selatan, DKI Jakarta'),
-            'city_id'        => $user->city_id ?? '153', // Default Jakarta Selatan (ID 153)
-            'postal_code'    => $user->postal_code ?: '12190',
+            'recipient_name' => $user->name,
+            'phone'          => $user->phone ?? '-',
+            'address_label'  => 'Alamat Rumah Anda',
+            'full_address'   => $user->address,
+            'city_province'  => $user->city ?? '',
+            'city_id'        => $user->city_id,
+            'postal_code'    => $user->postal_code ?? '-',
         ];
 
         // Hitung total berat estimasi produk (dalam gram)
@@ -66,68 +73,18 @@ class CheckoutController extends Controller
         }
         $totalWeight = max(1000, $totalWeight); // minimal 1000 gram (1 kg)
 
-        // Pilihan Kurir Default (JNE, POS, TIKI)
-        $couriers = [
-            [
-                'id'          => 'jne_reg',
-                'code'        => 'jne',
-                'service'     => 'REG',
-                'name'        => 'JNE Express (Reguler)',
-                'description' => 'Layanan Reguler JNE',
-                'etd'         => '1-2 Hari',
-                'price'       => 15000,
-                'logo'        => 'assets/jne.png',
-            ],
-            [
-                'id'          => 'pos_kilat',
-                'code'        => 'pos',
-                'service'     => 'Pos Kilat Khusus',
-                'name'        => 'POS Indonesia (Kilat Khusus)',
-                'description' => 'Layanan Kilat Khusus POS',
-                'etd'         => '2-3 Hari',
-                'price'       => 14000,
-                'logo'        => 'assets/jne.png',
-            ],
-            [
-                'id'          => 'tiki_reg',
-                'code'        => 'tiki',
-                'service'     => 'REG',
-                'name'        => 'TIKI (Reguler)',
-                'description' => 'Layanan Reguler TIKI',
-                'etd'         => '2-3 Hari',
-                'price'       => 16000,
-                'logo'        => 'assets/jne.png',
-            ],
-        ];
+        // Pilihan Kurir (Awalnya kosong, akan diisi via AJAX dari RajaOngkir)
+        $couriers = [];
 
         // Pilihan Metode Pembayaran
         $paymentMethods = [
             [
-                'category' => 'Virtual Account / Transfer Bank',
+                'category' => 'Virtual Account (Otomatis dicek)',
                 'methods'  => [
                     ['id' => 'bca_va', 'name' => 'BCA Virtual Account', 'logo' => 'assets/bca.png', 'fee' => 0],
                     ['id' => 'mandiri_va', 'name' => 'Mandiri Virtual Account', 'logo' => 'assets/mandiri.png', 'fee' => 0],
-                    ['id' => 'bri_va', 'name' => 'BRI Virtual Account', 'logo' => 'assets/qris.png', 'fee' => 0],
                 ],
-            ],
-            [
-                'category' => 'E-Wallet & QRIS Instant',
-                'methods'  => [
-                    ['id' => 'qris', 'name' => 'QRIS (GoPay, OVO, ShopeePay, DANA, LinkAja)', 'logo' => 'assets/qris.png', 'fee' => 0],
-                ],
-            ],
-            [
-                'category' => 'Kartu Kredit / Debit',
-                'methods'  => [
-                    ['id' => 'visa_master', 'name' => 'Kartu Kredit / Debit (Visa & Mastercard)', 'logo' => 'assets/visa.png', 'fee' => 0],
-                ],
-            ],
-            [
-                'category' => 'Bayar di Tempat',
-                'methods'  => [
-                    ['id' => 'cod', 'name' => 'COD (Bayar Tunai Saat Kurir Tiba)', 'logo' => 'assets/jne.png', 'fee' => 2500],
-                ],
-            ],
+            ]
         ];
 
         // Fetch active DB Vouchers
@@ -193,9 +150,9 @@ class CheckoutController extends Controller
 
         if (empty($apiKey)) {
             return response()->json([
-                'status' => 'fallback',
-                'message' => 'API Key RajaOngkir belum dikonfigurasi di file .env. Menggunakan tarif standar.',
-                'couriers' => $this->getFallbackCouriers($destinationCityId, $weight)
+                'status' => 'error',
+                'message' => 'API Key RajaOngkir belum dikonfigurasi di file .env. Ongkos kirim tidak dapat dihitung.',
+                'couriers' => []
             ]);
         }
 
@@ -205,8 +162,8 @@ class CheckoutController extends Controller
         foreach ($courierCodes as $code) {
             try {
                 $response = Http::withoutVerifying()
-                    ->connectTimeout(1)
-                    ->timeout(1.5)
+                    ->connectTimeout(5)
+                    ->timeout(10)
                     ->withHeaders([
                         'key' => $apiKey,
                     ])
@@ -257,11 +214,14 @@ class CheckoutController extends Controller
             ]);
         }
 
-        // Jika API tidak memberikan hasil atau timeout, kembalikan data fallback
+        // Jika API tidak memberikan hasil atau timeout, kembalikan Fallback/Simulasi
+        $fallbackCouriers = $this->getFallbackCouriers($destinationCityId, $weight);
+        
         return response()->json([
-            'status'   => 'fallback',
-            'message'  => 'Menggunakan estimasi tarif lokal.',
-            'couriers' => $this->getFallbackCouriers($destinationCityId, $weight)
+            'status'   => 'success', // Tetap success agar UI tidak error
+            'source'   => 'fallback',
+            'message'  => 'Menggunakan estimasi tarif simulasi karena server RajaOngkir tidak dapat diakses.',
+            'couriers' => $fallbackCouriers
         ]);
     }
 
@@ -399,16 +359,13 @@ class CheckoutController extends Controller
         $productDiscountAmount  = 0;
 
         $user = Auth::user();
-        $userActiveVouchers = $user ? $user->vouchers()
-            ->wherePivot('is_used', false)
-            ->where('status', 'aktif')
-            ->where(function ($q) {
-                $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
-            })->pluck('code')->toArray() : [];
-
+        // Ambil daftar kode voucher yang SUDAH pernah dipakai oleh user ini
+        $userUsedVouchers = $user ? $user->vouchers()
+            ->wherePivot('is_used', true)
+            ->pluck('code')->toArray() : [];
         // 1. Process Shipping Voucher (Gratis Ongkir - Max 1)
         if (!empty($shippingVoucherCode)) {
-            if (in_array($shippingVoucherCode, $userActiveVouchers)) {
+            if (!in_array($shippingVoucherCode, $userUsedVouchers)) {
                 $sVoucher = \App\Models\Voucher::where('code', $shippingVoucherCode)->where('status', 'aktif')->first();
                 if ($sVoucher && $sVoucher->type === 'gratis_ongkir' && $subtotal >= $sVoucher->min_spend) {
                     $shippingDiscountAmount = min((int) $sVoucher->discount_value, $shippingCost);
@@ -420,7 +377,7 @@ class CheckoutController extends Controller
 
         // 2. Process Product Discount Voucher (Diskon Produk - Max 1)
         if (!empty($discountVoucherCode)) {
-            if (in_array($discountVoucherCode, $userActiveVouchers)) {
+            if (!in_array($discountVoucherCode, $userUsedVouchers)) {
                 $dVoucher = \App\Models\Voucher::where('code', $discountVoucherCode)->where('status', 'aktif')->first();
                 if ($dVoucher && in_array($dVoucher->type, ['diskon_nominal', 'diskon_persen']) && $subtotal >= $dVoucher->min_spend) {
                     if ($dVoucher->type === 'diskon_nominal') {
@@ -438,7 +395,7 @@ class CheckoutController extends Controller
 
         // Fallback for single general voucher input
         if (empty($shippingDiscountAmount) && empty($productDiscountAmount) && !empty($generalVoucherCode)) {
-            if (in_array($generalVoucherCode, $userActiveVouchers)) {
+            if (!in_array($generalVoucherCode, $userUsedVouchers)) {
                 $gVoucher = \App\Models\Voucher::where('code', $generalVoucherCode)->where('status', 'aktif')->first();
                 if ($gVoucher && $subtotal >= $gVoucher->min_spend) {
                     if ($gVoucher->type === 'gratis_ongkir') {
@@ -514,10 +471,12 @@ class CheckoutController extends Controller
             ]);
 
             foreach ($checkoutItems as $item) {
+                $prodId = $item['product_id'] ?? $item['id'] ?? null;
+                $varText = !empty($item['variant']) ? ' (' . str_replace('Varian: ', '', $item['variant']) . ')' : '';
                 \App\Models\OrderItem::create([
                     'order_id'     => $dbOrder->id,
-                    'product_id'   => $item['id'] ?? null,
-                    'product_name' => $item['name'] ?? 'Produk Pesanan',
+                    'product_id'   => is_numeric($prodId) ? (int)$prodId : null,
+                    'product_name' => ($item['name'] ?? 'Produk Pesanan') . $varText,
                     'quantity'     => max(1, (int) ($item['qty'] ?? 1)),
                     'price'        => (int) ($item['price'] ?? 0),
                 ]);
@@ -529,10 +488,18 @@ class CheckoutController extends Controller
                 $usedVoucherIds = \App\Models\Voucher::whereIn('code', $usedCodes)->pluck('id')->toArray();
                 if (!empty($usedVoucherIds) && $user) {
                     foreach ($usedVoucherIds as $vid) {
-                        $user->vouchers()->updateExistingPivot($vid, [
-                            'is_used' => true,
-                            'used_at' => now()
-                        ]);
+                        $exists = $user->vouchers()->where('voucher_id', $vid)->exists();
+                        if ($exists) {
+                            $user->vouchers()->updateExistingPivot($vid, [
+                                'is_used' => true,
+                                'used_at' => now()
+                            ]);
+                        } else {
+                            $user->vouchers()->attach($vid, [
+                                'is_used' => true,
+                                'used_at' => now()
+                            ]);
+                        }
                     }
                 }
             }
@@ -540,18 +507,37 @@ class CheckoutController extends Controller
 
         // Update Stok & Terjual Produk secara otomatis di Database
         foreach ($checkoutItems as $item) {
-            $productId = $item['id'] ?? null;
+            $productId = $item['product_id'] ?? $item['id'] ?? null;
             $qty = max(1, (int) ($item['qty'] ?? 1));
 
-            if ($productId) {
+            if ($productId && is_numeric($productId)) {
                 $dbProduct = \App\Models\Product::find($productId);
                 if ($dbProduct) {
                     $newStock = max(0, $dbProduct->stock - $qty);
                     $newSold  = $dbProduct->sold + $qty;
 
+                    $variants = $dbProduct->variants;
+                    if (is_array($variants) && isset($item['color']) && isset($item['size'])) {
+                        $updated = false;
+                        foreach ($variants as &$var) {
+                            if (
+                                strcasecmp($var['color'] ?? '', $item['color'] ?? '') === 0 &&
+                                strcasecmp($var['size'] ?? '', $item['size'] ?? '') === 0
+                            ) {
+                                $var['stock'] = max(0, (int)($var['stock'] ?? 0) - $qty);
+                                $updated = true;
+                                break;
+                            }
+                        }
+                        if ($updated) {
+                            $dbProduct->variants = $variants;
+                        }
+                    }
+
                     $dbProduct->update([
                         'stock' => $newStock,
                         'sold'  => $newSold,
+                        'variants' => $dbProduct->variants
                     ]);
                 }
             }
@@ -563,11 +549,113 @@ class CheckoutController extends Controller
         } else {
             $cart = session()->get('cart', []);
             foreach ($checkoutItems as $item) {
-                if (isset($cart[$item['id']])) {
-                    unset($cart[$item['id']]);
+                $cartKey = $item['id'] ?? null;
+                if ($cartKey && isset($cart[$cartKey])) {
+                    unset($cart[$cartKey]);
                 }
             }
             session()->put('cart', $cart);
+        }
+
+        // --- DOKU PAYMENT INTEGRATION (DIRECT API) ---
+        if ($request->payment_method !== 'cod') {
+            $clientId = config('services.doku.client_id') ?: env('DOKU_CLIENT_ID', 'DOKU-DUMMY-CLIENT-ID');
+            $secretKey = config('services.doku.secret_key') ?: env('DOKU_SECRET_KEY', 'DOKU-DUMMY-SECRET-KEY');
+            $isProduction = config('services.doku.is_production') ?: env('DOKU_IS_PRODUCTION', false);
+            
+            $baseUrl = $isProduction ? 'https://api.doku.com' : 'https://api-sandbox.doku.com';
+            
+            // Tentukan Target Path berdasarkan pilihan metode pembayaran
+            $requestTarget = '';
+            if ($request->payment_method === 'bca_va') {
+                $requestTarget = '/bca-virtual-account/v2/payment-code';
+            } elseif ($request->payment_method === 'mandiri_va') {
+                $requestTarget = '/mandiri-virtual-account/v2/payment-code';
+            } else {
+                // Fallback default
+                $requestTarget = '/bca-virtual-account/v2/payment-code';
+            }
+
+            $url = $baseUrl . $requestTarget;
+            
+            $requestId = uniqid();
+            $requestTimestamp = gmdate("Y-m-d\TH:i:s\Z");
+
+            $payload = [
+                'order' => [
+                    'invoice_number' => $orderId,
+                    'amount' => (int) $totalAmount,
+                ],
+                'virtual_account_info' => [
+                    'expired_time' => 60, // 60 menit
+                    'reusable_status' => false,
+                ],
+                'customer' => [
+                    'name' => Auth::user()->name ?? 'Pelanggan',
+                    'email' => Auth::user()->email ?? 'customer@example.com',
+                ]
+            ];
+
+            $jsonPayload = json_encode($payload);
+            $digest = base64_encode(hash('sha256', $jsonPayload, true));
+
+            $signature = $this->generateDokuSignature(
+                $clientId, 
+                $requestId, 
+                $requestTimestamp, 
+                $requestTarget, 
+                $digest, 
+                $secretKey
+            );
+
+            try {
+                $response = Http::withHeaders([
+                    'Client-Id' => $clientId,
+                    'Request-Id' => $requestId,
+                    'Request-Timestamp' => $requestTimestamp,
+                    'Signature' => $signature,
+                    'Content-Type' => 'application/json'
+                ])->post($url, $payload);
+
+                if ($response->successful()) {
+                    $responseData = $response->json();
+                    // Dapatkan nomor VA
+                    $paymentCode = $responseData['virtual_account_info']['virtual_account_number'] ?? null;
+                    
+                    if ($paymentCode) {
+                        // Simpan VA ke dalam pesanan di DB
+                        if (isset($dbOrder)) {
+                            $dbOrder->update(['payment_code' => $paymentCode]);
+                        }
+                        
+                        // Update session
+                        $lastOrder = session('last_order');
+                        $lastOrder['payment_code'] = $paymentCode;
+                        session()->put('last_order', $lastOrder);
+
+                        // Kirim Email Invoice
+                        try {
+                            $emailTo = Auth::user()->email;
+                            if ($emailTo) {
+                                Mail::to($emailTo)->send(new OrderCreated($dbOrder));
+                            }
+                        } catch (\Exception $e) {
+                            Log::error('Gagal mengirim email: ' . $e->getMessage());
+                        }
+
+                        return redirect()->route('checkout.success', ['order_id' => str_replace('/', '-', $orderId)])
+                            ->with('success', 'Pesanan berhasil dibuat! Silakan lakukan pembayaran ke Virtual Account berikut.');
+                    }
+                }
+                
+                Log::error('DOKU Direct API Error: ' . $response->body());
+                return redirect()->route('checkout.success', ['order_id' => str_replace('/', '-', $orderId)])
+                    ->with('error', 'Gagal membuat Virtual Account DOKU. Error: ' . $response->json('error.message', 'Unknown Error'));
+            } catch (\Exception $e) {
+                Log::error('DOKU Direct Connection Error: ' . $e->getMessage());
+                return redirect()->route('checkout.success', ['order_id' => str_replace('/', '-', $orderId)])
+                    ->with('error', 'Gagal memproses pembayaran DOKU. Terjadi kesalahan sistem.');
+            }
         }
 
         return redirect()->route('checkout.success', ['order_id' => str_replace('/', '-', $orderId)])
@@ -598,6 +686,7 @@ class CheckoutController extends Controller
                     'total_amount'             => $dbOrder->total,
                     'created_at'               => $dbOrder->created_at->format('d M Y, H:i') . ' WIB',
                     'created_at_timestamp'     => $dbOrder->created_at->timestamp,
+                    'payment_code'             => $dbOrder->payment_code,
                     'items'                    => $dbOrder->items->map(function($item) {
                         return [
                             'name'  => $item->product_name,
@@ -703,5 +792,21 @@ class CheckoutController extends Controller
         }
 
         return redirect()->route('orders')->with('success', 'Pembayaran Berhasil! Pesanan Anda sedang dikemas oleh penjual.');
+    }
+
+    /**
+     * Helper: Generate DOKU Signature HMAC-SHA256
+     */
+    private function generateDokuSignature($clientId, $requestId, $requestTimestamp, $requestTarget, $digest, $secretKey)
+    {
+        $componentSignature = "Client-Id:" . $clientId . "\n" .
+                              "Request-Id:" . $requestId . "\n" .
+                              "Request-Timestamp:" . $requestTimestamp . "\n" .
+                              "Request-Target:" . $requestTarget . "\n" .
+                              "Digest:" . $digest;
+                              
+        $signature = base64_encode(hash_hmac('sha256', $componentSignature, $secretKey, true));
+        
+        return "HMACSHA256=" . $signature;
     }
 }

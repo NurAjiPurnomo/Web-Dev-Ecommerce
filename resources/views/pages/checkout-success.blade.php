@@ -202,23 +202,23 @@
                     </div>
 
                 <!-- B. VIRTUAL ACCOUNT BANK (BCA, MANDIRI, BRI, BNI) -->
-                @elseif(in_array($payMethod, ['bca', 'mandiri', 'bri', 'bni']))
+                @elseif(in_array($payMethod, ['bca', 'mandiri', 'bri', 'bni', 'bca_va', 'mandiri_va', 'bri_va', 'bni_va']))
                     <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-5 space-y-3">
                         <div class="text-xs font-bold text-slate-800">
-                            Nomor Virtual Account {{ strtoupper($payMethod) }}
+                            Nomor Virtual Account {{ strtoupper(str_replace('_va', '', $payMethod)) }}
                         </div>
 
                         <div class="bg-white border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xs">
                             <div>
                                 <div class="text-[11px] text-slate-500 font-semibold">Nomor Virtual Account:</div>
                                 <div class="font-bold text-slate-900 font-mono text-lg sm:text-xl tracking-wide mt-0.5">
-                                    88012 0812 3456 7890
+                                    {{ $order['payment_code'] ?? 'Sedang Diproses...' }}
                                 </div>
                             </div>
 
                             <button 
                                 type="button" 
-                                @click="copyText('88012081234567890', 'va')"
+                                @click="copyText('{{ $order['payment_code'] ?? '' }}', 'va')"
                                 class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2.5 rounded-lg transition-colors cursor-pointer shrink-0"
                             >
                                 <span x-text="copiedVa ? 'Nomor VA Disalin!' : 'Salin Nomor VA'"></span>
@@ -226,9 +226,9 @@
                         </div>
 
                         <div class="text-xs text-slate-600 space-y-1 pt-1">
-                            <p>1. Buka Mobile Banking / ATM {{ strtoupper($payMethod) }} Anda.</p>
+                            <p>1. Buka Mobile Banking / ATM {{ strtoupper(str_replace('_va', '', $payMethod)) }} Anda.</p>
                             <p>2. Pilih menu <strong>Transfer ➔ Virtual Account</strong>.</p>
-                            <p>3. Masukkan nomor VA <strong>88012081234567890</strong> dan konfirmasi nominal Rp {{ number_format($order['total_amount'] ?? 0, 0, ',', '.') }}.</p>
+                            <p>3. Masukkan nomor VA <strong>{{ $order['payment_code'] ?? 'di atas' }}</strong> dan konfirmasi nominal Rp {{ number_format($order['total_amount'] ?? 0, 0, ',', '.') }}.</p>
                         </div>
                     </div>
 

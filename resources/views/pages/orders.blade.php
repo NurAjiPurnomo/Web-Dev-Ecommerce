@@ -13,14 +13,23 @@
             <span class="text-slate-900 font-bold">Manajer Pesanan</span>
         </nav>
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-1">
-            <div>
-                <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-                    <svg class="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+            <div class="flex items-center gap-4">
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                        <svg class="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                        </svg>
+                        <span>Manajer Pesanan</span>
+                    </h1>
+                    <p class="text-xs sm:text-sm text-slate-500">Kelola, lacak status, dan lihat rincian transaksi belanja Anda</p>
+                </div>
+                <!-- BUTTON TAMBAH PESANAN DUMMY UNTUK TESTING -->
+                <a href="{{ url('/setup-dummy-order') }}" class="bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-300 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                     </svg>
-                    <span>Manajer Pesanan</span>
-                </h1>
-                <p class="text-xs sm:text-sm text-slate-500">Kelola, lacak status, dan lihat rincian transaksi belanja Anda</p>
+                    Buat Pesanan Dummy (Selesai)
+                </a>
             </div>
             
             <div class="flex items-center gap-2">
@@ -515,11 +524,11 @@
                                 </a>
 
                                 <button 
-                                    type="button" 
-                                    @click="window.print()"
-                                    class="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-semibold text-xs px-4 py-3.5 rounded-xl transition-colors cursor-pointer text-center"
+                                    type="button"
+                                    @click="openCancelModal(activeOrder.raw_id)"
+                                    class="w-full sm:w-auto bg-white hover:bg-red-50 text-red-600 border border-slate-300 hover:border-red-200 font-semibold text-xs px-4 py-3.5 rounded-xl transition-colors cursor-pointer text-center"
                                 >
-                                    Unduh Invoice
+                                    Batalkan Pesanan
                                 </button>
                             </div>
                         </template>
@@ -814,6 +823,58 @@
         </template>
     </div>
 
+    <!-- 8. CANCEL CONFIRMATION MODAL -->
+    <div 
+        x-show="showCancelModal" 
+        style="display: none;"
+        class="fixed inset-0 z-50 flex items-center justify-center px-4"
+    >
+        <!-- Overlay -->
+        <div 
+            x-show="showCancelModal" 
+            x-transition.opacity 
+            class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            @click="showCancelModal = false"
+        ></div>
+
+        <!-- Modal Content -->
+        <div 
+            x-show="showCancelModal" 
+            x-transition.scale.origin.bottom
+            class="relative bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden"
+        >
+            <div class="p-6 text-center space-y-4">
+                <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-extrabold text-slate-900">Batalkan Pesanan?</h3>
+                <p class="text-sm text-slate-500 leading-relaxed">
+                    Apakah Anda yakin ingin membatalkan pesanan ini? Pesanan yang dibatalkan tidak dapat diubah kembali.
+                </p>
+                <div class="flex items-center gap-3 pt-2">
+                    <button 
+                        type="button" 
+                        @click="showCancelModal = false"
+                        class="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition-colors cursor-pointer"
+                    >
+                        Nanti Saja
+                    </button>
+                    <form method="POST" :action="'{{ url('orders') }}/' + cancelOrderId + '/cancel'" class="flex-1">
+                        @csrf
+                        <button 
+                            type="submit"
+                            class="w-full px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl transition-colors cursor-pointer shadow-md shadow-red-200"
+                        >
+                            Ya, Batalkan
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 @push('scripts')
@@ -826,6 +887,8 @@ function orderManagerApp() {
         searchQuery: '',
         showReviewModal: false,
         showTrackingModal: false,
+        showCancelModal: false,
+        cancelOrderId: null,
         selectedRating: 5,
         reviewComment: '',
         isAnonymous: false,
@@ -836,6 +899,11 @@ function orderManagerApp() {
             setInterval(() => {
                 this.nowTimestamp = Math.floor(Date.now() / 1000);
             }, 1000);
+        },
+        
+        openCancelModal(orderId) {
+            this.cancelOrderId = orderId;
+            this.showCancelModal = true;
         },
 
         getRemainingTime(createdTs) {
