@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 70" width="240" height="70">
+  <rect width="240" height="70" rx="10" fill="#005BAB"/>
+  <g transform="translate(15, 15)">
+    <rect width="12" height="40" fill="#E31E24"/>
+    <rect x="12" width="12" height="40" fill="#005BAB"/>
+    <rect x="24" width="12" height="40" fill="#FFC72C"/>
+  </g>
+  <text x="145" y="44" fill="#FFFFFF" font-family="'Outfit', 'Inter', sans-serif" font-weight="900" font-size="24" text-anchor="middle">Indomaret</text>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 70" width="240" height="70">
+  <rect width="240" height="70" rx="10" fill="#003B70"/>
+  <g transform="translate(18, 20)">
+    <rect width="28" height="14" rx="3" fill="#F37023"/>
+    <rect y="16" width="28" height="14" rx="3" fill="#FFC72C"/>
+  </g>
+  <text x="142" y="45" fill="#FFFFFF" font-family="'Outfit', 'Inter', sans-serif" font-weight="900" font-size="24" text-anchor="middle">Danamon</text>
+</svg>

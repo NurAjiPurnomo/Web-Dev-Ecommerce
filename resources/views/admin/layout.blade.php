@@ -85,6 +85,16 @@
                 </a>
 
                 <a 
+                    href="{{ route('admin.returns') }}" 
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors {{ request()->routeIs('admin.returns*') ? 'bg-slate-800 text-white' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}"
+                >
+                    <svg class="w-5 h-5 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 15v-1a4 4 0 00-4-4H4m0 0l4-4m-4 4l4 4"/>
+                    </svg>
+                    <span>Retur & Komplain</span>
+                </a>
+
+                <a 
                     href="{{ route('admin.users') }}" 
                     class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors {{ request()->routeIs('admin.users*') ? 'bg-slate-800 text-white' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}"
                 >
@@ -92,6 +102,16 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 43a8 8 0 100-16 8 8 0 000 16zM21 21v-1a7 7 0 00-7-7h-4a7 7 0 00-7 7v1"/>
                     </svg>
                     <span>Pelanggan</span>
+                </a>
+
+                <a 
+                    href="{{ route('admin.storeSettings') }}" 
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors {{ request()->routeIs('admin.storeSettings*') ? 'bg-slate-800 text-white' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}"
+                >
+                    <svg class="w-5 h-5 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    <span>Pengaturan Toko & Kurir</span>
                 </a>
 
                 <a 
@@ -180,20 +200,23 @@
             </nav>
 
             <!-- Bottom Profile Box -->
-            <div class="p-3 border-t border-slate-800 bg-slate-950/40">
+            <div class="p-3 border-t border-slate-800 bg-slate-950/60">
                 <div class="flex items-center justify-between px-2 py-1.5">
                     <div class="flex items-center gap-2.5 truncate">
-                        <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-semibold flex items-center justify-center text-xs shrink-0 shadow-2xs">
-                            A
+                        <div class="relative shrink-0">
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 text-white font-extrabold flex items-center justify-center text-xs ring-2 ring-slate-800 shadow-sm shadow-indigo-500/30">
+                                {{ strtoupper(substr(auth()->check() ? auth()->user()->name : (session('user.name') ?? 'Admin'), 0, 1)) }}
+                            </div>
+                            <span class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-slate-900"></span>
                         </div>
                         <div class="truncate">
-                            <p class="text-xs font-bold text-white truncate">{{ auth()->check() ? auth()->user()->name : (session('user.name') ?? 'Administrator') }}</p>
-                            <p class="text-[10px] text-slate-400 truncate">Super Admin</p>
+                            <p class="text-xs font-bold text-white truncate leading-snug">{{ auth()->check() ? auth()->user()->name : (session('user.name') ?? 'Administrator') }}</p>
+                            <span class="inline-block text-[9px] font-extrabold text-blue-400 uppercase tracking-wider">Super Admin</span>
                         </div>
                     </div>
                     <form action="{{ route('admin.logout') }}" method="POST">
                         @csrf
-                        <button type="submit" class="text-slate-400 hover:text-red-400 p-1.5 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer" title="Keluar Admin">
+                        <button type="submit" class="text-slate-400 hover:text-red-400 p-1.5 rounded-lg hover:bg-slate-800/80 transition-colors cursor-pointer" title="Keluar Admin">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
                             </svg>

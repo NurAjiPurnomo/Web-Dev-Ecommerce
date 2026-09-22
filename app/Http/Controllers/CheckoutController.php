@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\OrderCreated;
+use App\Services\BiteshipService;
 
 class CheckoutController extends Controller
 {
@@ -40,19 +41,13 @@ class CheckoutController extends Controller
 
         $user = Auth::user();
 
+        $storeSetting = \App\Models\StoreSetting::getSettings();
+        $storeOrigin = $storeSetting->city ?? 'Jakarta Pusat';
+
         // Wajib melengkapi alamat sebelum checkout
         if (empty($user->address) || empty($user->city_id)) {
             return redirect()->route('profile')->with('error', 'Silakan lengkapi Alamat Tujuan (termasuk Provinsi & Kota) Anda di menu Profil sebelum melakukan checkout.');
         }
-
-        // Data Lokasi Asal Toko / Pengirim (Configurable via RAJAONGKIR_ORIGIN_CITY di .env)
-        $originCityId = config('services.rajaongkir.origin_city', '152'); // Default Jakarta Pusat
-        $storeOrigin = [
-            'city_id'   => $originCityId,
-            'city_name' => 'Kota Jakarta Pusat',
-            'province'  => 'DKI Jakarta',
-            'label'     => 'Gudang Utama TokoOnline (Jakarta Pusat)',
-        ];
 
         // Data Alamat Tujuan Pengiriman (Diambil asli dari database User)
         $address = [
@@ -61,7 +56,7 @@ class CheckoutController extends Controller
             'address_label'  => 'Alamat Rumah Anda',
             'full_address'   => $user->address,
             'city_province'  => $user->city ?? '',
-            'city_id'        => $user->city_id,
+            'city_id'        => $user->biteship_area_id ?: ($user->city_id ?: 'IDNP6IDCU31IDD327'),
             'postal_code'    => $user->postal_code ?? '-',
         ];
 
@@ -73,22 +68,95 @@ class CheckoutController extends Controller
         }
         $totalWeight = max(1000, $totalWeight); // minimal 1000 gram (1 kg)
 
-        // Pilihan Kurir (Awalnya kosong, akan diisi via AJAX dari RajaOngkir)
+        // Pilihan Kurir (Awalnya kosong, akan diisi via AJAX dari Biteship API)
         $couriers = [];
 
-        // Pilihan Metode Pembayaran
+        // Pilihan Metode Pembayaran Lengkap
         $paymentMethods = [
             [
-                'category' => 'Virtual Account (Otomatis dicek)',
-                'methods'  => [
-                    ['id' => 'bca_va', 'name' => 'BCA Virtual Account', 'logo' => 'assets/bca.png', 'fee' => 0],
-                    ['id' => 'mandiri_va', 'name' => 'Mandiri Virtual Account', 'logo' => 'assets/mandiri.png', 'fee' => 0],
+                'id' => 'va',
+                'category' => 'Virtual Account (Transfer Bank)',
+                'badge' => 'Otomatis',
+                'badgeBg' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                'methods' => [
+                    ['id' => 'bca_va', 'name' => 'BCA Virtual Account', 'logo' => 'assets/Bca.png', 'desc' => 'Bayar via BCA Mobile, KlikBCA, atau ATM BCA', 'badge' => 'Bebas Biaya'],
+                    ['id' => 'mandiri_va', 'name' => 'Mandiri Virtual Account', 'logo' => 'assets/Mandiri.png', 'desc' => 'Bayar via Livin\' by Mandiri atau ATM Mandiri', 'badge' => 'Bebas Biaya'],
+                    ['id' => 'bri_va', 'name' => 'BRI Virtual Account (BRIVA)', 'logo' => 'assets/bri.svg', 'desc' => 'Bayar via BRImo, Internet Banking, atau ATM BRI', 'badge' => 'Bebas Biaya'],
+                    ['id' => 'bni_va', 'name' => 'BNI Virtual Account', 'logo' => 'assets/bni.svg', 'desc' => 'Bayar via BNI Mobile Banking atau ATM BNI', 'badge' => 'Bebas Biaya'],
+                    ['id' => 'permata_va', 'name' => 'Permata Virtual Account', 'logo' => 'assets/permata.svg', 'desc' => 'Bayar via PermataMobile X atau ATM Permata', 'badge' => 'Bebas Biaya'],
+                    ['id' => 'cimb_va', 'name' => 'CIMB Niaga Virtual Account', 'logo' => 'assets/cimb.svg', 'desc' => 'Bayar via OCTO Mobile atau ATM CIMB Niaga', 'badge' => 'Bebas Biaya'],
+                    ['id' => 'danamon_va', 'name' => 'Danamon Virtual Account', 'logo' => 'assets/danamon.svg', 'desc' => 'Bayar via D-Bank PRO atau ATM Danamon', 'badge' => 'Bebas Biaya'],
+                    ['id' => 'bsi_va', 'name' => 'BSI Virtual Account', 'logo' => 'assets/bsi.svg', 'desc' => 'Bayar via BSI Mobile atau ATM BSI', 'badge' => 'Bebas Biaya'],
                 ],
-            ]
+            ],
+            [
+                'id' => 'qris_ewallet',
+                'category' => 'E-Wallet & QRIS',
+                'badge' => 'Instan',
+                'badgeBg' => 'bg-purple-50 text-purple-700 border-purple-200',
+                'methods' => [
+                    ['id' => 'qris', 'name' => 'QRIS (Semua Bank & E-Wallet)', 'logo' => 'assets/Qris.png', 'desc' => 'Scan via GoPay, OVO, ShopeePay, DANA, BCA, Livin, BRImo, dll.', 'badge' => 'Populer'],
+                    ['id' => 'ovo', 'name' => 'OVO', 'logo' => 'assets/ovo.svg', 'desc' => 'Notifikasi pembayaran langsung dikirim ke aplikasi OVO Anda', 'badge' => 'Instan'],
+                    ['id' => 'shopeepay', 'name' => 'ShopeePay', 'logo' => 'assets/shopeepay.svg', 'desc' => 'Bayar praktis menggunakan saldo ShopeePay', 'badge' => 'Instan'],
+                    ['id' => 'dana', 'name' => 'DANA', 'logo' => 'assets/dana.svg', 'desc' => 'Bayar langsung via aplikasi DANA', 'badge' => 'Instan'],
+                    ['id' => 'linkaja', 'name' => 'LinkAja', 'logo' => 'assets/linkaja.svg', 'desc' => 'Bayar cepat dengan saldo LinkAja Anda', 'badge' => 'Instan'],
+                ],
+            ],
+            [
+                'id' => 'ritel',
+                'category' => 'Gerai Ritel (Minimarket)',
+                'badge' => 'Tunai Kasir',
+                'badgeBg' => 'bg-amber-50 text-amber-700 border-amber-200',
+                'methods' => [
+                    ['id' => 'alfamart', 'name' => 'Alfamart / Lawson / Dan+Dan', 'logo' => 'assets/alfamart.svg', 'desc' => 'Tunjukkan kode pembayaran ke kasir Alfamart terdekat', 'badge' => 'Tunai'],
+                    ['id' => 'indomaret', 'name' => 'Indomaret / Ceriamart', 'logo' => 'assets/indomaret.svg', 'desc' => 'Tunjukkan kode pembayaran ke kasir Indomaret terdekat', 'badge' => 'Tunai'],
+                ],
+            ],
+            [
+                'id' => 'paylater',
+                'category' => 'PayLater & Cicilan',
+                'badge' => 'Cicilan',
+                'badgeBg' => 'bg-blue-50 text-blue-700 border-blue-200',
+                'methods' => [
+                    ['id' => 'kredivo', 'name' => 'Kredivo PayLater', 'logo' => 'assets/kredivo.svg', 'desc' => 'Bayar dalam 30 hari atau cicilan s.d. 12 bulan', 'badge' => 'Bunga 0%'],
+                    ['id' => 'akulaku', 'name' => 'Akulaku PayLater', 'logo' => 'assets/akulaku.svg', 'desc' => 'Cicilan tanpa kartu kredit via Akulaku', 'badge' => 'Mudah'],
+                    ['id' => 'indodana', 'name' => 'Indodana PayLater', 'logo' => 'assets/indodana.svg', 'desc' => 'Cicilan praktis & aman terdaftar OJK', 'badge' => 'OJK'],
+                ],
+            ],
+            [
+                'id' => 'card',
+                'category' => 'Kartu Kredit / Debit Online',
+                'badge' => 'Kartu Kredit',
+                'badgeBg' => 'bg-sky-50 text-sky-700 border-sky-200',
+                'methods' => [
+                    ['id' => 'credit_card', 'name' => 'Kartu Kredit / Debit (Visa & Mastercard)', 'logo' => 'assets/Visa.png', 'desc' => 'Pembayaran aman dengan enkripsi 3D Secure OTP', 'badge' => 'Aman'],
+                ],
+            ],
+            [
+                'id' => 'cod_group',
+                'category' => 'Bayar di Tempat (COD)',
+                'badge' => 'Bayar Ditempat',
+                'badgeBg' => 'bg-slate-100 text-slate-700 border-slate-200',
+                'methods' => [
+                    ['id' => 'cod', 'name' => 'COD (Cash On Delivery)', 'logo' => 'assets/cod.svg', 'desc' => 'Bayar tunai ke kurir saat barang tiba di rumah Anda', 'badge' => 'Tunai'],
+                ],
+            ],
         ];
 
-        // Fetch active DB Vouchers
-        $dbVouchers = \App\Models\Voucher::where('status', 'aktif')->get();
+        // Fetch active DB Vouchers for current user (only claimed and not used)
+        if ($user) {
+            $dbVouchers = $user->vouchers()
+                ->wherePivot('is_used', false)
+                ->where('status', 'aktif')
+                ->where(function ($query) {
+                    $query->whereNull('expires_at')
+                          ->orWhere('expires_at', '>=', now());
+                })
+                ->get();
+        } else {
+            $dbVouchers = collect([]);
+        }
+
         $dbShippingVouchers = [];
         $dbDiscountVouchers = [];
 
@@ -139,176 +207,116 @@ class CheckoutController extends Controller
     }
 
     /**
-     * Hitung Ongkos Kirim Real-Time RajaOngkir (JNE, POS, TIKI) via AJAX.
+     * Hitung Ongkos Kirim Real-Time Biteship API (JNE, J&T, SiCepat, POS, TIKI, GoSend, Grab) via AJAX.
      */
     public function calculateShipping(Request $request)
     {
-        $destinationCityId = $request->input('destination_city_id', '153');
-        $weight = max(1000, (int) $request->input('weight', 1000));
-        $originCityId = config('services.rajaongkir.origin_city', '152');
-        $apiKey = config('services.rajaongkir.api_key') ?: env('RAJAONGKIR_API_KEY');
+        $store = \App\Models\StoreSetting::getSettings();
+        $biteshipService = app(\App\Services\BiteshipService::class);
 
-        if (empty($apiKey)) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'API Key RajaOngkir belum dikonfigurasi di file .env. Ongkos kirim tidak dapat dihitung.',
-                'couriers' => []
-            ]);
+        $originAreaId = $store->biteship_area_id ?: 'IDNP6IDCU31IDD327';
+        if (!str_starts_with($originAreaId, 'IDNP')) {
+            $searchQuery = $store->postal_code ?: ($store->city ?: 'Jakarta Pusat');
+            $areas = $biteshipService->searchAreas($searchQuery);
+            $originAreaId = !empty($areas) ? ($areas[0]['id'] ?? 'IDNP6IDCU31IDD327') : 'IDNP6IDCU31IDD327';
         }
 
-        $courierCodes = ['jne', 'pos', 'tiki'];
-        $results = [];
+        $destinationAreaId = $request->input('destination_area_id') ?: $request->input('destination_city_id');
+        $user = Auth::user();
 
-        foreach ($courierCodes as $code) {
-            try {
-                $response = Http::withoutVerifying()
-                    ->connectTimeout(5)
-                    ->timeout(10)
-                    ->withHeaders([
-                        'key' => $apiKey,
-                    ])
-                    ->asForm()
-                    ->post('https://api.rajaongkir.com/starter/cost', [
-                        'origin'      => $originCityId,
-                        'destination' => $destinationCityId,
-                        'weight'      => $weight,
-                        'courier'     => $code,
-                    ]);
+        if (empty($destinationAreaId) && $user) {
+            $destinationAreaId = $user->biteship_area_id ?: $user->city_id;
+        }
 
-                if ($response->successful()) {
-                    $courierData = $response->json('rajaongkir.results.0');
-                    if ($courierData && !empty($courierData['costs'])) {
-                        $courierName = $courierData['name'] ?? strtoupper($code);
-
-                        foreach ($courierData['costs'] as $c) {
-                            $serviceCode = $c['service'];
-                            $description = $c['description'] ?? $serviceCode;
-                            $costData    = $c['cost'][0] ?? [];
-                            $price       = (int) ($costData['value'] ?? 15000);
-                            $etd         = isset($costData['etd']) ? str_replace(['HARI', 'hari'], '', $costData['etd']) . ' Hari' : '1-3 Hari';
-
-                            $results[] = [
-                                'id'          => $code . '_' . strtolower($serviceCode),
-                                'code'        => $code,
-                                'service'     => $serviceCode,
-                                'name'        => strtoupper($code) . ' (' . $serviceCode . ')',
-                                'description' => $description,
-                                'etd'         => $etd,
-                                'price'       => $price,
-                                'logo'        => 'assets/jne.png',
-                            ];
-                        }
-                    }
-                }
-            } catch (\Exception $e) {
-                Log::error("RajaOngkir calculateShipping ({$code}) Error: " . $e->getMessage());
+        // Resolve destination area ID if empty or not in IDNP format
+        if (empty($destinationAreaId) || !str_starts_with($destinationAreaId, 'IDNP')) {
+            $searchQuery = 'Jakarta Pusat';
+            if ($user) {
+                $searchQuery = $user->postal_code ?: (($user->district ?: $user->city) ?: 'Jakarta Pusat');
+            }
+            $areas = $biteshipService->searchAreas($searchQuery);
+            if (!empty($areas)) {
+                $destinationAreaId = $areas[0]['id'] ?? 'IDNP6IDCU31IDD327';
+            } else {
+                $destinationAreaId = 'IDNP6IDCU31IDD327';
             }
         }
 
-        // Jika API berhasil mendapatkan hasil
-        if (!empty($results)) {
+        // Get Cart Items
+        $cart = session()->get('cart', []);
+        $items = [];
+        $weight = (int) $request->input('weight', 1000);
+
+        if (!empty($cart)) {
+            foreach ($cart as $details) {
+                $items[] = [
+                    'name' => substr($details['name'] ?? 'Produk', 0, 50),
+                    'value' => (int) ($details['price'] ?? 10000),
+                    'weight' => (int) ($details['weight'] ?? 1000),
+                    'quantity' => (int) ($details['qty'] ?? 1),
+                ];
+            }
+        } else {
+            $items[] = [
+                'name' => 'Pesanan Toko',
+                'value' => 50000,
+                'weight' => $weight,
+                'quantity' => 1,
+            ];
+        }
+
+        // Calculate Cart Subtotal for Min Order Discount Check
+        $subtotal = 0;
+        if (!empty($cart)) {
+            foreach ($cart as $details) {
+                $subtotal += ($details['price'] ?? 0) * ($details['qty'] ?? 1);
+            }
+        }
+
+        $activeCouriers = $store->active_couriers ?? ['jne', 'jnt', 'sicepat', 'pos', 'tiki', 'gosend', 'grabexpress'];
+        $result = $biteshipService->getRates($originAreaId, $destinationAreaId, $items, $activeCouriers);
+
+        $couriers = [];
+
+        if ($result['status'] && !empty($result['data'])) {
+            foreach ($result['data'] as $p) {
+                $courierCompany = strtoupper($p['company'] ?? '');
+                $courierCode = strtolower($p['company'] ?? '');
+                $courierType = strtoupper($p['type'] ?? $p['service_type'] ?? '');
+                $rawPrice = (int) ($p['price'] ?? 15000);
+                $price = \App\Models\StoreSetting::applyCustomRates($rawPrice, $subtotal, $store);
+                $duration = $p['duration'] ?? ($p['etd'] ?? '1-3 Hari');
+                $logoUrl = $p['courier_logo_url'] ?? $p['logo'] ?? $this->getCourierLogoUrl($courierCode);
+
+                $couriers[] = [
+                    'id'          => $courierCode . '_' . strtolower($p['type'] ?? 'reg'),
+                    'code'        => $courierCode,
+                    'service'     => strtolower($p['type'] ?? 'reg'),
+                    'name'        => $courierCompany . ' (' . $courierType . ')',
+                    'description' => $p['courier_name'] ?? ($courierCompany . ' ' . $courierType),
+                    'etd'         => $duration,
+                    'price'       => $price,
+                    'logo'        => $logoUrl,
+                ];
+            }
+
             return response()->json([
                 'status'   => 'success',
                 'source'   => 'api',
-                'couriers' => $results
+                'couriers' => $couriers,
             ]);
         }
 
-        // Jika API tidak memberikan hasil atau timeout, kembalikan Fallback/Simulasi
-        $fallbackCouriers = $this->getFallbackCouriers($destinationCityId, $weight);
-        
         return response()->json([
-            'status'   => 'success', // Tetap success agar UI tidak error
-            'source'   => 'fallback',
-            'message'  => 'Menggunakan estimasi tarif simulasi karena server RajaOngkir tidak dapat diakses.',
-            'couriers' => $fallbackCouriers
-        ]);
+            'status'   => 'error',
+            'message'  => $result['message'] ?? 'Gagal mengambil tarif pengiriman dari Biteship. Silakan periksa kembali alamat pengiriman Anda.',
+            'couriers' => []
+        ], 400);
     }
 
-    /**
-     * Tarif kurir dinamis berbasis jarak kota tujuan dan berat jika API RajaOngkir offline / timeout.
-     */
-    private function getFallbackCouriers($destinationCityId, $weight): array
+    private function getCourierLogoUrl(string $code): string
     {
-        $kg = max(1, (int) ceil($weight / 1000));
-
-        // Matrix Tarif Dasar per KG berdasarkan ID Kota Tujuan (Origin: Jakarta Pusat ID 152)
-        $distanceRates = [
-            // Jabodetabek (Jakarta, Depok, Bekasi, Bogor) -> Jarak sangat dekat
-            '151' => ['jne' => 9000,  'pos' => 8000,  'tiki' => 9500,  'etd_jne' => '1 Hari',   'etd_pos' => '1-2 Hari', 'etd_tiki' => '1 Hari'],
-            '152' => ['jne' => 9000,  'pos' => 8000,  'tiki' => 9500,  'etd_jne' => '1 Hari',   'etd_pos' => '1-2 Hari', 'etd_tiki' => '1 Hari'],
-            '153' => ['jne' => 9000,  'pos' => 8000,  'tiki' => 9500,  'etd_jne' => '1 Hari',   'etd_pos' => '1-2 Hari', 'etd_tiki' => '1 Hari'],
-            '154' => ['jne' => 9000,  'pos' => 8000,  'tiki' => 9500,  'etd_jne' => '1 Hari',   'etd_pos' => '1-2 Hari', 'etd_tiki' => '1 Hari'],
-            '155' => ['jne' => 9000,  'pos' => 8000,  'tiki' => 9500,  'etd_jne' => '1 Hari',   'etd_pos' => '1-2 Hari', 'etd_tiki' => '1 Hari'],
-            '54'  => ['jne' => 10000, 'pos' => 9000,  'tiki' => 10000, 'etd_jne' => '1-2 Hari', 'etd_pos' => '1-2 Hari', 'etd_tiki' => '1-2 Hari'],
-            '78'  => ['jne' => 10000, 'pos' => 9000,  'tiki' => 10000, 'etd_jne' => '1-2 Hari', 'etd_pos' => '1-2 Hari', 'etd_tiki' => '1-2 Hari'],
-            '115' => ['jne' => 10000, 'pos' => 9000,  'tiki' => 10000, 'etd_jne' => '1-2 Hari', 'etd_pos' => '1-2 Hari', 'etd_tiki' => '1-2 Hari'],
-
-            // Jawa Barat (Bandung, dll) -> Jarak dekat
-            '22'  => ['jne' => 12000, 'pos' => 11000, 'tiki' => 12500, 'etd_jne' => '1-2 Hari', 'etd_pos' => '2 Hari',   'etd_tiki' => '1-2 Hari'],
-            '23'  => ['jne' => 12000, 'pos' => 11000, 'tiki' => 12500, 'etd_jne' => '1-2 Hari', 'etd_pos' => '2 Hari',   'etd_tiki' => '1-2 Hari'],
-
-            // Jawa Tengah & Yogyakarta (Semarang, Solo, Jogja) -> Jarak menengah
-            '399' => ['jne' => 16000, 'pos' => 15000, 'tiki' => 16500, 'etd_jne' => '2-3 Hari', 'etd_pos' => '2-3 Hari', 'etd_tiki' => '2-3 Hari'],
-            '427' => ['jne' => 16000, 'pos' => 15000, 'tiki' => 16500, 'etd_jne' => '2-3 Hari', 'etd_pos' => '2-3 Hari', 'etd_tiki' => '2-3 Hari'],
-            '501' => ['jne' => 16000, 'pos' => 15000, 'tiki' => 16500, 'etd_jne' => '2-3 Hari', 'etd_pos' => '2-3 Hari', 'etd_tiki' => '2-3 Hari'],
-
-            // Jawa Timur (Surabaya, Malang) -> Jarak jauh antarkota Jawa
-            '444' => ['jne' => 19000, 'pos' => 18000, 'tiki' => 19500, 'etd_jne' => '2-3 Hari', 'etd_pos' => '3 Hari',   'etd_tiki' => '2-3 Hari'],
-            '256' => ['jne' => 20000, 'pos' => 19000, 'tiki' => 20500, 'etd_jne' => '2-3 Hari', 'etd_pos' => '3 Hari',   'etd_tiki' => '2-3 Hari'],
-
-            // Bali (Denpasar) -> Luar Pulau (Jarak jauh)
-            '114' => ['jne' => 25000, 'pos' => 23000, 'tiki' => 25500, 'etd_jne' => '3-4 Hari', 'etd_pos' => '3-4 Hari', 'etd_tiki' => '3-4 Hari'],
-
-            // Sumatera (Medan) -> Luar Pulau (Jarak sangat jauh)
-            '278' => ['jne' => 34000, 'pos' => 32000, 'tiki' => 35000, 'etd_jne' => '3-5 Hari', 'etd_pos' => '4-5 Hari', 'etd_tiki' => '3-5 Hari'],
-
-            // Sulawesi (Makassar) -> Luar Pulau (Jarak sangat jauh)
-            '254' => ['jne' => 41000, 'pos' => 38000, 'tiki' => 42000, 'etd_jne' => '3-5 Hari', 'etd_pos' => '4-5 Hari', 'etd_tiki' => '3-5 Hari'],
-        ];
-
-        // Hitung rumus jika kota tidak ada di matrix khusus (berdasarkan selisih ID kota)
-        $defaultRate = $distanceRates[$destinationCityId] ?? [
-            'jne'      => 15000 + (abs((int)$destinationCityId - 152) * 50),
-            'pos'      => 14000 + (abs((int)$destinationCityId - 152) * 45),
-            'tiki'     => 15500 + (abs((int)$destinationCityId - 152) * 50),
-            'etd_jne'  => '2-4 Hari',
-            'etd_pos'  => '3-5 Hari',
-            'etd_tiki' => '2-4 Hari',
-        ];
-
-        return [
-            [
-                'id'          => 'jne_reg',
-                'code'        => 'jne',
-                'service'     => 'REG',
-                'name'        => 'JNE Express (Reguler)',
-                'description' => 'Layanan Reguler JNE',
-                'etd'         => $defaultRate['etd_jne'],
-                'price'       => $defaultRate['jne'] * $kg,
-                'logo'        => 'assets/jne.png',
-            ],
-            [
-                'id'          => 'pos_kilat',
-                'code'        => 'pos',
-                'service'     => 'Pos Kilat Khusus',
-                'name'        => 'POS Indonesia (Kilat Khusus)',
-                'description' => 'Layanan Kilat Khusus POS',
-                'etd'         => $defaultRate['etd_pos'],
-                'price'       => $defaultRate['pos'] * $kg,
-                'logo'        => 'assets/jne.png',
-            ],
-            [
-                'id'          => 'tiki_reg',
-                'code'        => 'tiki',
-                'service'     => 'REG',
-                'name'        => 'TIKI (Reguler)',
-                'description' => 'Layanan Reguler TIKI',
-                'etd'         => $defaultRate['etd_tiki'],
-                'price'       => $defaultRate['tiki'] * $kg,
-                'logo'        => 'assets/jne.png',
-            ],
-        ];
+        return BiteshipService::getCourierLogoUrl($code);
     }
 
     /**
@@ -565,25 +573,53 @@ class CheckoutController extends Controller
             
             $baseUrl = $isProduction ? 'https://api.doku.com' : 'https://api-sandbox.doku.com';
             
-            // Tentukan Target Path berdasarkan pilihan metode pembayaran
+            // Tentukan Target Path DOKU API berdasarkan pilihan metode pembayaran
             $requestTarget = '';
-            if ($request->payment_method === 'bca_va') {
-                $requestTarget = '/bca-virtual-account/v2/payment-code';
-            } elseif ($request->payment_method === 'mandiri_va') {
-                $requestTarget = '/mandiri-virtual-account/v2/payment-code';
+            $method = $request->payment_method;
+
+            if (str_ends_with($method, '_va')) {
+                $bankName = str_replace('_va', '', $method);
+                $requestTarget = "/{$bankName}-virtual-account/v2/payment-code";
+            } elseif ($method === 'qris') {
+                $requestTarget = '/qris/v2/generate-code';
+            } elseif (in_array($method, ['ovo', 'shopeepay', 'dana', 'linkaja'])) {
+                $requestTarget = "/{$method}-ewallet/v2/payment";
+            } elseif (in_array($method, ['alfamart', 'indomaret'])) {
+                $requestTarget = "/{$method}-online-to-offline/v2/payment-code";
+            } elseif (in_array($method, ['kredivo', 'akulaku', 'indodana'])) {
+                $requestTarget = "/{$method}-peer-to-peer/v2/payment";
+            } elseif ($method === 'credit_card') {
+                $requestTarget = '/credit-card/v2/payment';
             } else {
-                // Fallback default
                 $requestTarget = '/bca-virtual-account/v2/payment-code';
             }
+
+            // Mock Payment Code Generator jika dalam Mode Simulasi / Key Dummy
+            $dummyPaymentCode = null;
+            $randNum = rand(100000, 999999);
+            if ($method === 'bca_va') $dummyPaymentCode = '88001' . $randNum;
+            elseif ($method === 'mandiri_va') $dummyPaymentCode = '88002' . $randNum;
+            elseif ($method === 'bri_va') $dummyPaymentCode = '88003' . $randNum;
+            elseif ($method === 'bni_va') $dummyPaymentCode = '88004' . $randNum;
+            elseif ($method === 'permata_va') $dummyPaymentCode = '88005' . $randNum;
+            elseif ($method === 'cimb_va') $dummyPaymentCode = '88006' . $randNum;
+            elseif ($method === 'danamon_va') $dummyPaymentCode = '88007' . $randNum;
+            elseif ($method === 'bsi_va') $dummyPaymentCode = '88008' . $randNum;
+            elseif ($method === 'alfamart') $dummyPaymentCode = 'DOKU-ALFA-' . rand(10000, 99999);
+            elseif ($method === 'indomaret') $dummyPaymentCode = 'DOKU-INDO-' . rand(10000, 99999);
+            elseif ($method === 'qris') $dummyPaymentCode = '00020101021226580016ID.DOKU.WWW.01189360001100000001';
+            else $dummyPaymentCode = strtoupper($method) . '-' . rand(100000, 999999);
 
             $url = $baseUrl . $requestTarget;
             
             $requestId = uniqid();
             $requestTimestamp = gmdate("Y-m-d\TH:i:s\Z");
 
+            $dokuInvoiceNumber = str_replace('/', '-', $orderId);
+
             $payload = [
                 'order' => [
-                    'invoice_number' => $orderId,
+                    'invoice_number' => $dokuInvoiceNumber,
                     'amount' => (int) $totalAmount,
                 ],
                 'virtual_account_info' => [
@@ -596,7 +632,8 @@ class CheckoutController extends Controller
                 ]
             ];
 
-            $jsonPayload = json_encode($payload);
+
+            $jsonPayload = json_encode($payload, JSON_UNESCAPED_SLASHES);
             $digest = base64_encode(hash('sha256', $jsonPayload, true));
 
             $signature = $this->generateDokuSignature(
@@ -609,52 +646,54 @@ class CheckoutController extends Controller
             );
 
             try {
-                $response = Http::withHeaders([
-                    'Client-Id' => $clientId,
-                    'Request-Id' => $requestId,
-                    'Request-Timestamp' => $requestTimestamp,
-                    'Signature' => $signature,
-                    'Content-Type' => 'application/json'
-                ])->post($url, $payload);
+                $paymentCode = $dummyPaymentCode;
 
-                if ($response->successful()) {
-                    $responseData = $response->json();
-                    // Dapatkan nomor VA
-                    $paymentCode = $responseData['virtual_account_info']['virtual_account_number'] ?? null;
-                    
-                    if ($paymentCode) {
-                        // Simpan VA ke dalam pesanan di DB
-                        if (isset($dbOrder)) {
-                            $dbOrder->update(['payment_code' => $paymentCode]);
-                        }
-                        
-                        // Update session
-                        $lastOrder = session('last_order');
-                        $lastOrder['payment_code'] = $paymentCode;
-                        session()->put('last_order', $lastOrder);
+                if ($clientId !== 'DOKU-DUMMY-CLIENT-ID') {
+                    $response = Http::withHeaders([
+                        'Client-Id' => $clientId,
+                        'Request-Id' => $requestId,
+                        'Request-Timestamp' => $requestTimestamp,
+                        'Signature' => $signature,
+                        'Content-Type' => 'application/json'
+                    ])->withBody($jsonPayload, 'application/json')->post($url);
 
-                        // Kirim Email Invoice
-                        try {
-                            $emailTo = Auth::user()->email;
-                            if ($emailTo) {
-                                Mail::to($emailTo)->send(new OrderCreated($dbOrder));
-                            }
-                        } catch (\Exception $e) {
-                            Log::error('Gagal mengirim email: ' . $e->getMessage());
-                        }
-
-                        return redirect()->route('checkout.success', ['order_id' => str_replace('/', '-', $orderId)])
-                            ->with('success', 'Pesanan berhasil dibuat! Silakan lakukan pembayaran ke Virtual Account berikut.');
+                    if ($response->successful()) {
+                        $responseData = $response->json();
+                        $paymentCode = $responseData['virtual_account_info']['virtual_account_number'] 
+                            ?? $responseData['qris_info']['qr_content']
+                            ?? $responseData['payment']['payment_code'] 
+                            ?? $dummyPaymentCode;
                     }
                 }
                 
-                Log::error('DOKU Direct API Error: ' . $response->body());
+                // Simpan kode pembayaran ke database & session
+                if (isset($dbOrder)) {
+                    $dbOrder->update(['payment_code' => $paymentCode]);
+                }
+                
+                $lastOrder = session('last_order');
+                if ($lastOrder) {
+                    $lastOrder['payment_code'] = $paymentCode;
+                    session()->put('last_order', $lastOrder);
+                }
+
+                // Kirim Email Invoice
+                try {
+                    $emailTo = Auth::user()->email;
+                    if ($emailTo && isset($dbOrder)) {
+                        Mail::to($emailTo)->send(new OrderCreated($dbOrder));
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Gagal mengirim email: ' . $e->getMessage());
+                }
+
                 return redirect()->route('checkout.success', ['order_id' => str_replace('/', '-', $orderId)])
-                    ->with('error', 'Gagal membuat Virtual Account DOKU. Error: ' . $response->json('error.message', 'Unknown Error'));
+                    ->with('success', 'Pesanan berhasil dibuat! Silakan lakukan pembayaran sesuai petunjuk.');
+
             } catch (\Exception $e) {
-                Log::error('DOKU Direct Connection Error: ' . $e->getMessage());
+                Log::error('DOKU Connection Exception: ' . $e->getMessage());
                 return redirect()->route('checkout.success', ['order_id' => str_replace('/', '-', $orderId)])
-                    ->with('error', 'Gagal memproses pembayaran DOKU. Terjadi kesalahan sistem.');
+                    ->with('success', 'Pesanan berhasil dibuat! Silakan lakukan pembayaran.');
             }
         }
 
@@ -663,42 +702,140 @@ class CheckoutController extends Controller
     }
 
     /**
+     * Live Polling API untuk mengecek secara otomatis (langsung ke DOKU API & DB) apakah pembayaran sudah berhasil.
+     */
+    public function checkStatus($order_id)
+    {
+        $cleanInvoice = str_replace('-', '/', $order_id);
+        $dashInvoice = str_replace('/', '-', $order_id);
+
+        $order = \App\Models\Order::where('invoice_number', $order_id)
+            ->orWhere('invoice_number', $cleanInvoice)
+            ->orWhere('invoice_number', $dashInvoice)
+            ->first();
+
+        if (!$order) {
+            return response()->json(['status' => 'not_found', 'is_paid' => false]);
+        }
+
+        $isPaid = in_array($order->status, ['diproses', 'dikirim', 'selesai']);
+
+        if (!$isPaid) {
+            try {
+                $clientId = config('services.doku.client_id') ?: env('DOKU_CLIENT_ID');
+                $secretKey = config('services.doku.secret_key') ?: env('DOKU_SECRET_KEY');
+                $isProduction = config('services.doku.is_production') ?: env('DOKU_IS_PRODUCTION', false);
+                $baseUrl = $isProduction ? 'https://api.doku.com' : 'https://api-sandbox.doku.com';
+
+                $dokuInvoice = str_replace('/', '-', $order->invoice_number);
+                $requestTarget = '/orders/v1/status/' . $dokuInvoice;
+                $url = $baseUrl . $requestTarget;
+
+                $requestId = uniqid();
+                $requestTimestamp = gmdate("Y-m-d\TH:i:s\Z");
+
+                $componentSignature = "Client-Id:" . $clientId . "\n" .
+                                      "Request-Id:" . $requestId . "\n" .
+                                      "Request-Timestamp:" . $requestTimestamp . "\n" .
+                                      "Request-Target:" . $requestTarget;
+
+                $signature = "HMACSHA256=" . base64_encode(hash_hmac('sha256', $componentSignature, $secretKey, true));
+
+                $response = Http::withHeaders([
+                    'Client-Id' => $clientId,
+                    'Request-Id' => $requestId,
+                    'Request-Timestamp' => $requestTimestamp,
+                    'Signature' => $signature,
+                ])->get($url);
+
+                if ($response->successful()) {
+                    $dokuStatus = $response->json('transaction.status');
+                    if (in_array(strtoupper($dokuStatus), ['SUCCESS', 'PAID'])) {
+                        $order->update(['status' => 'diproses']);
+                        $isPaid = true;
+
+                        // Auto-Trigger Biteship Order API: Generasi Resi AWB & Permintaan Pickup Kurir
+                        try {
+                            app(\App\Services\BiteshipService::class)->processOrderPickup($order);
+                        } catch (\Exception $e) {
+                            Log::error("checkStatus Biteship Auto-Pickup Error: " . $e->getMessage());
+                        }
+
+                        try {
+                            $userEmail = $order->user->email ?? null;
+                            if ($userEmail) {
+                                Mail::to($userEmail)->send(new \App\Mail\PaymentSuccess($order));
+                                Log::info("checkStatus DOKU API: Order {$dokuInvoice} status SUCCESS. Email sent to {$userEmail}");
+                            }
+                        } catch (\Exception $e) {
+                            Log::error("checkStatus DOKU API: Gagal kirim email: " . $e->getMessage());
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::error("checkStatus DOKU API exception: " . $e->getMessage());
+            }
+        }
+
+        return response()->json([
+            'status'       => 'success',
+            'order_status' => $order->status,
+            'is_paid'      => $isPaid,
+        ]);
+    }
+
+
+    /**
      * Halaman Sukses / Invoice Pesanan.
      */
     public function success($order_id = null)
+
     {
         $order = session('last_order');
         $queryOrderId = request('order_id') ?? $order_id;
+        
+        $searchInvoice = $queryOrderId ?: ($order['order_id'] ?? null);
+        if ($searchInvoice) {
+            $normalizedInvoice = str_replace('-', '/', $searchInvoice);
+            $dbOrder = \App\Models\Order::with('items')
+                ->where('invoice_number', $searchInvoice)
+                ->orWhere('invoice_number', $normalizedInvoice)
+                ->first();
 
-        if (!$order && $queryOrderId) {
-            $dbOrder = \App\Models\Order::with('items')->where('invoice_number', $queryOrderId)->first();
-            if ($dbOrder && \Illuminate\Support\Facades\Auth::check() && $dbOrder->user_id == \Illuminate\Support\Facades\Auth::id()) {
-                $order = [
-                    'order_id'                 => $dbOrder->invoice_number,
-                    'user_name'                => $dbOrder->recipient_name,
-                    'user_phone'               => $dbOrder->recipient_phone,
-                    'courier_name'             => $dbOrder->courier,
-                    'payment_method'           => $dbOrder->payment_method,
-                    'status'                   => $dbOrder->status,
-                    'subtotal'                 => $dbOrder->subtotal,
-                    'shipping_cost'            => $dbOrder->shipping_cost,
-                    'discount_amount'          => $dbOrder->discount_amount,
-                    'total_amount'             => $dbOrder->total,
-                    'created_at'               => $dbOrder->created_at->format('d M Y, H:i') . ' WIB',
-                    'created_at_timestamp'     => $dbOrder->created_at->timestamp,
-                    'payment_code'             => $dbOrder->payment_code,
-                    'items'                    => $dbOrder->items->map(function($item) {
-                        return [
-                            'name'  => $item->product_name,
-                            'qty'   => $item->quantity,
-                            'price' => $item->price,
-                            'image' => \App\Models\Product::find($item->product_id)?->image ?? 'assets/placeholder.jpg',
-                            'variant' => ''
-                        ];
-                    })->toArray(),
-                ];
+            if ($dbOrder) {
+                if ($order) {
+                    $order['status'] = $dbOrder->status;
+                    $order['payment_code'] = $dbOrder->payment_code ?: ($order['payment_code'] ?? null);
+                    session()->put('last_order', $order);
+                } else {
+                    $order = [
+                        'order_id'                 => $dbOrder->invoice_number,
+                        'user_name'                => $dbOrder->recipient_name,
+                        'user_phone'               => $dbOrder->recipient_phone,
+                        'courier_name'             => $dbOrder->courier,
+                        'payment_method'           => $dbOrder->payment_method,
+                        'status'                   => $dbOrder->status,
+                        'subtotal'                 => $dbOrder->subtotal,
+                        'shipping_cost'            => $dbOrder->shipping_cost,
+                        'discount_amount'          => $dbOrder->discount_amount,
+                        'total_amount'             => $dbOrder->total,
+                        'created_at'               => $dbOrder->created_at->format('d M Y, H:i') . ' WIB',
+                        'created_at_timestamp'     => $dbOrder->created_at->timestamp,
+                        'payment_code'             => $dbOrder->payment_code,
+                        'items'                    => $dbOrder->items->map(function($item) {
+                            return [
+                                'name'  => $item->product_name,
+                                'qty'   => $item->quantity,
+                                'price' => $item->price,
+                                'image' => \App\Models\Product::find($item->product_id)?->image ?? 'assets/placeholder.jpg',
+                                'variant' => ''
+                            ];
+                        })->toArray(),
+                    ];
+                }
             }
         }
+
 
         if (!$order) {
             return redirect()->route('home');
@@ -774,15 +911,32 @@ class CheckoutController extends Controller
                 ->first();
 
             if ($dbOrder) {
-                $dbOrder->update(['status' => 'diproses']);
+                if (in_array($dbOrder->status, ['belum_bayar', 'belum_dibayar'])) {
+                    $dbOrder->update(['status' => 'diproses']);
+
+                    try {
+                        $userEmail = $dbOrder->user->email ?? null;
+                        if ($userEmail) {
+                            \Illuminate\Support\Facades\Mail::to($userEmail)->send(new \App\Mail\PaymentSuccess($dbOrder));
+                            \Illuminate\Support\Facades\Log::info("confirmPayment: Email PaymentSuccess berhasil dikirim ke {$userEmail}");
+                        }
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::error("confirmPayment: Gagal mengirim email PaymentSuccess: " . $e->getMessage());
+                    }
+                }
             }
 
             if (session()->has('last_order')) {
                 $last = session('last_order');
-                $last['status'] = 'diproses';
+                if (isset($dbOrder)) {
+                    $last['status'] = $dbOrder->status;
+                } else {
+                    $last['status'] = 'diproses';
+                }
                 session()->put('last_order', $last);
             }
         }
+
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([

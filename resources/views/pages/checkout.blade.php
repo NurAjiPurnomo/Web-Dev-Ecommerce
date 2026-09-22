@@ -61,7 +61,7 @@
 
                     <!-- Info Rute Pengiriman dihapus agar tampilan lebih profesional untuk pembeli -->
 
-                    <!-- Pilihan Kota Tujuan RajaOngkir (Hidden, diambil otomatis dari Profil) -->
+                    <!-- Pilihan Area Tujuan (Hidden, diambil otomatis dari Profil) -->
                     <div class="pt-2 border-t border-slate-100 hidden">
                         <input type="hidden" x-model="selectedCityId" value="{{ $address['city_id'] }}">
                     </div>
@@ -109,7 +109,7 @@
                     </div>
                 </div>
 
-                <!-- 3. PILIH METODE PENGIRIMAN REALTIME RAJAONGKIR (JNE, POS, TIKI) -->
+                <!-- 3. PILIH METODE PENGIRIMAN REALTIME BITESHIP -->
                 <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4 relative">
                     <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                         <div class="flex items-center gap-2.5">
@@ -134,23 +134,7 @@
                         </template>
                     </div>
 
-                    <!-- Notifikasi Error Jaringan / Fallback -->
-                    <template x-if="isLiveApi">
-                        <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 font-bold flex items-center gap-2">
-                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            <span>🟢 100% HARGA ASLI LIVE DARI RAJAONGKIR API</span>
-                        </div>
-                    </template>
-                    <template x-if="!isLiveApi && shippingErrorMsg">
-                        <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-center gap-2">
-                            <svg class="w-4 h-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                            <span x-text="shippingErrorMsg"></span>
-                        </div>
-                    </template>
-
-                    <!-- Dynamic List Couriers from RajaOngkir -->
+                    <!-- Dynamic List Couriers from Biteship -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <template x-for="courier in couriers" :key="courier.id">
                             <label 
@@ -164,8 +148,16 @@
                                         :value="courier.id" 
                                         x-model="selectedCourier" 
                                         @change="selectedCourierCost = courier.price; selectedCourierName = courier.name" 
-                                        class="w-4 h-4 text-blue-700 border-slate-300 focus:ring-blue-700 cursor-pointer"
+                                        class="w-4 h-4 text-blue-700 border-slate-300 focus:ring-blue-700 cursor-pointer shrink-0"
                                     >
+                                    <div class="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200 p-1 flex items-center justify-center shrink-0 overflow-hidden">
+                                        <img 
+                                            :src="courier.logo" 
+                                            :alt="courier.name" 
+                                            class="w-full h-full object-contain"
+                                            x-on:error="$event.target.src='/assets/couriers/jne.svg'"
+                                        >
+                                    </div>
                                     <div>
                                         <div class="font-bold text-xs sm:text-sm text-slate-900" x-text="courier.name"></div>
                                         <div class="text-[11px] text-slate-500" x-text="'Estimasi: ' + courier.etd"></div>
@@ -182,33 +174,103 @@
                 <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
                     <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                         <div class="flex items-center gap-2.5">
-                            <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold shadow-2xs">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                                 </svg>
                             </div>
-                            <h2 class="text-base sm:text-lg font-bold text-slate-900">Pilih Metode Pembayaran</h2>
+                            <div>
+                                <h2 class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">Metode Pembayaran</h2>
+                                <p class="text-[11px] text-slate-500">Pilih opsi pembayaran yang Anda inginkan</p>
+                            </div>
                         </div>
                     </div>
 
-                    @foreach($paymentMethods as $group)
-                        <div class="space-y-2">
-                            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">{{ $group['category'] }}</h3>
-                            <div class="grid grid-cols-1 gap-2">
-                                @foreach($group['methods'] as $method)
-                                    <label class="border rounded-xl p-3 flex items-center justify-between cursor-pointer transition-all hover:border-blue-700" :class="selectedPayment === '{{ $method['id'] }}' ? 'border-2 border-blue-700 bg-blue-50/50 shadow-2xs' : 'border-slate-200 bg-white'">
-                                        <div class="flex items-center gap-3">
-                                            <input type="radio" name="payment_method" value="{{ $method['id'] }}" x-model="selectedPayment" class="w-4 h-4 text-blue-700 border-slate-300 focus:ring-blue-700 cursor-pointer">
-                                            <span class="font-bold text-xs sm:text-sm text-slate-900">{{ $method['name'] }}</span>
+                    <!-- ACCORDION KATEGORI PEMBAYARAN -->
+                    <div class="space-y-3">
+                        @foreach($paymentMethods as $group)
+                            <div 
+                                class="border rounded-xl overflow-hidden transition-all duration-200 bg-white"
+                                :class="openPaymentCategory === '{{ $group['id'] }}' ? 'ring-2 ring-blue-500/30 border-blue-600 shadow-sm' : 'border-slate-200 hover:border-slate-300'"
+                            >
+                                <!-- Group Header Toggle -->
+                                <button 
+                                    type="button" 
+                                    @click="openPaymentCategory = (openPaymentCategory === '{{ $group['id'] }}' ? null : '{{ $group['id'] }}')" 
+                                    class="w-full p-3.5 sm:p-4 flex items-center justify-between text-left transition-colors cursor-pointer bg-slate-50/70 hover:bg-slate-100/80"
+                                >
+                                    <div class="flex items-center gap-3">
+                                        <!-- Category Indicator Dot -->
+                                        <div 
+                                            class="w-4 h-4 rounded-full border-2 transition-all shrink-0 flex items-center justify-center"
+                                            :class="isCategoryActive('{{ $group['id'] }}') ? 'border-blue-600 bg-blue-600 ring-2 ring-blue-200' : 'border-slate-300 bg-white'"
+                                        >
+                                            <template x-if="isCategoryActive('{{ $group['id'] }}')">
+                                                <div class="w-1.5 h-1.5 rounded-full bg-white"></div>
+                                            </template>
                                         </div>
-                                        @if(file_exists(public_path($method['logo'])))
-                                            <img src="{{ asset($method['logo']) }}" alt="{{ $method['name'] }}" class="h-5 object-contain">
-                                        @endif
-                                    </label>
-                                @endforeach
+                                        <div>
+                                            <div class="flex items-center gap-2 flex-wrap">
+                                                <span class="font-bold text-xs sm:text-sm text-slate-900">{{ $group['category'] }}</span>
+                                            </div>
+                                            <p class="text-[11px] text-slate-500 mt-0.5 font-medium" x-text="getSelectedMethodDescInGroup('{{ $group['id'] }}') || 'Klik untuk memilih channel'"></p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-center gap-2">
+                                        <svg 
+                                            class="w-5 h-5 text-slate-400 transition-transform duration-200 shrink-0" 
+                                            :class="openPaymentCategory === '{{ $group['id'] }}' ? 'rotate-180 text-blue-700' : ''"
+                                            fill="none" 
+                                            stroke="currentColor" 
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                        </svg>
+                                    </div>
+                                </button>
+
+                                <!-- Group Methods Body (Collapsible) -->
+                                <div 
+                                    x-show="openPaymentCategory === '{{ $group['id'] }}'" 
+                                    x-collapse
+                                    class="p-3 sm:p-4 bg-white border-t border-slate-100 space-y-2"
+                                >
+                                    @foreach($group['methods'] as $method)
+                                        <label 
+                                            class="flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all border"
+                                            :class="selectedPayment === '{{ $method['id'] }}' ? 'border-2 border-blue-600 bg-blue-50/50 shadow-2xs' : 'border-slate-100 hover:border-slate-200 bg-white'"
+                                            @click="openPaymentCategory = '{{ $group['id'] }}'"
+                                        >
+                                            <div class="flex items-center gap-3">
+                                                <input 
+                                                    type="radio" 
+                                                    name="payment_method" 
+                                                    value="{{ $method['id'] }}" 
+                                                    x-model="selectedPayment" 
+                                                    class="w-4 h-4 text-blue-700 border-slate-300 focus:ring-blue-700 cursor-pointer"
+                                                >
+                                                <div>
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="font-bold text-xs sm:text-sm text-slate-900">{{ $method['name'] }}</span>
+                                                    </div>
+                                                    <p class="text-[11px] text-slate-500">{{ $method['desc'] }}</p>
+                                                </div>
+                                            </div>
+
+                                            <div class="shrink-0 flex items-center gap-2">
+                                                @if(file_exists(public_path($method['logo'])))
+                                                    <img src="{{ asset($method['logo']) }}" alt="{{ $method['name'] }}" class="h-5 sm:h-6 max-w-[75px] object-contain">
+                                                @else
+                                                    <span class="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">DOKU</span>
+                                                @endif
+                                            </div>
+                                        </label>
+                                    @endforeach
+                                </div>
                             </div>
-                        </div>
-                    @endforeach
+                        @endforeach
+                    </div>
                 </div>
 
             </div>
@@ -258,7 +320,7 @@
                             <template x-if="appliedShippingVoucher">
                                 <div class="p-2 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-900 shadow-2xs">
                                     <div class="flex items-center gap-1.5 truncate">
-                                        <span class="text-xs shrink-0">🚚</span>
+                                        <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
                                         <div class="truncate">
                                             <span class="font-bold">Gratis Ongkir:</span>
                                             <span class="font-mono bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-extrabold text-[10px] ml-1" x-text="appliedShippingVoucher.code"></span>
@@ -275,7 +337,7 @@
                             <template x-if="appliedDiscountVoucher">
                                 <div class="p-2 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between text-xs text-blue-900 shadow-2xs">
                                     <div class="flex items-center gap-1.5 truncate">
-                                        <span class="text-xs shrink-0">🏷️</span>
+                                        <svg class="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
                                         <div class="truncate">
                                             <span class="font-bold">Diskon Produk:</span>
                                             <span class="font-mono bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-extrabold text-[10px] ml-1" x-text="appliedDiscountVoucher.code"></span>
@@ -312,7 +374,10 @@
                         <!-- Potongan Gratis Ongkir -->
                         <template x-if="appliedShippingVoucher && shippingDiscountAmount > 0">
                             <div class="flex items-center justify-between text-emerald-700 font-medium">
-                                <span class="flex items-center gap-1">🚚 Potongan Ongkir</span>
+                                <span class="flex items-center gap-1">
+                                    <svg class="w-4 h-4 text-emerald-600 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
+                                    <span>Potongan Ongkir</span>
+                                </span>
                                 <span class="font-bold" x-text="'- ' + formatRupiah(shippingDiscountAmount)"></span>
                             </div>
                         </template>
@@ -320,7 +385,10 @@
                         <!-- Potongan Diskon Produk -->
                         <template x-if="appliedDiscountVoucher && productDiscountAmount > 0">
                             <div class="flex items-center justify-between text-blue-700 font-medium">
-                                <span class="flex items-center gap-1">🏷️ Diskon Produk</span>
+                                <span class="flex items-center gap-1">
+                                    <svg class="w-4 h-4 text-blue-600 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                                    <span>Diskon Produk</span>
+                                </span>
                                 <span class="font-bold" x-text="'- ' + formatRupiah(productDiscountAmount)"></span>
                             </div>
                         </template>
@@ -357,7 +425,7 @@
         </div>
 
         <!-- Include Voucher Selection Modal Component -->
-        <x-voucher-modal />
+        @include('components.voucher-modal')
 
     </form>
 
@@ -375,9 +443,49 @@ function checkoutApp() {
         selectedCourierCost: 0,
         selectedCourierName: '',
         selectedPayment: 'bca_va',
+        openPaymentCategory: 'va',
         loadingShipping: false,
         shippingErrorMsg: '',
         isLiveApi: false,
+
+        isCategoryActive(catId) {
+            const map = {
+                'va': ['bca_va', 'mandiri_va', 'bri_va', 'bni_va', 'permata_va', 'cimb_va', 'danamon_va', 'bsi_va'],
+                'qris_ewallet': ['qris', 'ovo', 'shopeepay', 'dana', 'linkaja'],
+                'ritel': ['alfamart', 'indomaret'],
+                'paylater': ['kredivo', 'akulaku', 'indodana'],
+                'card': ['credit_card'],
+                'cod_group': ['cod']
+            };
+            return (map[catId] || []).includes(this.selectedPayment);
+        },
+
+        getSelectedMethodDescInGroup(catId) {
+            if (!this.isCategoryActive(catId)) return '';
+            const titles = {
+                'bca_va': 'BCA Virtual Account',
+                'mandiri_va': 'Mandiri Virtual Account',
+                'bri_va': 'BRI Virtual Account',
+                'bni_va': 'BNI Virtual Account',
+                'permata_va': 'Permata Virtual Account',
+                'cimb_va': 'CIMB Niaga Virtual Account',
+                'danamon_va': 'Danamon Virtual Account',
+                'bsi_va': 'BSI Virtual Account',
+                'qris': 'QRIS Instant (All Bank & E-Wallet)',
+                'ovo': 'OVO E-Wallet',
+                'shopeepay': 'ShopeePay E-Wallet',
+                'dana': 'DANA E-Wallet',
+                'linkaja': 'LinkAja E-Wallet',
+                'alfamart': 'Alfamart / Lawson / Dan+Dan',
+                'indomaret': 'Indomaret / Ceriamart',
+                'kredivo': 'Kredivo PayLater',
+                'akulaku': 'Akulaku PayLater',
+                'indodana': 'Indodana PayLater',
+                'credit_card': 'Kartu Kredit / Debit Online',
+                'cod': 'COD (Bayar di Tempat)'
+            };
+            return '✓ ' + (titles[this.selectedPayment] || 'Metode dipilih') + ' (Aktif)';
+        },
 
         getSelectedCityName() {
             const citiesMap = {
@@ -411,77 +519,8 @@ function checkoutApp() {
         appliedShippingVoucher: null,
         appliedDiscountVoucher: null,
 
-        shippingVouchers: ( @json($dbShippingVouchers ?? []) ).length > 0 ? @json($dbShippingVouchers ?? []) : [
-            {
-                id: 'v_ongkir_1',
-                code: 'FREEONGKIR20',
-                category: 'shipping',
-                title: 'Gratis Ongkir s.d. Rp 20.000',
-                minSpend: 50000,
-                discountType: 'shipping',
-                discountValue: 20000,
-                description: 'Min. belanja Rp 50.000 (Khusus potongan ongkos kirim)',
-                expiry: 'Berlaku s.d. 31 Agt 2026',
-                badge: 'GRATIS ONGKIR',
-                badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-200'
-            },
-            {
-                id: 'v_ongkir_2',
-                code: 'FREEONGKIR15',
-                category: 'shipping',
-                title: 'Gratis Ongkir s.d. Rp 15.000',
-                minSpend: 30000,
-                discountType: 'shipping',
-                discountValue: 15000,
-                description: 'Min. belanja Rp 30.000 (Khusus potongan ongkos kirim)',
-                expiry: 'Berlaku s.d. 25 Agt 2026',
-                badge: 'GRATIS ONGKIR',
-                badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-200'
-            }
-        ],
-
-        discountVouchers: ( @json($dbDiscountVouchers ?? []) ).length > 0 ? @json($dbDiscountVouchers ?? []) : [
-            {
-                id: 'v_diskon_1',
-                code: 'DISKON50K',
-                category: 'discount',
-                title: 'Potongan Harga Rp 50.000',
-                minSpend: 200000,
-                discountType: 'fixed',
-                discountValue: 50000,
-                description: 'Min. belanja Rp 200.000 (Khusus potongan harga produk)',
-                expiry: 'Berlaku s.d. 31 Agt 2026',
-                badge: 'DISKON PRODUK',
-                badgeBg: 'bg-blue-100 text-blue-800 border-blue-200'
-            },
-            {
-                id: 'v_diskon_2',
-                code: 'DISKON10',
-                category: 'discount',
-                title: 'Diskon 10% (s.d. Rp 100.000)',
-                minSpend: 0,
-                discountType: 'percent',
-                discountValue: 10,
-                maxDiscount: 100000,
-                description: 'Tanpa min. belanja (Khusus potongan harga produk)',
-                expiry: 'Berlaku s.d. 20 Agt 2026',
-                badge: 'DISKON PERSEN',
-                badgeBg: 'bg-purple-100 text-purple-800 border-purple-200'
-            },
-            {
-                id: 'v_diskon_3',
-                code: 'CASHBACK25K',
-                category: 'discount',
-                title: 'Cashback Ekstra Rp 25.000',
-                minSpend: 100000,
-                discountType: 'fixed',
-                discountValue: 25000,
-                description: 'Min. belanja Rp 100.000 (Khusus potongan harga produk)',
-                expiry: 'Berlaku s.d. 28 Agt 2026',
-                badge: 'CASHBACK',
-                badgeBg: 'bg-amber-100 text-amber-800 border-amber-200'
-            }
-        ],
+        shippingVouchers: @json($dbShippingVouchers ?? []),
+        discountVouchers: @json($dbDiscountVouchers ?? []),
 
         init() {
             // Fetch live shipping rates when checkout loads
@@ -508,10 +547,11 @@ function checkoutApp() {
 
                 const data = await response.json();
 
-                if (data.couriers && data.couriers.length > 0) {
+                if (data.status === 'success' && data.couriers && data.couriers.length > 0) {
                     this.couriers = data.couriers;
+                    this.isLiveApi = (data.source === 'api');
+                    this.shippingErrorMsg = data.message || '';
                     
-                    // Match currently selected courier or fallback to first courier
                     const match = this.couriers.find(c => c.id === this.selectedCourier);
                     if (match) {
                         this.selectedCourierCost = match.price;
@@ -526,19 +566,13 @@ function checkoutApp() {
                     this.selectedCourier = null;
                     this.selectedCourierCost = 0;
                     this.selectedCourierName = '';
-                }
-
-                if (data.source === 'api') {
-                    this.isLiveApi = true;
-                    this.shippingErrorMsg = '';
-                } else {
                     this.isLiveApi = false;
-                    this.shippingErrorMsg = data.message || 'Menggunakan estimasi tarif lokal (backup jaringan).';
+                    this.shippingErrorMsg = data.message || 'Gagal mengambil tarif real-time dari Biteship API.';
                 }
 
             } catch (error) {
-                console.error('Error fetching RajaOngkir rates:', error);
-                this.shippingErrorMsg = 'Gagal menghubungi server ongkos kirim. Silakan coba lagi.';
+                console.error('Error fetching Biteship rates:', error);
+                this.shippingErrorMsg = 'Gagal menghubungi server Biteship. Silakan periksa koneksi internet / API Key.';
                 this.couriers = [];
                 this.selectedCourier = null;
                 this.selectedCourierCost = 0;

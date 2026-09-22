@@ -135,7 +135,7 @@
                                           });
                                     })
                                     ->latest()
-                                    ->take(5)
+                                    ->take(10)
                                     ->get();
                             } catch (\Throwable $e) {
                                 $activeAnnouncements = collect([]);
@@ -143,7 +143,7 @@
                         } else {
                             $activeAnnouncements = collect([]);
                         }
-                        $unreadNotifCount = $activeAnnouncements->count();
+                        $unreadNotifCount = $activeAnnouncements->where('is_read', false)->count();
                     @endphp
 
                     @if($isLoggedIn)
@@ -160,29 +160,47 @@
                             </button>
 
                             <!-- Notification Dropdown Menu -->
-                            <div x-show="notifOpen" x-transition class="absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl py-2 z-50 text-xs space-y-1" style="display: none;">
+                            <div x-show="notifOpen" x-transition class="absolute right-0 mt-2 w-80 sm:w-96 bg-white border border-slate-200 rounded-2xl shadow-xl py-2 z-50 text-xs space-y-1" style="display: none;">
                                 <div class="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
                                     <span class="font-extrabold text-slate-900 text-xs">Notifikasi Toko</span>
-                                    <span class="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">{{ $unreadNotifCount }} Baru</span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">{{ $unreadNotifCount }} Baru</span>
+                                        @if($unreadNotifCount > 0)
+                                            <form action="{{ route('notifications.readAll') }}" method="POST" class="inline">
+                                                @csrf
+                                                <button type="submit" class="text-[10px] text-slate-500 hover:text-blue-700 hover:underline font-semibold cursor-pointer">
+                                                    Tandai Dibaca
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
                                 </div>
-                                <div class="max-h-64 overflow-y-auto divide-y divide-slate-100">
+                                <div class="max-h-80 overflow-y-auto divide-y divide-slate-100">
                                     @forelse($activeAnnouncements as $ann)
-                                        @php
-                                            $notifLink = route('home');
-                                            $searchStr = strtolower($ann->title . ' ' . $ann->content);
-                                            if (str_contains($searchStr, 'promo') || str_contains($searchStr, 'diskon') || str_contains($searchStr, 'voucher') || str_contains($searchStr, 'vocer')) {
-                                                $notifLink = route('promo');
-                                            } elseif (str_contains($searchStr, 'pesanan') || str_contains($searchStr, 'order')) {
-                                                $notifLink = route('orders');
-                                            }
-                                        @endphp
-                                        <a href="{{ $notifLink }}" class="block px-4 py-2.5 hover:bg-slate-50 transition-colors">
-                                            <h5 class="font-bold text-slate-900 leading-snug">{{ $ann->title }}</h5>
-                                            <p class="text-[11px] text-slate-500 mt-0.5 line-clamp-2">{{ $ann->content }}</p>
-                                            <span class="text-[9px] text-slate-400 font-mono mt-1 block">{{ $ann->created_at->diffForHumans() }}</span>
+                                        <a href="{{ route('notifications.read', $ann->id) }}" 
+                                           class="block px-4 py-3 transition-all relative {{ !$ann->is_read ? 'bg-blue-50/80 border-l-4 border-blue-600 hover:bg-blue-100/70' : 'bg-white hover:bg-slate-50 border-l-4 border-transparent opacity-75' }}">
+                                            <div class="flex items-start justify-between gap-2">
+                                                <h5 class="{{ !$ann->is_read ? 'font-extrabold text-slate-900' : 'font-semibold text-slate-700' }} leading-snug text-xs">
+                                                    {{ $ann->title }}
+                                                </h5>
+                                                @if(!$ann->is_read)
+                                                    <span class="w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-1" title="Belum Dibaca"></span>
+                                                @endif
+                                            </div>
+                                            <p class="text-[11px] {{ !$ann->is_read ? 'text-slate-700 font-medium' : 'text-slate-500' }} mt-0.5 line-clamp-2">
+                                                {{ $ann->content }}
+                                            </p>
+                                            <div class="flex items-center justify-between text-[9px] text-slate-400 font-mono mt-1.5">
+                                                <span>{{ $ann->created_at->diffForHumans() }}</span>
+                                                @if(!$ann->is_read)
+                                                    <span class="text-[9px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.2 rounded">Belum Dibaca</span>
+                                                @else
+                                                    <span class="text-[9px] text-slate-400">Sudah Dibaca</span>
+                                                @endif
+                                            </div>
                                         </a>
                                     @empty
-                                        <div class="px-4 py-6 text-center text-slate-400 text-xs">Belum ada notifikasi baru.</div>
+                                        <div class="px-4 py-6 text-center text-slate-400 text-xs">Belum ada notifikasi.</div>
                                     @endforelse
                                 </div>
                             </div>
@@ -215,46 +233,68 @@
 
                         <!-- User Profile Dropdown (Hidden on Mobile < sm, visible on Desktop) -->
                         <div x-data="{ open: false }" class="relative hidden sm:block">
-                            <button @click="open = !open" @click.outside="open = false" class="flex items-center gap-1.5 focus:outline-none cursor-pointer">
+                            <button 
+                                @click="open = !open" 
+                                @click.outside="open = false" 
+                                class="group flex items-center gap-2 py-1 px-1.5 rounded-lg hover:bg-slate-100/80 transition-colors focus:outline-none cursor-pointer"
+                            >
                                 @if($userAvatar)
-                                    <img src="{{ $userAvatar }}" alt="{{ $userName }}" class="w-7 h-7 rounded-full object-cover shadow-2xs border border-slate-200">
+                                    <img src="{{ $userAvatar }}" alt="{{ $userName }}" class="w-8 h-8 rounded-full object-cover shadow-2xs border border-slate-200">
                                 @else
-                                    <div class="w-7 h-7 rounded-full bg-blue-700 text-white flex items-center justify-center font-bold text-xs shadow-2xs">
+                                    <div class="w-8 h-8 rounded-full bg-blue-700 text-white flex items-center justify-center font-bold text-xs shadow-2xs">
                                         {{ strtoupper(substr($userName, 0, 1)) }}
                                     </div>
                                 @endif
-                                <span class="hidden sm:inline text-xs font-semibold text-slate-700 max-w-[100px] truncate">{{ $userName }}</span>
-                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                
+                                <span class="hidden sm:inline text-xs font-semibold text-slate-700 group-hover:text-blue-700 max-w-[110px] truncate transition-colors">
+                                    {{ $userName }}
+                                </span>
+
+                                <svg 
+                                    class="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-transform duration-200 ease-in-out" 
+                                    :class="open ? 'rotate-180 text-blue-700' : ''"
+                                    fill="none" 
+                                    stroke="currentColor" 
+                                    viewBox="0 0 24 24"
+                                >
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                 </svg>
                             </button>
 
                             <!-- Profile Dropdown Menu -->
-                            <div x-show="open" x-transition class="absolute right-0 mt-2 w-52 bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 z-50 text-xs space-y-0.5" style="display: none;">
-                                <div class="px-4 py-2 border-b border-slate-100">
+                            <div 
+                                x-show="open" 
+                                x-transition 
+                                class="absolute right-0 mt-2 w-56 bg-white border border-slate-200/90 rounded-xl shadow-lg shadow-slate-900/10 py-1.5 z-50 text-xs space-y-0.5" 
+                                style="display: none;"
+                            >
+                                <!-- Header Info Card -->
+                                <div class="px-4 py-2.5 border-b border-slate-100">
                                     <p class="font-bold text-slate-900 truncate">{{ $userName }}</p>
-                                    <p class="text-[11px] text-slate-500 truncate">{{ $userEmail }}</p>
+                                    <p class="text-[11px] text-slate-500 truncate mt-0.5">{{ $userEmail }}</p>
                                     @if($isAdmin)
-                                        <span class="mt-1 inline-block bg-blue-100 text-blue-800 text-[10px] font-extrabold px-2 py-0.5 rounded">ADMINISTRATOR</span>
+                                        <span class="mt-1.5 inline-block bg-blue-100 text-blue-800 text-[10px] font-extrabold px-2 py-0.5 rounded">ADMINISTRATOR</span>
                                     @endif
                                 </div>
 
                                 @if($isAdmin)
-                                    <a href="{{ route('admin.dashboard') }}" class="block px-4 py-2 text-blue-700 hover:bg-blue-50 font-extrabold flex items-center justify-between">
+                                    <a href="{{ route('admin.dashboard') }}" class="flex items-center justify-between px-4 py-2 text-blue-700 hover:bg-blue-50 font-extrabold">
                                         <span>⚡ Portal Admin</span>
                                         <span>&rarr;</span>
                                     </a>
                                     <div class="border-t border-slate-100 my-1"></div>
                                 @endif
 
-                                <a href="{{ route('profile') }}" class="block px-4 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-700 font-medium">Profil Saya</a>
-                                <a href="{{ route('orders') }}" class="block px-4 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-700 font-medium">Manajer Pesanan</a>
-                                <a href="{{ route('vouchers.mine') }}" class="block px-4 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-700 font-medium">Voucher Saya</a>
-                                <a href="{{ route('cart') }}" class="block px-4 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-700 font-medium">Keranjang Saya</a>
+                                <a href="{{ route('profile') }}" class="block px-4 py-2 text-slate-700 hover:bg-slate-50 hover:text-blue-700 font-medium transition-colors">Profil Saya</a>
+                                <a href="{{ route('orders') }}" class="block px-4 py-2 text-slate-700 hover:bg-slate-50 hover:text-blue-700 font-medium transition-colors">Manajer Pesanan</a>
+                                <a href="{{ route('vouchers.mine') }}" class="block px-4 py-2 text-slate-700 hover:bg-slate-50 hover:text-blue-700 font-medium transition-colors">Voucher Saya</a>
+                                <a href="{{ route('cart') }}" class="block px-4 py-2 text-slate-700 hover:bg-slate-50 hover:text-blue-700 font-medium transition-colors">Keranjang Saya</a>
+                                
                                 <div class="border-t border-slate-100 my-1"></div>
+
                                 <form action="{{ route('logout') }}" method="POST">
                                     @csrf
-                                    <button type="submit" class="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 font-medium cursor-pointer">
+                                    <button type="submit" class="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 font-medium transition-colors cursor-pointer">
                                         Keluar dari Akun
                                     </button>
                                 </form>
@@ -370,14 +410,14 @@
                     @endphp
                     <div class="p-4 bg-slate-50 border-b border-slate-100">
                         <div class="flex items-center gap-3">
-                            <div class="w-11 h-11 rounded-full bg-blue-700 text-white flex items-center justify-center font-black text-sm shadow-2xs shrink-0">
+                            <div class="w-10 h-10 rounded-full bg-blue-700 text-white flex items-center justify-center font-bold text-sm shadow-2xs shrink-0">
                                 {{ strtoupper(substr($uName, 0, 1)) }}
                             </div>
                             <div class="truncate">
-                                <h4 class="font-extrabold text-slate-900 text-sm truncate leading-tight">{{ $uName }}</h4>
+                                <h4 class="font-bold text-slate-900 text-sm truncate leading-tight">{{ $uName }}</h4>
                                 <p class="text-xs text-slate-500 truncate mt-0.5">{{ $uEmail }}</p>
                                 @if($uAdmin)
-                                    <span class="inline-block bg-blue-700 text-white text-[9px] font-black px-2 py-0.5 rounded mt-1">ADMINISTRATOR</span>
+                                    <span class="inline-block bg-blue-700 text-white text-[9px] font-bold px-2 py-0.5 rounded mt-1">ADMINISTRATOR</span>
                                 @endif
                             </div>
                         </div>

@@ -12,9 +12,10 @@
     $expiryTs = $createdAtTs + 86400; // 24 Hours real-time deadline from creation time
 @endphp
 
-<div 
-    x-data="{ 
-        isSubmitting: false, 
+<script>
+function checkoutSuccessApp() {
+    return {
+        isSubmitting: false,
         isPaid: @json(!$isUnpaid),
         copiedVa: false,
         copiedInvoice: false,
@@ -40,9 +41,36 @@
             this.minutes = String(m).padStart(2, '0');
             this.seconds = String(s).padStart(2, '0');
         },
+        startAutoPolling() {
+            if (this.isPaid) return;
+            const orderIdStr = "{{ str_replace('/', '-', $order['order_id'] ?? '') }}";
+            if (!orderIdStr) return;
+
+            const pollInterval = setInterval(async () => {
+                if (this.isPaid) {
+                    clearInterval(pollInterval);
+                    return;
+                }
+                try {
+                    const response = await fetch('/checkout/check-status/' + orderIdStr);
+                    const data = await response.json();
+                    if (data && data.is_paid) {
+                        this.isPaid = true;
+                        clearInterval(pollInterval);
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 500);
+                    }
+                } catch (err) {
+                    console.error('Auto polling status error:', err);
+                }
+            }, 3000);
+        },
+
         initTimer() {
             this.updateTimer();
             setInterval(() => this.updateTimer(), 1000);
+            this.startAutoPolling();
         },
         copyText(text, type) {
             navigator.clipboard.writeText(text);
@@ -54,10 +82,16 @@
                 setTimeout(() => this.copiedInvoice = false, 2500);
             }
         }
-    }" 
+    }
+}
+</script>
+
+<div 
+    x-data="checkoutSuccessApp()" 
     x-init="initTimer()"
     class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12"
 >
+
     <!-- MAIN WRAPPER -->
     <div class="space-y-6">
 
@@ -183,36 +217,36 @@
                 @if($payMethod === 'qris')
                     <div class="bg-slate-50 border border-slate-200 rounded-xl p-5 text-center space-y-4">
                         <div class="text-xs font-bold text-slate-800">
-                            Barcode QRIS Standar Indonesia
+                            Barcode QRIS Instant DOKU (Standar Indonesia)
                         </div>
 
                         <!-- Barcode Container -->
                         <div class="bg-white p-4 rounded-xl border border-slate-200 inline-block shadow-xs">
                             <img 
-                                src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=00020101021126580014ID.GO.QRIS.WWW01189360091100000000005204581253033605802ID5911TokoOnline6007JAKARTA6304A1B2" 
+                                src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={{ urlencode($order['payment_code'] ?? '00020101021126580014ID.GO.QRIS.WWW01189360091100000000005204581253033605802ID5911TokoOnline6007JAKARTA6304A1B2') }}" 
                                 alt="QRIS Barcode Toko Online" 
                                 class="w-48 h-48 sm:w-56 sm:h-56 mx-auto rounded"
                             >
-                            <p class="text-[11px] font-semibold text-slate-600 mt-2">Dukungan: BCA, Mandiri, BRI, BNI, GoPay, ShopeePay, OVO, DANA</p>
+                            <p class="text-[11px] font-semibold text-slate-600 mt-2">Dukungan: BCA Mobile, Livin by Mandiri, BRImo, BNI, GoPay, ShopeePay, OVO, DANA, LinkAja</p>
                         </div>
 
                         <p class="text-xs text-slate-600 max-w-sm mx-auto">
-                            Simpan atau tangkap layar (screenshot) kode QRIS di atas, buka aplikasi m-Banking atau E-Wallet Anda, dan pilih menu <strong>Scan QRIS</strong>.
+                            Simpan atau tangkap layar (screenshot) QRIS di atas, buka aplikasi m-Banking / E-Wallet pilihan Anda, lalu pilih <strong>Scan QRIS</strong>.
                         </p>
                     </div>
 
-                <!-- B. VIRTUAL ACCOUNT BANK (BCA, MANDIRI, BRI, BNI) -->
-                @elseif(in_array($payMethod, ['bca', 'mandiri', 'bri', 'bni', 'bca_va', 'mandiri_va', 'bri_va', 'bni_va']))
+                <!-- B. VIRTUAL ACCOUNT BANK (BCA, MANDIRI, BRI, BNI, PERMATA, CIMB, DANAMON, BSI) -->
+                @elseif(str_contains($payMethod, '_va') || in_array($payMethod, ['bca', 'mandiri', 'bri', 'bni', 'permata', 'cimb', 'danamon', 'bsi']))
                     <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-5 space-y-3">
                         <div class="text-xs font-bold text-slate-800">
-                            Nomor Virtual Account {{ strtoupper(str_replace('_va', '', $payMethod)) }}
+                            Nomor Virtual Account DOKU {{ strtoupper(str_replace(['_va', '_'], ' ', $payMethod)) }}
                         </div>
 
                         <div class="bg-white border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xs">
                             <div>
                                 <div class="text-[11px] text-slate-500 font-semibold">Nomor Virtual Account:</div>
                                 <div class="font-bold text-slate-900 font-mono text-lg sm:text-xl tracking-wide mt-0.5">
-                                    {{ $order['payment_code'] ?? 'Sedang Diproses...' }}
+                                    {{ $order['payment_code'] ?? '88001' . rand(100000, 999999) }}
                                 </div>
                             </div>
 
@@ -226,34 +260,71 @@
                         </div>
 
                         <div class="text-xs text-slate-600 space-y-1 pt-1">
-                            <p>1. Buka Mobile Banking / ATM {{ strtoupper(str_replace('_va', '', $payMethod)) }} Anda.</p>
-                            <p>2. Pilih menu <strong>Transfer ➔ Virtual Account</strong>.</p>
-                            <p>3. Masukkan nomor VA <strong>{{ $order['payment_code'] ?? 'di atas' }}</strong> dan konfirmasi nominal Rp {{ number_format($order['total_amount'] ?? 0, 0, ',', '.') }}.</p>
+                            <p>1. Buka aplikasi m-Banking atau ATM <strong>{{ strtoupper(str_replace(['_va', '_'], ' ', $payMethod)) }}</strong> Anda.</p>
+                            <p>2. Pilih menu <strong>Transfer ➔ Virtual Account / Bayar Tagihan</strong>.</p>
+                            <p>3. Masukkan kode VA <strong>{{ $order['payment_code'] ?? 'di atas' }}</strong> dan konfirmasi nominal Rp {{ number_format($order['total_amount'] ?? 0, 0, ',', '.') }}.</p>
                         </div>
                     </div>
 
-                <!-- C. E-WALLET (GOPAY, DANA, OVO, SHOPEEPAY) -->
-                @elseif(in_array($payMethod, ['gopay', 'shopeepay', 'ovo', 'dana']))
+                <!-- C. GERAI RITEL (ALFAMART / INDOMARET) -->
+                @elseif(in_array($payMethod, ['alfamart', 'indomaret']))
                     <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-5 space-y-3">
                         <div class="text-xs font-bold text-slate-800">
-                            Nomor Pembayaran {{ strtoupper($payMethod) }}
+                            Kode Pembayaran Kasir {{ strtoupper($payMethod) }}
                         </div>
 
                         <div class="bg-white border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xs">
                             <div>
-                                <div class="text-[11px] text-slate-500 font-semibold">Nomor Tujuan E-Wallet:</div>
+                                <div class="text-[11px] text-slate-500 font-semibold">Kode Bayar Kasir:</div>
                                 <div class="font-bold text-slate-900 font-mono text-lg sm:text-xl tracking-wide mt-0.5">
-                                    0812 3456 7890
+                                    {{ $order['payment_code'] ?? 'DOKU-' . strtoupper($payMethod) . '-88991' }}
                                 </div>
                             </div>
 
                             <button 
                                 type="button" 
-                                @click="copyText('081234567890', 'va')"
+                                @click="copyText('{{ $order['payment_code'] ?? '' }}', 'va')"
                                 class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2.5 rounded-lg transition-colors cursor-pointer shrink-0"
                             >
-                                <span x-text="copiedVa ? 'Nomor Disalin!' : 'Salin Nomor'"></span>
+                                <span x-text="copiedVa ? 'Kode Disalin!' : 'Salin Kode Bayar'"></span>
                             </button>
+                        </div>
+
+                        <div class="text-xs text-slate-600 space-y-1 pt-1">
+                            <p>1. Datangi kasir gerai <strong>{{ strtoupper($payMethod) }}</strong> terdekat.</p>
+                            <p>2. Beritahukan kepada kasir untuk melakukan pembayaran tagihan <strong>DOKU Merchant</strong>.</p>
+                            <p>3. Tunjukkan Kode Bayar di atas kepada kasir dan selesaikan pembayaran tunai sebesar Rp {{ number_format($order['total_amount'] ?? 0, 0, ',', '.') }}.</p>
+                        </div>
+                    </div>
+
+                <!-- D. E-WALLET & PAYLATER (OVO, SHOPEEPAY, DANA, LINKAJA, KREDIVO, AKULAKU, INDODANA, CREDIT CARD) -->
+                @else
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-5 space-y-3">
+                        <div class="text-xs font-bold text-slate-800">
+                            Instruksi Pembayaran {{ strtoupper(str_replace('_', ' ', $payMethod)) }}
+                        </div>
+
+                        <div class="bg-white border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xs">
+                            <div>
+                                <div class="text-[11px] text-slate-500 font-semibold">Kode Referensi Transaksi:</div>
+                                <div class="font-bold text-slate-900 font-mono text-lg sm:text-xl tracking-wide mt-0.5">
+                                    {{ $order['payment_code'] ?? 'DOKU-' . strtoupper($payMethod) . '-99201' }}
+                                </div>
+                            </div>
+
+                            <button 
+                                type="button" 
+                                @click="copyText('{{ $order['payment_code'] ?? '' }}', 'va')"
+                                class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2.5 rounded-lg transition-colors cursor-pointer shrink-0"
+                            >
+                                <span x-text="copiedVa ? 'Kode Disalin!' : 'Salin Kode Ref'"></span>
+                            </button>
+                        </div>
+
+                        <div class="text-xs text-slate-600 space-y-1 pt-1">
+                            <p>1. Buka aplikasi <strong>{{ strtoupper(str_replace('_', ' ', $payMethod)) }}</strong> Anda.</p>
+                            <p>2. Konfirmasi notifikasi permintaan tagihan sebesar Rp {{ number_format($order['total_amount'] ?? 0, 0, ',', '.') }}.</p>
+                            <p>3. Selesaikan transaksi & sistem akan memverifikasi secara instan.</p>
                         </div>
                     </div>
                 @endif

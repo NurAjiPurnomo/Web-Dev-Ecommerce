@@ -222,7 +222,7 @@ function cartApp() {
         customerAddress: @json($uAddress),
         items: @json($cartItems ?? []),
 
-        // RAJAONGKIR REAL-TIME API STATE
+        // BITESHIP REAL-TIME API STATE
         selectedCityId: @json($uCityId),
         loadingShipping: false,
         isLiveApi: false,
@@ -265,10 +265,10 @@ function cartApp() {
                 const data = await response.json();
                 if (data.source === 'api') {
                     this.isLiveApi = true;
-                    this.shippingStatusMsg = '🟢 100% HARGA ASLI LIVE DARI RAJAONGKIR API';
+                    this.shippingStatusMsg = '🟢 100% HARGA ASLI LIVE DARI BITESHIP API';
                 } else {
                     this.isLiveApi = false;
-                    this.shippingStatusMsg = data.message || '⚡ Server API RajaOngkir lambat/offline. Menggunakan Tarif Resmi Ekspedisi.';
+                    this.shippingStatusMsg = data.message || '⚡ Server API Biteship lambat/offline. Menggunakan Tarif Resmi Ekspedisi.';
                 }
 
                 if (data.couriers && data.couriers.length > 0) {
@@ -284,7 +284,7 @@ function cartApp() {
                     }
                 }
             } catch (err) {
-                console.error("RajaOngkir fetch error", err);
+                console.error("Biteship fetch error", err);
                 this.isLiveApi = false;
                 this.shippingStatusMsg = '⚡ Menggunakan Tarif Resmi Ekspedisi (Jarak & Berat).';
             } finally {
@@ -311,77 +311,8 @@ function cartApp() {
         appliedShippingVoucher: null,
         appliedDiscountVoucher: null,
 
-        shippingVouchers: [
-            {
-                id: 'v_ongkir_1',
-                code: 'FREEONGKIR20',
-                category: 'shipping',
-                title: 'Gratis Ongkir s.d. Rp 20.000',
-                minSpend: 50000,
-                discountType: 'shipping',
-                discountValue: 20000,
-                description: 'Min. belanja Rp 50.000 untuk semua pilihan pengiriman',
-                expiry: 'Berlaku s.d. 31 Agt 2026',
-                badge: 'GRATIS ONGKIR',
-                badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-200'
-            },
-            {
-                id: 'v_ongkir_2',
-                code: 'FREEONGKIR15',
-                category: 'shipping',
-                title: 'Gratis Ongkir s.d. Rp 15.000',
-                minSpend: 30000,
-                discountType: 'shipping',
-                discountValue: 15000,
-                description: 'Min. belanja Rp 30.000 untuk J&T / SiCepat / JNE',
-                expiry: 'Berlaku s.d. 25 Agt 2026',
-                badge: 'GRATIS ONGKIR',
-                badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-200'
-            }
-        ],
-
-        discountVouchers: [
-            {
-                id: 'v_diskon_1',
-                code: 'DISKON50K',
-                category: 'discount',
-                title: 'Potongan Harga Rp 50.000',
-                minSpend: 200000,
-                discountType: 'fixed',
-                discountValue: 50000,
-                description: 'Min. belanja Rp 200.000 untuk semua produk',
-                expiry: 'Berlaku s.d. 31 Agt 2026',
-                badge: 'SPESIAL GAJIAN',
-                badgeBg: 'bg-blue-100 text-blue-800 border-blue-200'
-            },
-            {
-                id: 'v_diskon_2',
-                code: 'DISKON10',
-                category: 'discount',
-                title: 'Diskon 10% (s.d. Rp 100.000)',
-                minSpend: 0,
-                discountType: 'percent',
-                discountValue: 10,
-                maxDiscount: 100000,
-                description: 'Tanpa min. belanja khusus kategori Fashion & Gadget',
-                expiry: 'Berlaku s.d. 20 Agt 2026',
-                badge: 'DISKON PERSEN',
-                badgeBg: 'bg-purple-100 text-purple-800 border-purple-200'
-            },
-            {
-                id: 'v_diskon_3',
-                code: 'CASHBACK25K',
-                category: 'discount',
-                title: 'Cashback Ekstra Rp 25.000',
-                minSpend: 100000,
-                discountType: 'fixed',
-                discountValue: 25000,
-                description: 'Min. belanja Rp 100.000 untuk transaksi apa saja',
-                expiry: 'Berlaku s.d. 28 Agt 2026',
-                badge: 'CASHBACK',
-                badgeBg: 'bg-amber-100 text-amber-800 border-amber-200'
-            }
-        ],
+        shippingVouchers: @json($dbShippingVouchers ?? []),
+        discountVouchers: @json($dbDiscountVouchers ?? []),
 
         ineligibleVouchers: [
             {

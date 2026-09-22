@@ -53,8 +53,61 @@ class CartController extends Controller
             session()->put('cart_initialized', true);
         }
 
+        $user = auth()->user();
+        if ($user) {
+            $dbVouchers = $user->vouchers()
+                ->wherePivot('is_used', false)
+                ->where('status', 'aktif')
+                ->where(function ($query) {
+                    $query->whereNull('expires_at')
+                          ->orWhere('expires_at', '>=', now());
+                })
+                ->get();
+        } else {
+            $dbVouchers = collect([]);
+        }
+
+        $dbShippingVouchers = [];
+        $dbDiscountVouchers = [];
+
+        foreach ($dbVouchers as $v) {
+            if ($v->type === 'gratis_ongkir') {
+                $dbShippingVouchers[] = [
+                    'id'            => 'v_' . $v->id,
+                    'code'          => $v->code,
+                    'category'      => 'shipping',
+                    'title'         => 'Gratis Ongkir s.d. Rp ' . number_format($v->discount_value, 0, ',', '.'),
+                    'minSpend'      => (int) $v->min_spend,
+                    'discountType'  => 'shipping',
+                    'discountValue' => (int) $v->discount_value,
+                    'description'   => 'Min. belanja Rp ' . number_format($v->min_spend, 0, ',', '.') . ' khusus potongan ongkir',
+                    'expiry'        => $v->expires_at ? 'Berlaku s.d. ' . $v->expires_at->format('d M Y') : 'Berlaku terbatas',
+                    'badge'         => 'GRATIS ONGKIR',
+                    'badgeBg'       => 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                ];
+            } else {
+                $isPercent = ($v->type === 'diskon_persen');
+                $dbDiscountVouchers[] = [
+                    'id'            => 'v_' . $v->id,
+                    'code'          => $v->code,
+                    'category'      => 'discount',
+                    'title'         => $isPercent ? ('Diskon ' . $v->discount_value . '% (s.d. Rp ' . number_format($v->max_discount ?: 100000, 0, ',', '.') . ')') : ('Potongan Harga Rp ' . number_format($v->discount_value, 0, ',', '.')),
+                    'minSpend'      => (int) $v->min_spend,
+                    'discountType'  => $isPercent ? 'percent' : 'fixed',
+                    'discountValue' => (int) $v->discount_value,
+                    'maxDiscount'   => $v->max_discount ? (int) $v->max_discount : null,
+                    'description'   => 'Min. belanja Rp ' . number_format($v->min_spend, 0, ',', '.') . ' khusus potongan harga produk',
+                    'expiry'        => $v->expires_at ? 'Berlaku s.d. ' . $v->expires_at->format('d M Y') : 'Berlaku terbatas',
+                    'badge'         => $isPercent ? 'DISKON PERSEN' : 'POTONGAN HARGA',
+                    'badgeBg'       => $isPercent ? 'bg-purple-100 text-purple-800 border-purple-200' : 'bg-blue-100 text-blue-800 border-blue-200'
+                ];
+            }
+        }
+
         return view('pages.cart', [
-            'cartItems' => array_values($cart),
+            'cartItems'          => array_values($cart),
+            'dbShippingVouchers' => $dbShippingVouchers,
+            'dbDiscountVouchers' => $dbDiscountVouchers,
         ]);
     }
 
@@ -77,6 +130,9 @@ class CartController extends Controller
         $dbProduct = \App\Models\Product::find($productId);
         $originalPrice = $dbProduct ? $dbProduct->original_price : (int) str_replace(['Rp', '.', ' ', ','], '', $request->input('original_price', 0));
         $discount = $dbProduct ? $dbProduct->discount : $request->input('discount');
+
+        // Resolve specific variant image if available
+        $image = $this->resolveVariantImage($dbProduct, $color, $size, $variantId, $image);
 
         // Buat kunci unik per kombinasi produk & varian
         $keyParts = [
@@ -153,6 +209,9 @@ class CartController extends Controller
         $color     = $request->input('color', null);
         $size      = $request->input('size', null);
         $qty       = max(1, (int) $request->input('qty', 1));
+
+        $dbProduct = \App\Models\Product::find($productId);
+        $image     = $this->resolveVariantImage($dbProduct, $color, $size, $variantId, $image);
 
         $keyParts = [
             $productId,
@@ -319,5 +378,60 @@ class CartController extends Controller
         }
 
         return redirect()->back()->with('success', 'Keranjang berhasil dikosongkan.');
+    }
+
+    /**
+     * Resolve image URL for selected product variant.
+     */
+    private function resolveVariantImage($dbProduct, $color, $size, $variantId, $fallbackImage = null)
+    {
+        if ($dbProduct && !empty($dbProduct->variants) && is_array($dbProduct->variants)) {
+            foreach ($dbProduct->variants as $var) {
+                $matchColor = !empty($color) && strtolower(trim($var['color'] ?? '')) === strtolower(trim($color));
+                $matchSize  = !empty($size) && strtolower(trim($var['size'] ?? '')) === strtolower(trim($size));
+                $matchId    = !empty($variantId) && (($var['id'] ?? null) == $variantId || ($var['variant_id'] ?? null) == $variantId);
+
+                if (($matchColor && $matchSize) || $matchId || ($matchColor && empty($size))) {
+                    if (!empty($var['image'])) {
+                        $img = $var['image'];
+                        if (!str_starts_with($img, 'http') && !str_starts_with($img, 'assets/')) {
+                            return asset(ltrim($img, '/'));
+                        }
+                        return $img;
+                    }
+                }
+            }
+        }
+
+        if ($dbProduct && !empty($dbProduct->colors) && is_array($dbProduct->colors) && !empty($color)) {
+            foreach ($dbProduct->colors as $c) {
+                if (is_array($c) && !empty($c['name']) && strtolower(trim($c['name'])) === strtolower(trim($color))) {
+                    if (!empty($c['image'])) {
+                        $img = $c['image'];
+                        if (!str_starts_with($img, 'http') && !str_starts_with($img, 'assets/')) {
+                            return asset(ltrim($img, '/'));
+                        }
+                        return $img;
+                    }
+                }
+            }
+        }
+
+        if (!empty($fallbackImage)) {
+            if (!str_starts_with($fallbackImage, 'http') && !str_starts_with($fallbackImage, 'assets/')) {
+                return asset(ltrim($fallbackImage, '/'));
+            }
+            return $fallbackImage;
+        }
+
+        if ($dbProduct && !empty($dbProduct->image)) {
+            $img = $dbProduct->image;
+            if (!str_starts_with($img, 'http') && !str_starts_with($img, 'assets/')) {
+                return asset(ltrim($img, '/'));
+            }
+            return $img;
+        }
+
+        return 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=600&auto=format&fit=crop&q=80';
     }
 }

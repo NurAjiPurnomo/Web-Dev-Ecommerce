@@ -64,11 +64,27 @@
                 </template>
             </div>
 
+            <!-- Empty State Notice if No Active Claimed Vouchers -->
+            <template x-if="shippingVouchers.length === 0 && discountVouchers.length === 0">
+                <div class="py-6 px-4 bg-slate-50 border border-dashed border-slate-200 rounded-2xl text-center space-y-2">
+                    <div class="w-10 h-10 rounded-full bg-slate-200/70 text-slate-500 flex items-center justify-center mx-auto">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 011 1.732 2 2 0 01-1 1.732V17a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 01-1-1.732 2 2 0 011-1.732V7a2 2 0 00-2-2H5z"/></svg>
+                    </div>
+                    <div>
+                        <h4 class="font-extrabold text-slate-800 text-xs sm:text-sm">Tidak Ada Voucher Aktif</h4>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Semua voucher yang Anda klaim telah digunakan atau belum diklaim.</p>
+                    </div>
+                    <a href="{{ route('promo') }}" class="inline-block bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg transition-colors">
+                        Klaim Voucher Baru di Halaman Promo →
+                    </a>
+                </div>
+            </template>
+
             <!-- SECTION 1: VOUCHER GRATIS ONGKIR -->
             <div class="space-y-3">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-2">
                     <div class="flex items-center gap-2">
-                        <span class="text-base">🚚</span>
+                        <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
                         <div>
                             <h4 class="font-extrabold text-slate-900 text-xs sm:text-sm uppercase tracking-tight">Voucher Gratis Ongkir</h4>
                             <p class="text-[10px] text-emerald-700 font-semibold">Khusus Potongan Biaya Ongkos Kirim</p>
@@ -124,7 +140,7 @@
             <div class="space-y-3">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-2">
                     <div class="flex items-center gap-2">
-                        <span class="text-base">🏷️</span>
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
                         <div>
                             <h4 class="font-extrabold text-slate-900 text-xs sm:text-sm uppercase tracking-tight">Voucher Diskon Produk</h4>
                             <p class="text-[10px] text-blue-700 font-semibold">Khusus Potongan Subtotal Harga Produk</p>
@@ -180,7 +196,7 @@
             <div class="space-y-3">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-2">
                     <div class="flex items-center gap-2">
-                        <span class="text-base">🚫</span>
+                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
                         <h4 class="font-extrabold text-slate-400 text-xs sm:text-sm uppercase tracking-tight">Voucher Tidak Berlaku</h4>
                     </div>
                 </div>

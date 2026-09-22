@@ -144,8 +144,8 @@
                 </div>
             </div>
 
-            <!-- Product Grid (5 Columns) -->
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <!-- Product Grid (6 Columns) -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
                 @forelse($promoProducts as $product)
                     <div>
                         <x-product-card 

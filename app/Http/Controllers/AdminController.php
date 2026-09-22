@@ -12,6 +12,8 @@ use App\Models\Affiliate;
 use App\Models\Announcement;
 use App\Models\ProductReview;
 use App\Models\Banner;
+use App\Models\StoreSetting;
+use App\Services\BiteshipService;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 
@@ -213,10 +215,13 @@ class AdminController extends Controller
             'price'          => 'required|numeric|min:0',
             'original_price' => 'nullable|numeric|min:0',
             'stock'          => 'required|integer|min:0',
+            'weight'         => 'nullable|integer|min:1',
             'image'          => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'size_guide_image'=> 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'description'    => 'nullable|string',
         ]);
+
+        $validated['weight'] = !empty($validated['weight']) ? (int)$validated['weight'] : 1000;
 
         if (!empty($validated['original_price']) && (float)$validated['original_price'] > (float)$validated['price']) {
             $discountPct = round((((float)$validated['original_price'] - (float)$validated['price']) / (float)$validated['original_price']) * 100);
@@ -365,11 +370,14 @@ class AdminController extends Controller
             'price'          => 'required|numeric|min:0',
             'original_price' => 'nullable|numeric|min:0',
             'stock'          => 'required|integer|min:0',
+            'weight'         => 'nullable|integer|min:1',
             'image'          => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'size_guide_image'=> 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'description'    => 'nullable|string',
             'status'         => 'required|string',
         ]);
+
+        $validated['weight'] = !empty($validated['weight']) ? (int)$validated['weight'] : ($product->weight ?: 1000);
 
         if (!empty($validated['original_price']) && (float)$validated['original_price'] > (float)$validated['price']) {
             $discountPct = round((((float)$validated['original_price'] - (float)$validated['price']) / (float)$validated['original_price']) * 100);
@@ -587,6 +595,78 @@ class AdminController extends Controller
     }
 
     /**
+     * Export Laporan Penjualan (CSV Format)
+     */
+    public function exportOrders(Request $request)
+    {
+        $status = $request->query('status', 'semua');
+        $query = Order::with(['user', 'items']);
+
+        if ($status !== 'semua') {
+            if ($status === 'belum_bayar' || $status === 'belum_dibayar') {
+                $query->whereIn('status', ['belum_bayar', 'belum_dibayar']);
+            } elseif ($status === 'dikemas' || $status === 'diproses') {
+                $query->whereIn('status', ['dikemas', 'diproses']);
+            } else {
+                $query->where('status', $status);
+            }
+        }
+
+        $orders = $query->latest()->get();
+        $filename = 'laporan-penjualan-' . date('Y-m-d') . '.csv';
+
+        $headers = [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Pragma'              => 'no-cache',
+            'Cache-Control'       => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires'             => '0',
+        ];
+
+        $callback = function () use ($orders) {
+            $file = fopen('php://output', 'w');
+            fputs($file, "\xEF\xBB\xBF");
+
+            fputcsv($file, [
+                'No. Invoice',
+                'Tanggal Pesanan',
+                'Nama Pembeli',
+                'Telepon',
+                'Alamat Pengiriman',
+                'Ekspedisi / Kurir',
+                'Nomor Resi',
+                'Status Transaksi',
+                'Subtotal',
+                'Ongkos Kirim',
+                'Diskon',
+                'Total Tagihan',
+            ]);
+
+            foreach ($orders as $o) {
+                fputcsv($file, [
+                    $o->invoice_number,
+                    $o->created_at ? $o->created_at->format('Y-m-d H:i') : '',
+                    $o->recipient_name ?: ($o->user->name ?? 'Pelanggan'),
+                    $o->recipient_phone ?: ($o->user->phone ?? '-'),
+                    $o->shipping_address ?: ($o->user->address ?? '-'),
+                    strtoupper($o->courier ?: 'J&T'),
+                    $o->tracking_number ?: '-',
+                    strtoupper($o->status ?: 'BELUM DIBAYAR'),
+                    $o->subtotal ?? 0,
+                    $o->shipping_cost ?? 0,
+                    $o->discount_amount ?? 0,
+                    $o->total ?? 0,
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+
+    /**
      * Update Order Status & Resi
      */
     public function updateOrder(Request $request, $id)
@@ -637,6 +717,51 @@ class AdminController extends Controller
         }
 
         return redirect()->route('admin.orders')->with('success', 'Status pesanan ' . $order->invoice_number . ' telah berhasil diperbarui menjadi "' . strtoupper(str_replace('_', ' ', $validated['status'])) . '"!');
+    }
+
+    /**
+     * Management Return / Komplain Pelanggan (Bukti Video Unboxing & Foto Cacat)
+     */
+    public function returns()
+    {
+        $returns = \App\Models\OrderReturn::with('order', 'user')->latest()->get();
+        return view('admin.returns', compact('returns'));
+    }
+
+    /**
+     * Process Return Request (Approve / Reject)
+     */
+    public function processReturn(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|string|in:approved,rejected,completed',
+            'admin_notes' => 'nullable|string|max:1000',
+        ]);
+
+        $orderReturn = \App\Models\OrderReturn::with('order')->findOrFail($id);
+        $orderReturn->status = $request->status;
+        $orderReturn->admin_notes = trim($request->admin_notes);
+        $orderReturn->save();
+
+        // Update main order status if approved or completed
+        if ($request->status === 'approved' || $request->status === 'completed') {
+            $orderReturn->order->update(['status' => 'batal']);
+        }
+
+        // Send System Notification to User
+        if ($orderReturn->user_id) {
+            $statusText = $request->status === 'approved' ? 'DISETUJUI' : ($request->status === 'rejected' ? 'DITOLAK' : 'SELESAI');
+            \App\Models\Announcement::create([
+                'user_id' => $orderReturn->user_id,
+                'title'   => '📦 Pengajuan Retur #' . $orderReturn->order->invoice_number . ' ' . $statusText,
+                'content' => 'Pengajuan retur barang Anda telah ' . strtolower($statusText) . ' oleh admin. Catatan: ' . ($request->admin_notes ?: '-'),
+                'type'    => 'notifikasi',
+                'target'  => 'pelanggan',
+                'status'  => 'ditayangkan'
+            ]);
+        }
+
+        return redirect()->route('admin.returns')->with('success', 'Pengajuan retur berhasil diperbarui!');
     }
 
     /**
@@ -1080,5 +1205,82 @@ class AdminController extends Controller
         $article->delete();
 
         return redirect()->route('admin.articles')->with('success', 'Artikel berhasil dihapus!');
+    }
+
+    /**
+     * Store Settings Page (Lokasi Asal Toko & Pengaturan Kurir Aktif)
+     */
+    public function storeSettings()
+    {
+        $settings = StoreSetting::getSettings();
+        return view('admin.store-settings', compact('settings'));
+    }
+
+    /**
+     * Update Store Settings
+     */
+    public function updateStoreSettings(Request $request)
+    {
+        $settings = StoreSetting::getSettings();
+
+        $validated = $request->validate([
+            'store_name' => 'required|string|max:255',
+            'sender_name' => 'required|string|max:255',
+            'sender_phone' => 'required|string|max:50',
+            'address_detail' => 'required|string',
+            'village' => 'required|string',
+            'district' => 'required|string',
+            'city' => 'required|string',
+            'province' => 'required|string',
+            'postal_code' => 'required|string|max:10',
+            'biteship_area_id' => 'nullable|string',
+            'biteship_api_key' => 'nullable|string',
+            'active_couriers' => 'nullable|array',
+            'biteship_handling_fee' => 'nullable|numeric|min:0',
+            'biteship_shipping_discount' => 'nullable|numeric|min:0',
+            'min_order_for_discount' => 'nullable|numeric|min:0',
+            'biteship_round_shipping' => 'nullable|string|in:none,up_1000,down_1000,nearest_1000',
+        ]);
+
+        $validated['active_couriers'] = $request->input('active_couriers', []);
+        $validated['biteship_handling_fee'] = $validated['biteship_handling_fee'] ?? 0;
+        $validated['biteship_shipping_discount'] = $validated['biteship_shipping_discount'] ?? 0;
+        $validated['min_order_for_discount'] = $validated['min_order_for_discount'] ?? 0;
+        $validated['biteship_round_shipping'] = $validated['biteship_round_shipping'] ?? 'none';
+
+        $settings->update($validated);
+
+        return redirect()->route('admin.storeSettings')->with('success', 'Pengaturan lokasi toko, kurir aktif & strategi tarif (Custom Rates) berhasil diperbarui!');
+    }
+
+    /**
+     * Create Biteship Order manually for an order & generate A6 Shipping Label
+     */
+    public function createBiteshipOrder(Request $request, $id, BiteshipService $biteshipService)
+    {
+        $order = Order::findOrFail($id);
+        $result = $biteshipService->processOrderPickup($order);
+
+        return redirect()->route('admin.orders')->with('success', 'Pesanan berhasil dikirim ke Biteship! No. Resi (AWB): ' . $order->waybill_number);
+    }
+
+    /**
+     * Render Printable A6 Thermal Shipping Label
+     */
+    public function shippingLabel($id)
+    {
+        $order = Order::with('items.product', 'user')->findOrFail($id);
+        $store = StoreSetting::getSettings();
+        return view('admin.shipping-label', compact('order', 'store'));
+    }
+
+    private function normalizeCourierCode(string $courierStr): string
+    {
+        return BiteshipService::normalizeCourierCode($courierStr);
+    }
+
+    private function normalizeCourierService(string $serviceStr): string
+    {
+        return BiteshipService::normalizeCourierService($serviceStr);
     }
 }

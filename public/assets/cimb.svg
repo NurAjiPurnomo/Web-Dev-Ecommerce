@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 70" width="240" height="70">
+  <rect width="240" height="70" rx="10" fill="#7A0000"/>
+  <g transform="translate(16, 18)">
+    <polygon points="0,0 24,17 0,34" fill="#ED1C24"/>
+    <polygon points="10,6 28,17 10,28" fill="#FFFFFF"/>
+  </g>
+  <text x="140" y="44" fill="#FFFFFF" font-family="'Outfit', 'Inter', sans-serif" font-weight="900" font-size="22" text-anchor="middle" letter-spacing="1">CIMB NIAGA</text>
+</svg>

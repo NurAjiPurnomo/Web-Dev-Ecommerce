@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 70" width="240" height="70">
+  <rect width="240" height="70" rx="10" fill="#334155"/>
+  <g transform="translate(16, 18)">
+    <rect width="34" height="24" rx="4" fill="#10B981"/>
+    <circle cx="17" cy="30" r="4" fill="#F59E0B"/>
+  </g>
+  <text x="142" y="44" fill="#FFFFFF" font-family="'Outfit', 'Inter', sans-serif" font-weight="900" font-size="24" text-anchor="middle">COD Bayar</text>
+</svg>

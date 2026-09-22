@@ -43,6 +43,7 @@
                 alt="{{ $title }}" 
                 class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                 loading="lazy"
+                onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&auto=format&fit=crop&q=80';"
             >
         </div>
     </a>

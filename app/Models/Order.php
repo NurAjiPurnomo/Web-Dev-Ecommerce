@@ -17,12 +17,22 @@ class Order extends Model
         'discount_amount',
         'total',
         'courier',
+        'courier_code',
+        'courier_service',
         'payment_method',
         'status',
         'tracking_number',
+        'biteship_order_id',
+        'waybill_number',
+        'waybill_pdf_url',
         'shipping_address',
         'recipient_name',
         'recipient_phone',
+        'destination_area_id',
+        'destination_postal_code',
+        'destination_district',
+        'destination_village',
+        'destination_rt_rw',
     ];
 
     protected static function booted()
@@ -48,6 +58,11 @@ class Order extends Model
     public function items()
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function returns()
+    {
+        return $this->hasMany(OrderReturn::class);
     }
 
     public function getFormattedTotalAttribute()

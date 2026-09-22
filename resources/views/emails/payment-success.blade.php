@@ -97,8 +97,8 @@
             </table>
 
             <div style="text-align: center; margin-top: 30px;">
-                <p style="font-size: 14px; color: #64748b; margin-bottom: 10px;">Anda dapat melacak status pesanan Anda secara langsung melalui website kami.</p>
-                <a href="{{ url('/orders') }}" class="btn">Lacak Pesanan Saya</a>
+                <p style="font-size: 14px; color: #64748b; margin-bottom: 10px;">Anda dapat melacak status pesanan Anda secara langsung melalui halaman pelacakan kami.</p>
+                <a href="{{ route('tracking.public', $order->invoice_number) }}" class="btn">Lacak Pesanan Saya</a>
             </div>
         </div>
 

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 70" width="240" height="70">
+  <rect width="240" height="70" rx="10" fill="#F36F21"/>
+  <g transform="translate(18, 18)">
+    <polygon points="0,0 16,17 0,34" fill="#00B9FF"/>
+    <polygon points="12,0 28,17 12,34" fill="#FFFFFF"/>
+  </g>
+  <text x="142" y="44" fill="#FFFFFF" font-family="'Outfit', 'Inter', sans-serif" font-weight="900" font-size="24" text-anchor="middle">Kredivo</text>
+</svg>

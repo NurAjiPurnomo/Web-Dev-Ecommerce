@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 70" width="240" height="70">
+  <rect width="240" height="70" rx="10" fill="#00A39D"/>
+  <g transform="translate(18, 15)">
+    <polygon points="20,0 25,14 40,14 27,22 32,36 20,27 8,36 13,22 0,14 15,14" fill="#FFC72C"/>
+  </g>
+  <text x="145" y="46" fill="#FFFFFF" font-family="'Outfit', 'Inter', sans-serif" font-weight="900" font-size="32" text-anchor="middle" letter-spacing="2">BSI</text>
+</svg>

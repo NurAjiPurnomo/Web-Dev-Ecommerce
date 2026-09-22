@@ -72,8 +72,8 @@
         </div>
     </div>
 
-    <!-- Product Grid (Full Width: Strict 5-Column Grid, NO sidebars) -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 pt-2">
+    <!-- Product Grid (Full Width: Strict 6-Column Grid) -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-5 pt-2">
         <template x-for="item in items" :key="item.id">
             <a :href="'/product/' + item.id + '/' + item.slug" class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-xs hover:shadow-md transition-all duration-200 group relative flex flex-col justify-between block">
                 <div>

@@ -53,19 +53,33 @@ class DokuWebhookController extends Controller
         $status = $payload['transaction']['status'] ?? null;
 
         if ($invoiceNumber) {
-            $order = Order::where('invoice_number', $invoiceNumber)->first();
+            $slashInvoice = str_replace('-', '/', $invoiceNumber);
+            $dashInvoice = str_replace('/', '-', $invoiceNumber);
+            $order = Order::where('invoice_number', $invoiceNumber)
+                ->orWhere('invoice_number', $slashInvoice)
+                ->orWhere('invoice_number', $dashInvoice)
+                ->first();
+
 
             if ($order) {
                 // Jika pembayaran sukses (SUCCESS)
                 if (in_array(strtoupper($status), ['SUCCESS', 'PAID'])) {
-                    // Update status pesanan ke 'diproses' (Sedang Dikemas)
-                    $order->update([
-                        'status' => 'diproses'
-                    ]);
-                    
-                    Log::info("DOKU Webhook: Order {$invoiceNumber} marked as PAID.");
+                    // Update status pesanan ke 'diproses' (hanya jika posisi awal belum bayar)
+                    if (in_array($order->status, ['belum_bayar', 'belum_dibayar'])) {
+                        $order->update([
+                            'status' => 'diproses'
+                        ]);
+                        Log::info("DOKU Webhook: Order {$invoiceNumber} marked as PAID.");
+                    }
 
-                    // Kirim Email Pembayaran Sukses
+                    // Auto-Trigger Biteship Order API: Generasi Resi AWB & Permintaan Pickup Kurir
+                    try {
+                        app(\App\Services\BiteshipService::class)->processOrderPickup($order);
+                    } catch (\Exception $e) {
+                        Log::error("DOKU Webhook Biteship Auto-Pickup Error: " . $e->getMessage());
+                    }
+                    
+                    // Kirim Email Pembayaran Sukses (jika belum dikirim)
                     try {
                         $userEmail = $order->user->email ?? null;
                         if ($userEmail) {

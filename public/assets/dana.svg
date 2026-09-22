@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 70" width="240" height="70">
+  <rect width="240" height="70" rx="10" fill="#108EE9"/>
+  <g transform="translate(18, 18)">
+    <polygon points="16,0 32,32 0,32" fill="#FFFFFF"/>
+    <circle cx="16" cy="18" r="5" fill="#108EE9"/>
+  </g>
+  <text x="145" y="46" fill="#FFFFFF" font-family="'Outfit', 'Inter', sans-serif" font-weight="900" font-size="34" text-anchor="middle" letter-spacing="3">DANA</text>
+</svg>

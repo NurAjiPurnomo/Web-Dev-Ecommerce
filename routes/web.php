@@ -11,7 +11,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\AdminController;
-use App\Http\Controllers\RajaOngkirController;
+use App\Http\Controllers\ShippingController;
 use App\Http\Middleware\AdminMiddleware;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
@@ -21,9 +21,15 @@ Route::get('/promo', [HomeController::class, 'promo'])->name('promo');
 Route::get('/berita', [HomeController::class, 'articlesIndex'])->name('articles.index');
 Route::get('/berita/{slug}', [HomeController::class, 'articleDetail'])->name('articles.detail');
 
-// RajaOngkir Helper API Routes for Checkout
-Route::get('/shipping/provinces', [RajaOngkirController::class, 'getProvinces'])->name('shipping.provinces');
-Route::get('/shipping/cities/{province_id}', [RajaOngkirController::class, 'getCities'])->name('shipping.cities');
+// Biteship Shipping API Routes
+Route::get('/shipping/biteship/areas', [ShippingController::class, 'searchArea'])->name('shipping.biteship.areas');
+Route::post('/shipping/biteship/cost', [ShippingController::class, 'calculateCost'])->name('shipping.biteship.cost');
+Route::get('/orders/{id}/track', [ShippingController::class, 'trackOrder'])->name('orders.track')->middleware('auth');
+
+// Public Custom Branded Tracking Page & API (No Auth Required)
+Route::get('/lacak/{waybill?}', [ShippingController::class, 'publicTrackingPage'])->name('tracking.public');
+Route::get('/track/{waybill?}', [ShippingController::class, 'publicTrackingPage']);
+Route::get('/api/tracking/search', [ShippingController::class, 'publicTrackApi'])->name('tracking.public.api');
 
 // Cart Routes
 Route::get('/cart', [CartController::class, 'index'])->name('cart');
@@ -42,6 +48,8 @@ Route::post('/checkout/address', [CheckoutController::class, 'updateAddress'])->
 Route::post('/checkout/calculate-shipping', [CheckoutController::class, 'calculateShipping'])->name('checkout.calculateShipping')->middleware('auth');
 Route::post('/checkout/confirm-payment', [CheckoutController::class, 'confirmPayment'])->name('checkout.confirmPayment')->middleware('auth');
 Route::get('/checkout/success/{order_id?}', [CheckoutController::class, 'success'])->name('checkout.success')->middleware('auth');
+Route::get('/checkout/check-status/{order_id}', [CheckoutController::class, 'checkStatus'])->name('checkout.checkStatus');
+
 
 // Profile & Order Management Routes
 Route::get('/profile', [ProfileController::class, 'show'])->name('profile')->middleware('auth');
@@ -49,12 +57,18 @@ Route::post('/profile', [ProfileController::class, 'update'])->name('profile.upd
 Route::post('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password')->middleware('auth');
 Route::get('/orders', [OrderController::class, 'index'])->name('orders')->middleware('auth');
 Route::post('/orders/{id}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel')->where('id', '.*')->middleware('auth');
+Route::post('/orders/{id}/complete', [OrderController::class, 'complete'])->name('orders.complete')->where('id', '.*')->middleware('auth');
 Route::post('/orders/review', [OrderController::class, 'submitReview'])->name('orders.review')->middleware('auth');
-Route::get('/setup-dummy-order', [\App\Http\Controllers\OrderController::class, 'setupDummyOrder']);
+Route::post('/orders/return', [OrderController::class, 'submitReturn'])->name('orders.return')->middleware('auth');
+
 
 // Wishlist Routes
 Route::get('/wishlist', [WishlistController::class, 'index'])->name('wishlist')->middleware('auth');
 Route::post('/wishlist/toggle', [WishlistController::class, 'toggle'])->name('wishlist.toggle')->middleware('auth');
+
+// User Notification Routes
+Route::get('/notifications/{id}/read', [HomeController::class, 'readNotification'])->name('notifications.read')->middleware('auth');
+Route::post('/notifications/read-all', [HomeController::class, 'readAllNotifications'])->name('notifications.readAll')->middleware('auth');
 
 // Voucher Routes
 Route::post('/vouchers/{id}/claim', [\App\Http\Controllers\VoucherController::class, 'claim'])->name('vouchers.claim')->middleware('auth');
@@ -85,6 +99,7 @@ Route::post('/resend-otp', [OtpController::class, 'resend'])->name('otp.resend')
 // ADMIN DASHBOARD & MANAGEMENT ROUTES
 // ==========================================
 Route::get('/admin', [AdminController::class, 'showLogin'])->name('admin.login');
+Route::get('/admin/login', [AdminController::class, 'showLogin']);
 Route::post('/admin/login', [AdminController::class, 'login'])->name('admin.login.post');
 
 Route::middleware([AdminMiddleware::class])->prefix('admin')->group(function () {
@@ -103,12 +118,18 @@ Route::middleware([AdminMiddleware::class])->prefix('admin')->group(function () 
 
     // Orders Management
     Route::get('/orders', [AdminController::class, 'orders'])->name('admin.orders');
+    Route::get('/orders/export', [AdminController::class, 'exportOrders'])->name('admin.orders.export');
     Route::post('/orders/{id}/update', [AdminController::class, 'updateOrder'])->name('admin.orders.update');
+
 
     // Vouchers Management
     Route::get('/vouchers', [AdminController::class, 'vouchers'])->name('admin.vouchers');
     Route::post('/vouchers', [AdminController::class, 'storeVoucher'])->name('admin.vouchers.store');
     Route::post('/vouchers/{id}/toggle', [AdminController::class, 'toggleVoucher'])->name('admin.vouchers.toggle');
+
+    // Customer Returns & Complaints Management (Photo & Video Unboxing Proof)
+    Route::get('/returns', [AdminController::class, 'returns'])->name('admin.returns');
+    Route::post('/returns/{id}/process', [AdminController::class, 'processReturn'])->name('admin.returns.process');
 
     // Affiliates Management
     Route::get('/affiliates', [AdminController::class, 'affiliates'])->name('admin.affiliates');
@@ -145,6 +166,12 @@ Route::middleware([AdminMiddleware::class])->prefix('admin')->group(function () 
     Route::post('/pages/{id}/update', [AdminController::class, 'updatePage'])->name('admin.pages.update');
     Route::post('/pages/{id}/toggle', [AdminController::class, 'togglePageStatus'])->name('admin.pages.toggle');
     Route::post('/pages/{id}/delete', [AdminController::class, 'deletePage'])->name('admin.pages.delete');
+
+    // Store Settings & Biteship Couriers Management
+    Route::get('/store-settings', [AdminController::class, 'storeSettings'])->name('admin.storeSettings');
+    Route::post('/store-settings', [AdminController::class, 'updateStoreSettings'])->name('admin.storeSettings.update');
+    Route::post('/orders/{id}/create-biteship', [AdminController::class, 'createBiteshipOrder'])->name('admin.orders.createBiteship');
+    Route::get('/orders/{id}/shipping-label', [AdminController::class, 'shippingLabel'])->name('admin.orders.shippingLabel');
 });
 
 // Dynamic Pages Route (must be at the end to avoid conflicts)
@@ -153,7 +180,5 @@ Route::get('/page/{slug}', [HomeController::class, 'dynamicPage'])->name('page.s
 // DOKU Webhook Route
 Route::post('/api/doku/webhook', [App\Http\Controllers\DokuWebhookController::class, 'handle'])->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
 
-
-
-
-
+// Biteship Tracking Webhook Route
+Route::post('/api/biteship/webhook', [App\Http\Controllers\BiteshipWebhookController::class, 'handle'])->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);

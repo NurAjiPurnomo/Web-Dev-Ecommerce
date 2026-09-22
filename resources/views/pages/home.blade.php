@@ -184,16 +184,18 @@
                 @foreach($categories as $category)
                     @php $isActive = isset($selectedCategory) && strcasecmp($selectedCategory, $category['name']) === 0; @endphp
                     <a href="{{ route('catalog', ['category' => strtolower($category['name'])]) }}" class="flex flex-col items-center group cursor-pointer w-full">
-                        <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border transition-all duration-300 transform group-hover:-translate-y-1 group-hover:scale-105 flex items-center justify-center mb-2 {{ $isActive ? 'bg-blue-700 text-white border-blue-700 ring-4 ring-blue-700/20 shadow-md' : ($category['bgLight'] ?? 'bg-blue-50 text-blue-700 border-slate-200 group-hover:bg-blue-700 group-hover:text-white') }}">
+                        <div class="w-11 h-11 sm:w-13 sm:h-13 rounded-xl sm:rounded-2xl border transition-all duration-300 transform group-hover:-translate-y-0.5 group-hover:scale-105 flex items-center justify-center mb-1.5 {{ $isActive ? 'bg-blue-700 text-white border-blue-700 ring-3 ring-blue-700/20 shadow-sm' : ($category['bgLight'] ?? 'bg-blue-50/70 text-blue-700 border-slate-200/80 group-hover:bg-blue-700 group-hover:text-white') }}">
                             @if(isset($category['icon']))
-                                <svg class="w-6 h-6 sm:w-7 sm:h-7 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="{{ $category['icon'] }}"/>
+                                <svg class="w-5 h-5 sm:w-5 sm:h-5 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="{{ $category['icon'] }}"/>
                                 </svg>
                             @else
-                                <span class="text-xl sm:text-2xl transition-transform duration-300 group-hover:scale-110">{{ $category['emoji'] ?? '📦' }}</span>
+                                <svg class="w-5 h-5 sm:w-5 sm:h-5 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                </svg>
                             @endif
                         </div>
-                        <span class="text-xs font-semibold transition-colors text-center truncate w-full {{ $isActive ? 'text-blue-700 font-extrabold' : 'text-slate-700 group-hover:text-blue-700 font-bold' }}">
+                        <span class="text-[11px] sm:text-xs font-semibold transition-colors text-center truncate w-full {{ $isActive ? 'text-blue-700 font-extrabold' : 'text-slate-700 group-hover:text-blue-700 font-bold' }}">
                             {{ $category['name'] }}
                         </span>
                     </a>
@@ -234,7 +236,7 @@
 
             <!-- Grid of 5 Product Cards -->
             <div class="p-4 sm:p-5">
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
                     @foreach($flashSaleProducts as $product)
                         <x-product-card 
                             :id="$product['id']"
@@ -279,7 +281,7 @@
 
             <!-- Best Sellers Product Cards Grid (5 Columns) -->
             <div class="bg-white p-4 sm:p-5">
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
                     @foreach($bestSellerProducts as $product)
                         <x-product-card 
                             :id="$product['id']"
@@ -336,8 +338,8 @@
             </a>
         </div>
 
-        <!-- 5-Column Grid of Products -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        <!-- 6-Column Grid of Products -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
             @foreach($recommendedProducts as $product)
                 <x-product-card 
                     :id="$product['id']"
@@ -351,6 +353,16 @@
                     :variants="$product['variants'] ?? []"
                 />
             @endforeach
+        </div>
+
+        <!-- Tombol Lihat Selengkapnya (Standard Tokopedia & Shopee) -->
+        <div class="mt-8 text-center">
+            <a href="{{ route('catalog') }}" class="inline-flex items-center justify-center gap-2 px-8 py-3 bg-white hover:bg-blue-50 text-blue-700 font-extrabold text-xs sm:text-sm border-2 border-blue-700 rounded-xl transition-all shadow-xs hover:shadow-md cursor-pointer group">
+                <span>Lihat Selengkapnya di Katalog Produk</span>
+                <svg class="w-4 h-4 text-blue-700 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                </svg>
+            </a>
         </div>
     </section>
 

@@ -38,18 +38,19 @@ return [
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect' => env('GOOGLE_REDIRECT_URI'),
+        'redirect' => env('GOOGLE_REDIRECT_URI') ?: url('/auth/google/callback'),
     ],
 
-    'rajaongkir' => [
-        'api_key' => env('RAJAONGKIR_API_KEY'),
-        'base_url' => env('RAJAONGKIR_BASE_URL', 'https://api.rajaongkir.com/starter'),
-        'origin_city' => env('RAJAONGKIR_ORIGIN_CITY', '152'),
-    ],
 
     'komerce' => [
         'payment_key' => env('KOMERCE_PAYMENT_API_KEY'),
         'payment_base_url' => env('KOMERCE_PAYMENT_BASE_URL', 'https://api-sandbox.collaborator.komerce.id/user/api/v1'),
+    ],
+
+    'doku' => [
+        'client_id' => env('DOKU_CLIENT_ID'),
+        'secret_key' => env('DOKU_SECRET_KEY'),
+        'is_production' => env('DOKU_IS_PRODUCTION', false),
     ],
 
 ];

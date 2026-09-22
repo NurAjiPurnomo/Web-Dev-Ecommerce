@@ -46,7 +46,19 @@
             <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mt-1">Pusat Manajemen Penjualan &amp; Transaksi</h1>
             <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Monitoring transaksi pelanggan, status pengiriman ekspedisi, dan pencetakan label Airway Bill (AWB)</p>
         </div>
+        <div class="shrink-0">
+            <a 
+                href="{{ route('admin.orders.export', ['status' => $status]) }}" 
+                class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-3 rounded-xl transition-all shadow-xs flex items-center gap-2 cursor-pointer"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <span>Export Laporan (.csv)</span>
+            </a>
+        </div>
     </div>
+
 
     <!-- 5 KPI Summary Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-5 gap-3.5">
@@ -190,18 +202,18 @@
                             </td>
                             <td class="px-5 py-4 text-right">
                                 <div class="flex items-center justify-end gap-1.5">
-                                    <!-- Button Cetak Label Pengiriman AWB -->
-                                    <button 
-                                        type="button" 
-                                        @click="selectedOrder = ordersMap[{{ $o->id }}]; showAwbPrintModal = true"
-                                        class="text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
-                                        title="Cetak Shipping Label AWB Cashless"
+                                    <!-- Button Cetak Label Pengiriman Biteship / A6 PDF -->
+                                    <a 
+                                        href="{{ $o->waybill_pdf_url ?: route('admin.orders.shippingLabel', $o->id) }}" 
+                                        target="_blank"
+                                        class="text-xs font-bold text-white bg-blue-700 hover:bg-blue-800 border border-blue-800 px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
+                                        title="Cetak Shipping Label Resmi A6 (Siap Cetak Thermal)"
                                     >
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
                                         </svg>
-                                        <span>Label AWB</span>
-                                    </button>
+                                        <span>Cetak Resi (PDF)</span>
+                                    </a>
 
                                     @if($o->status === 'dikemas' || $o->status === 'diproses')
                                         <form action="{{ route('admin.orders.update', $o->id) }}" method="POST" class="inline">

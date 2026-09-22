@@ -1,6 +1,10 @@
 @extends('layouts.app')
 
 @section('content')
+<!-- Leaflet CSS and Script for Live GPS Tracking Map -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <div x-data="orderManagerApp()" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
 
     <!-- Page Header & Breadcrumb -->
@@ -13,23 +17,14 @@
             <span class="text-slate-900 font-bold">Manajer Pesanan</span>
         </nav>
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-1">
-            <div class="flex items-center gap-4">
-                <div>
-                    <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-                        <svg class="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                        </svg>
-                        <span>Manajer Pesanan</span>
-                    </h1>
-                    <p class="text-xs sm:text-sm text-slate-500">Kelola, lacak status, dan lihat rincian transaksi belanja Anda</p>
-                </div>
-                <!-- BUTTON TAMBAH PESANAN DUMMY UNTUK TESTING -->
-                <a href="{{ url('/setup-dummy-order') }}" class="bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-300 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1 transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            <div>
+                <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                    <svg class="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                     </svg>
-                    Buat Pesanan Dummy (Selesai)
-                </a>
+                    <span>Manajer Pesanan</span>
+                </h1>
+                <p class="text-xs sm:text-sm text-slate-500">Kelola, lacak status, dan lihat rincian transaksi belanja Anda</p>
             </div>
             
             <div class="flex items-center gap-2">
@@ -108,7 +103,7 @@
             <div class="space-y-3 max-h-[calc(100vh-220px)] overflow-y-auto pr-1">
                 <template x-for="(order, idx) in filteredOrders" :key="idx + '_' + (order.id || order.raw_id || idx)">
                     <div 
-                        @click="selectedOrderIndex = idx"
+                        @click="selectOrder(idx)"
                         :class="selectedOrderIndex === idx ? 'border-blue-600 ring-2 ring-blue-600/20 bg-blue-50/40 shadow-sm' : 'border-slate-200 bg-white hover:bg-slate-50/80 shadow-2xs'"
                         class="border rounded-2xl p-4 transition-all cursor-pointer space-y-3 relative group"
                     >
@@ -149,25 +144,38 @@
                             </template>
                         </div>
 
-                        <!-- Card Body: Summary -->
-                        <div class="space-y-1">
-                            <p class="text-xs font-semibold text-slate-800 line-clamp-1" x-text="order.items_summary"></p>
-                            <div class="flex items-center justify-between text-xs pt-1">
-                                <span class="text-slate-500">Total Tagihan:</span>
-                                <span class="font-extrabold text-slate-900 text-sm text-blue-700" x-text="formatRupiah(order.total_amount)"></span>
+                        <!-- Card Body: Shopee Style Product Thumbnail & Details -->
+                        <div class="flex items-center gap-3 py-2 border-y border-slate-100/80 my-1">
+                            <div class="w-14 h-14 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
+                                <img 
+                                    :src="order.items && order.items.length > 0 ? order.items[0].image : 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600'" 
+                                    :alt="order.items_summary"
+                                    class="w-full h-full object-cover"
+                                >
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-bold text-slate-900 line-clamp-2 leading-snug" x-text="order.items_summary"></p>
+                                <p class="text-[11px] font-semibold text-slate-500 mt-1" x-text="order.items && order.items.length > 0 ? (order.items[0].qty + ' barang • Rp ' + Number(order.items[0].price).toLocaleString('id-ID')) : ''"></p>
                             </div>
                         </div>
 
-                        <!-- Chevron Indicator -->
-                        <div class="flex justify-end pt-1">
-                            <span class="text-[11px] font-bold text-blue-700 group-hover:underline flex items-center gap-1">
+                        <!-- Card Footer: Total & Action -->
+                        <div class="flex items-center justify-between text-xs pt-1">
+                            <div>
+                                <span class="text-[11px] text-slate-500 font-medium block">Total Tagihan:</span>
+                                <span class="font-extrabold text-slate-900 text-sm text-blue-700" x-text="formatRupiah(order.total_amount)"></span>
+                            </div>
+                            <button 
+                                type="button" 
+                                @click.stop="selectOrderAndShowModal(idx)" 
+                                class="text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-600 hover:text-white border border-blue-200 px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1 cursor-pointer"
+                            >
                                 <span>Lihat Rincian</span>
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                                </svg>
-                            </span>
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                            </button>
                         </div>
                     </div>
+
                 </template>
 
                 <!-- Empty State -->
@@ -398,16 +406,23 @@
                     <!-- 4. Delivery & Address Information Section -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100 text-xs">
                         
-                        <!-- Customer Address -->
+                        <!-- Customer Address (Alamat Penerima) -->
                         <div class="space-y-1 bg-slate-50 p-3.5 rounded-xl border border-slate-200/60">
-                            <p class="font-bold text-slate-900 flex items-center gap-1.5">
-                                <svg class="w-3.5 h-3.5 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                                </svg>
-                                <span>Alamat Pengiriman</span>
+                            <p class="font-bold text-slate-900 flex items-center justify-between">
+                                <span class="flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                    </svg>
+                                    <span>Alamat Penerima</span>
+                                </span>
+                                <span class="text-[10px] bg-blue-100 text-blue-800 font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider">Tujuan</span>
                             </p>
                             <p class="font-bold text-slate-800" x-text="activeOrder.recipient.name + ' (' + activeOrder.recipient.phone + ')'"></p>
                             <p class="text-slate-600 text-[11px] leading-relaxed" x-text="activeOrder.recipient.address + ', ' + activeOrder.recipient.city"></p>
+                            <div class="pt-2 border-t border-slate-200/60 text-[11px] text-slate-500 flex items-center justify-between">
+                                <span><strong class="text-slate-700">Alamat Pengirim:</strong> Toko Online Official</span>
+                                <span class="text-[10px] text-slate-400 uppercase font-bold">Asal / Origin</span>
+                            </div>
                         </div>
 
                         <!-- Courier Info (Shopee Style Status Flow) -->
@@ -463,19 +478,7 @@
                                 </template>
                             </div>
 
-                            <!-- TOMBOL LACAK HANYA MUNCUL JIKA STATUS DIKIRIM ATAU SELESAI -->
-                            <template x-if="activeOrder.status === 'dikirim' || activeOrder.status === 'selesai'">
-                                <button 
-                                    type="button" 
-                                    @click="showTrackingModal = true"
-                                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 rounded-xl transition-colors cursor-pointer text-center mt-3 flex items-center justify-center gap-1.5 shadow-2xs"
-                                >
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
-                                    </svg>
-                                    <span>Lacak Paket Pengiriman</span>
-                                </button>
-                            </template>
+
                         </div>
 
                     </div>
@@ -573,10 +576,11 @@
 
                                 <button 
                                     type="button" 
-                                    @click="alert('Terima kasih! Status pesanan diperbarui menjadi Selesai.')"
-                                    class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-3.5 rounded-xl transition-colors cursor-pointer text-center"
+                                    @click="confirmCompleteOrder(activeOrder)"
+                                    class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-3.5 rounded-xl transition-colors cursor-pointer text-center flex items-center justify-center gap-1.5 shadow-xs"
                                 >
-                                    Pesanan Diterima
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                    <span>Pesanan Diterima</span>
                                 </button>
                             </div>
                         </template>
@@ -596,6 +600,15 @@
                                         <span>Beri Penilaian</span>
                                     </button>
                                 </template>
+
+                                <button 
+                                    type="button" 
+                                    @click="openReturnModal()"
+                                    class="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-semibold text-xs px-4 py-3.5 rounded-xl transition-colors text-center cursor-pointer flex items-center justify-center gap-1.5"
+                                >
+                                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 15v-1a4 4 0 00-4-4H4m0 0l4-4m-4 4l4 4"/></svg>
+                                    <span>Ajukan Retur / Komplain</span>
+                                </button>
 
                                 <a 
                                     href="{{ route('catalog') }}"
@@ -763,26 +776,74 @@
                         <p class="text-xs text-slate-600 leading-relaxed" x-text="activeOrder.tracking_data ? activeOrder.tracking_data.status_desc : ''"></p>
                     </div>
 
-                    <!-- Courier & Recipient Details -->
+                    <!-- Courier & Sender/Recipient Details -->
                     <div class="grid grid-cols-2 gap-3 text-xs">
                         <div class="p-3 bg-slate-50 border border-slate-200/60 rounded-xl space-y-0.5">
-                            <span class="text-slate-400 font-bold block text-[10px] uppercase">Kurir Pengirim:</span>
-                            <span class="font-extrabold text-slate-900 block" x-text="activeOrder.courier.driver"></span>
+                            <span class="text-slate-400 font-bold block text-[10px] uppercase">Alamat Pengirim:</span>
+                            <span class="font-extrabold text-slate-900 block truncate">Toko Online Official</span>
+                            <span class="text-[10px] text-slate-500 block truncate">Gudang Utama (Origin)</span>
                         </div>
                         <div class="p-3 bg-slate-50 border border-slate-200/60 rounded-xl space-y-0.5">
-                            <span class="text-slate-400 font-bold block text-[10px] uppercase">Tujuan Pengiriman:</span>
+                            <span class="text-slate-400 font-bold block text-[10px] uppercase">Alamat Penerima:</span>
                             <span class="font-extrabold text-slate-900 block truncate" x-text="activeOrder.recipient.name"></span>
+                            <span class="text-[10px] text-slate-500 block truncate" x-text="activeOrder.recipient.city"></span>
                         </div>
+                    </div>
+
+                    <!-- GPS LIVE MAP TRACKING (SHOPEE STYLE) -->
+                    <div class="space-y-1.5 pt-1">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                Peta GPS Rute Pengiriman Real-Time
+                            </span>
+                            <span class="text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                LIVE GPS MAP
+                            </span>
+                        </div>
+                        <div id="trackingLiveMap" class="w-full h-48 sm:h-56 rounded-2xl border border-slate-200 overflow-hidden shadow-inner z-0 bg-slate-100"></div>
                     </div>
 
                     <!-- Granular Timeline Track -->
                     <div class="space-y-3 pt-2">
-                        <h4 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                            <div class="w-1.5 h-4 bg-blue-700 rounded-full"></div>
-                            <span>Linimasa Perjalanan Paket</span>
-                        </h4>
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                                <div class="w-1.5 h-4 bg-blue-700 rounded-full"></div>
+                                <span>Linimasa Perjalanan Paket (Live Biteship)</span>
+                            </h4>
+                            <button type="button" @click="fetchLiveTracking()" class="text-xs font-bold text-blue-700 hover:underline flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                <span>Refresh</span>
+                            </button>
+                        </div>
 
-                        <template x-if="activeOrder.tracking_data">
+                        <template x-if="loadingTracking">
+                            <div class="py-6 text-center text-slate-500 text-xs flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4 animate-spin text-blue-700" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                <span>Mengambil status tracking terbaru...</span>
+                            </div>
+                        </template>
+
+                        <template x-if="!loadingTracking && trackingHistory.length > 0">
+                            <div class="relative pl-6 space-y-5 before:content-[''] before:absolute before:left-2.5 before:top-2.5 before:bottom-2.5 before:w-0.5 before:bg-slate-200">
+                                <template x-for="(step, sIdx) in trackingHistory" :key="sIdx">
+                                    <div class="relative space-y-0.5 text-xs">
+                                        <div 
+                                            :class="sIdx === 0 ? 'bg-blue-700 ring-4 ring-blue-100' : 'bg-blue-500'" 
+                                            class="w-3.5 h-3.5 rounded-full absolute -left-6 top-0.5 border-2 border-white transition-all shrink-0"
+                                        ></div>
+                                        <div class="flex items-center justify-between">
+                                            <h5 class="font-extrabold text-xs text-slate-900" x-text="step.note || step.status || 'Status Pengiriman'"></h5>
+                                            <span class="text-[10px] font-mono text-slate-400" x-text="step.updated_at || step.time || ''"></span>
+                                        </div>
+                                        <p class="text-[11px] text-slate-600 leading-snug" x-text="step.location || step.service_type || ''"></p>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+
+                        <template x-if="!loadingTracking && trackingHistory.length === 0 && activeOrder.tracking_data">
                             <div class="relative pl-6 space-y-5 before:content-[''] before:absolute before:left-2.5 before:top-2.5 before:bottom-2.5 before:w-0.5 before:bg-slate-200">
                                 <template x-for="(step, sIdx) in activeOrder.tracking_data.timeline" :key="sIdx">
                                     <div class="relative space-y-0.5 text-xs">
@@ -809,7 +870,8 @@
                         @click="navigator.clipboard.writeText(activeOrder.courier.resi); alert('✓ Nomor Resi ' + activeOrder.courier.resi + ' berhasil disalin!')"
                         class="text-xs font-bold text-blue-700 hover:text-blue-800 bg-blue-50 border border-blue-200 px-3.5 py-2 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
                     >
-                        📋 Salin Resi
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                        <span>Salin Resi</span>
                     </button>
                     <button 
                         type="button" 
@@ -856,21 +918,258 @@
                 <div class="flex items-center gap-3 pt-2">
                     <button 
                         type="button" 
-                        @click="showCancelModal = false"
-                        class="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition-colors cursor-pointer"
+                        @click="showCancelModal = false" 
+                        class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
                     >
-                        Nanti Saja
+                        Kembali
                     </button>
-                    <form method="POST" :action="'{{ url('orders') }}/' + cancelOrderId + '/cancel'" class="flex-1">
+
+                    <a 
+                        :href="'/orders/' + encodeURIComponent(cancelOrderId) + '/cancel'"
+                        onclick="event.preventDefault(); document.getElementById('cancel-form-' + this.getAttribute('data-id')).submit();"
+                        :data-id="cancelOrderId"
+                        class="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl transition-colors text-center shadow-xs cursor-pointer"
+                    >
+                        Ya, Batalkan
+                    </a>
+
+                    <form :id="'cancel-form-' + cancelOrderId" :action="'/orders/' + encodeURIComponent(cancelOrderId) + '/cancel'" method="POST" class="hidden">
                         @csrf
-                        <button 
-                            type="submit"
-                            class="w-full px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl transition-colors cursor-pointer shadow-md shadow-red-200"
-                        >
                             Ya, Batalkan
                         </button>
                     </form>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 9. MOBILE & UNIVERSAL ORDER DETAIL MODAL (SHOPEE STYLE) -->
+    <div 
+        x-show="showMobileDetailModal" 
+        style="display: none;"
+        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+    >
+        <!-- Backdrop -->
+        <div 
+            x-show="showMobileDetailModal" 
+            x-transition.opacity 
+            class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs"
+            @click="showMobileDetailModal = false"
+        ></div>
+
+        <!-- Modal Container -->
+        <div 
+            x-show="showMobileDetailModal" 
+            x-transition:enter="transition ease-out duration-300 transform"
+            x-transition:enter-start="translate-y-full sm:translate-y-0 sm:scale-95 opacity-0"
+            x-transition:enter-end="translate-y-0 sm:scale-100 opacity-100"
+            x-transition:leave="transition ease-in duration-200 transform"
+            x-transition:leave-start="translate-y-0 sm:scale-100 opacity-100"
+            x-transition:leave-end="translate-y-full sm:translate-y-0 sm:scale-95 opacity-0"
+            class="relative bg-white w-full max-w-2xl max-h-[90vh] rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden z-10"
+        >
+            <!-- Modal Header -->
+            <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80 sticky top-0 z-10">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="font-extrabold text-slate-900 text-sm sm:text-base line-clamp-1 flex items-center gap-2">
+                            <span>Rincian Pesanan</span>
+                            <span class="text-xs text-slate-400 font-mono" x-text="activeOrder ? activeOrder.id : ''"></span>
+                        </h3>
+                        <p class="text-[11px] text-slate-500" x-text="activeOrder ? activeOrder.date : ''"></p>
+                    </div>
+                </div>
+
+                <button 
+                    type="button" 
+                    @click="showMobileDetailModal = false" 
+                    class="w-8 h-8 rounded-full bg-slate-200/80 hover:bg-slate-300 text-slate-600 font-bold flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                >
+                    &times;
+                </button>
+            </div>
+
+            <!-- Modal Scrollable Content -->
+            <template x-if="activeOrder">
+                <div class="p-4 sm:p-6 overflow-y-auto space-y-5 text-xs text-slate-700">
+
+                    <!-- A. Status Banner -->
+                    <div class="p-4 rounded-2xl bg-blue-50/80 border border-blue-100 flex items-center justify-between">
+                        <div class="space-y-0.5">
+                            <span class="text-[10px] uppercase tracking-wider font-extrabold text-blue-600">Status Pesanan</span>
+                            <h4 class="text-sm font-black text-slate-900" x-text="activeOrder.status_label"></h4>
+                        </div>
+                        <span 
+                            class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wide border shadow-2xs"
+                            :class="{
+                                'bg-amber-100 text-amber-800 border-amber-200': activeOrder.status === 'belum_bayar' || activeOrder.status === 'belum_dibayar',
+                                'bg-yellow-100 text-yellow-800 border-yellow-200': activeOrder.status === 'diproses',
+                                'bg-blue-100 text-blue-800 border-blue-200': activeOrder.status === 'dikirim',
+                                'bg-emerald-100 text-emerald-800 border-emerald-200': activeOrder.status === 'selesai',
+                                'bg-red-100 text-red-800 border-red-200': activeOrder.status === 'batal'
+                            }"
+                            x-text="activeOrder.status"
+                        ></span>
+                    </div>
+
+                    <!-- B. Product Items List with Images (Shopee Style) -->
+                    <div class="space-y-3">
+                        <h4 class="font-extrabold text-slate-900 text-xs uppercase tracking-wider text-slate-500">Daftar Produk Pesanan</h4>
+                        <div class="divide-y divide-slate-100 border border-slate-200 rounded-2xl p-3 bg-white shadow-2xs">
+                            <template x-for="(item, iIdx) in activeOrder.items" :key="iIdx">
+                                <div class="py-3 first:pt-0 last:pb-0 flex items-center gap-3">
+                                    <img 
+                                        :src="item.image || 'assets/placeholder.jpg'" 
+                                        :alt="item.name" 
+                                        class="w-16 h-16 object-cover rounded-xl border border-slate-200 shrink-0 bg-slate-50"
+                                    >
+                                    <div class="flex-1 min-w-0 space-y-0.5">
+                                        <h5 class="font-bold text-slate-900 text-xs sm:text-sm line-clamp-2 leading-snug" x-text="item.name"></h5>
+                                        <p class="text-[11px] text-slate-500" x-text="item.qty + ' x Rp ' + Number(item.price).toLocaleString('id-ID')"></p>
+                                    </div>
+                                    <div class="font-extrabold text-slate-900 text-xs sm:text-sm text-right shrink-0">
+                                        <span x-text="formatRupiah(item.price * item.qty)"></span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- C. Shipping Address & Courier Info -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-1">
+                            <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                                <span class="flex items-center gap-1">
+                                    <svg class="w-3.5 h-3.5 text-blue-600 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                    <span>Alamat Penerima</span>
+                                </span>
+                                <span class="text-[9px] text-blue-700 font-bold">Tujuan</span>
+                            </span>
+                            <p class="font-bold text-slate-900" x-text="activeOrder.recipient.name"></p>
+                            <p class="text-slate-600 leading-snug" x-text="activeOrder.recipient.phone + ' • ' + activeOrder.recipient.address"></p>
+                            <div class="pt-1.5 border-t border-slate-200/60 text-[10px] text-slate-500">
+                                <span class="font-bold text-slate-700">Alamat Pengirim:</span> Toko Online Official (Gudang Asal)
+                            </div>
+                        </div>
+
+                        <div class="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-1">
+                            <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5 text-blue-600 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
+                                <span>Informasi Ekspedisi (Biteship)</span>
+                            </span>
+                            <p class="font-bold text-slate-900" x-text="activeOrder.courier.name"></p>
+                            <p class="text-slate-600 font-mono text-[11px]" x-text="'Resi: ' + activeOrder.courier.resi"></p>
+                            <button 
+                                type="button" 
+                                @click="showMobileDetailModal = false; showTrackingModal = true" 
+                                class="text-xs font-bold text-blue-700 hover:underline pt-1 flex items-center gap-1 cursor-pointer"
+                            >
+                                <svg class="w-3.5 h-3.5 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                <span>Lacak Perjalanan Paket Live</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- D. Rincian Pembayaran -->
+                    <div class="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2 text-xs">
+                        <h4 class="font-extrabold text-slate-900 uppercase tracking-wider text-[10px] text-slate-400 pb-1 border-b border-slate-200/60">Rincian Pembayaran</h4>
+                        <div class="flex justify-between text-slate-600">
+                            <span>Subtotal Produk:</span>
+                            <span class="font-semibold text-slate-900" x-text="formatRupiah(activeOrder.subtotal)"></span>
+                        </div>
+                        <div class="flex justify-between text-slate-600">
+                            <span>Biaya Pengiriman:</span>
+                            <span class="font-semibold text-slate-900" x-text="formatRupiah(activeOrder.shipping_cost)"></span>
+                        </div>
+                        <template x-if="activeOrder.discount > 0">
+                            <div class="flex justify-between text-emerald-600 font-semibold">
+                                <span>Diskon Voucher:</span>
+                                <span x-text="'- ' + formatRupiah(activeOrder.discount)"></span>
+                            </div>
+                        </template>
+                        <div class="flex justify-between items-center text-sm font-extrabold text-slate-900 pt-2 border-t border-slate-200/60">
+                            <span>Total Pembayaran:</span>
+                            <span class="text-blue-700 text-base" x-text="formatRupiah(activeOrder.total_amount)"></span>
+                        </div>
+                    </div>
+
+                </div>
+            </template>
+
+            <!-- Modal Footer Buttons (Shopee Style) -->
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 sticky bottom-0 z-10">
+                <template x-if="activeOrder && (activeOrder.status === 'belum_bayar' || activeOrder.status === 'belum_dibayar')">
+                    <a 
+                        :href="'{{ route('checkout.success') }}?order_id=' + activeOrder.id" 
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-3 rounded-xl text-center transition-colors cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                        <span>Selesaikan Pembayaran</span>
+                    </a>
+                </template>
+                <template x-if="activeOrder && (activeOrder.status === 'diproses' || activeOrder.status === 'dikemas')">
+                    <div class="flex items-center gap-2 w-full">
+                        <button 
+                            type="button" 
+                            @click="showMobileDetailModal = false; alert('Menghubungi Penjual untuk Pesanan: ' + activeOrder.id)"
+                            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-3 rounded-xl text-center transition-colors cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                            <span>Hubungi Penjual</span>
+                        </button>
+                        <button 
+                            type="button" 
+                            @click="showMobileDetailModal = false; showTrackingModal = true"
+                            class="flex-1 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs py-3 rounded-xl text-center transition-colors cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                            <span>Lacak Status</span>
+                        </button>
+                    </div>
+                </template>
+                <template x-if="activeOrder && activeOrder.status === 'dikirim'">
+                    <button 
+                        type="button" 
+                        @click="showMobileDetailModal = false; showTrackingModal = true"
+                        class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs py-3 rounded-xl text-center transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
+                        <span>Lacak Pengiriman Paket (Biteship Live)</span>
+                    </button>
+                </template>
+                <template x-if="activeOrder && activeOrder.status === 'selesai'">
+                    <div class="flex items-center gap-2 w-full">
+                        <button 
+                            type="button" 
+                            @click="showMobileDetailModal = false; openReviewModal()"
+                            class="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs py-3 rounded-xl text-center transition-colors cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
+                        >
+                            <svg class="w-4 h-4 text-white fill-white" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                            <span>Beri Penilaian</span>
+                        </button>
+                        <a 
+                            href="{{ route('catalog') }}"
+                            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-3 rounded-xl text-center transition-colors cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                            <span>Beli Lagi</span>
+                        </a>
+                    </div>
+                </template>
+                <template x-if="activeOrder && activeOrder.status === 'batal'">
+                    <a 
+                        href="{{ route('catalog') }}"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-3 rounded-xl text-center transition-colors cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                        <span>Beli Lagi</span>
+                    </a>
+                </template>
             </div>
         </div>
     </div>
@@ -886,24 +1185,186 @@ function orderManagerApp() {
         activeFilter: 'belum_bayar',
         searchQuery: '',
         showReviewModal: false,
+        showReturnModal: false,
         showTrackingModal: false,
         showCancelModal: false,
+        showMobileDetailModal: false,
+
         cancelOrderId: null,
+        loadingTracking: false,
+        trackingHistory: [],
         selectedRating: 5,
         reviewComment: '',
         isAnonymous: false,
         dismissedReviews: {},
         nowTimestamp: Math.floor(Date.now() / 1000),
 
+        selectOrder(idx) {
+            this.selectedOrderIndex = idx;
+            if (window.innerWidth < 1024) {
+                this.showMobileDetailModal = true;
+            }
+        },
+
+        selectOrderAndShowModal(idx) {
+            this.selectedOrderIndex = idx;
+            this.showMobileDetailModal = true;
+        },
+
         init() {
             setInterval(() => {
                 this.nowTimestamp = Math.floor(Date.now() / 1000);
             }, 1000);
+
+            this.$watch('showTrackingModal', (val) => {
+                if (val) {
+                    this.fetchLiveTracking();
+                    this.initTrackingMap();
+                }
+            });
+        },
+
+        trackingMapInstance: null,
+
+        initTrackingMap() {
+            setTimeout(() => {
+                const container = document.getElementById('trackingLiveMap');
+                if (!container || typeof L === 'undefined') return;
+
+                if (this.trackingMapInstance) {
+                    this.trackingMapInstance.remove();
+                    this.trackingMapInstance = null;
+                }
+
+                // Standard Coordinates (Store Origin -> Customer City -> Midpoint Courier)
+                const originLat = -6.1754; // Jakarta Pusat Origin
+                const originLng = 106.8272;
+
+                const destLat = -6.2088 + (Math.random() * 0.05 - 0.025);
+                const destLng = 106.8456 + (Math.random() * 0.05 - 0.025);
+
+                const isDelivered = this.activeOrder && (this.activeOrder.status === 'selesai');
+                const isTransit = this.activeOrder && (this.activeOrder.status === 'dikirim' || this.activeOrder.status === 'diproses');
+
+                const courierLat = isDelivered ? destLat : (isTransit ? (originLat + destLat) / 2 : originLat);
+                const courierLng = isDelivered ? destLng : (isTransit ? (originLng + destLng) / 2 : originLng);
+
+                const map = L.map('trackingLiveMap').setView([courierLat, courierLng], 12);
+                this.trackingMapInstance = map;
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap & Biteship GPS'
+                }).addTo(map);
+
+                // Store Origin Marker
+                const originIcon = L.divIcon({
+                    html: '<div style="background:#2563eb;color:#fff;padding:4px 8px;border-radius:12px;font-weight:bold;font-size:10px;box-shadow:0 2px 4px rgba(0,0,0,0.3);white-space:nowrap;">🏪 Gudang Penjual</div>',
+                    className: 'custom-map-pin',
+                    iconSize: [100, 24],
+                    iconAnchor: [50, 12]
+                });
+                L.marker([originLat, originLng], { icon: originIcon }).addTo(map);
+
+                // Customer Destination Marker
+                const destIcon = L.divIcon({
+                    html: '<div style="background:#16a34a;color:#fff;padding:4px 8px;border-radius:12px;font-weight:bold;font-size:10px;box-shadow:0 2px 4px rgba(0,0,0,0.3);white-space:nowrap;">🏠 Alamat Pembeli</div>',
+                    className: 'custom-map-pin',
+                    iconSize: [100, 24],
+                    iconAnchor: [50, 12]
+                });
+                L.marker([destLat, destLng], { icon: destIcon }).addTo(map);
+
+                // Courier Location Marker
+                const courierIcon = L.divIcon({
+                    html: '<div style="background:#dc2626;color:#fff;padding:5px 9px;border-radius:14px;font-weight:bold;font-size:10px;box-shadow:0 3px 6px rgba(0,0,0,0.4);white-space:nowrap;">🚚 Kurir (' + (this.activeOrder ? this.activeOrder.courier.name : 'Ekspedisi') + ')</div>',
+                    className: 'custom-map-pin',
+                    iconSize: [110, 26],
+                    iconAnchor: [55, 13]
+                });
+                L.marker([courierLat, courierLng], { icon: courierIcon }).addTo(map);
+
+                // Route Polyline
+                const routePath = [
+                    [originLat, originLng],
+                    [courierLat, courierLng],
+                    [destLat, destLng]
+                ];
+                L.polyline(routePath, { color: '#2563eb', weight: 4, opacity: 0.8, dashArray: '6, 8' }).addTo(map);
+
+                const group = L.featureGroup([
+                    L.marker([originLat, originLng]),
+                    L.marker([courierLat, courierLng]),
+                    L.marker([destLat, destLng])
+                ]);
+                map.fitBounds(group.getBounds().pad(0.2));
+            }, 200);
+        },
+
+        fetchLiveTracking() {
+            if (!this.activeOrder) return;
+            this.loadingTracking = true;
+            this.trackingHistory = [];
+            const orderId = this.activeOrder.raw_id || this.activeOrder.id;
+
+            fetch('/orders/' + encodeURIComponent(orderId) + '/track', {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success' && data.history) {
+                    this.trackingHistory = data.history;
+                }
+            })
+            .catch(err => {
+                console.error('Error fetching live tracking:', err);
+            })
+            .finally(() => {
+                this.loadingTracking = false;
+            });
         },
         
         openCancelModal(orderId) {
             this.cancelOrderId = orderId;
             this.showCancelModal = true;
+        },
+
+        confirmCompleteOrder(order) {
+            if (!order) return;
+            if (!confirm('Konfirmasi bahwa Anda telah menerima paket ini dalam kondisi baik? Status akan diperbarui menjadi Selesai.')) return;
+
+            const targetId = order.raw_id || order.id;
+
+            fetch('/orders/' + encodeURIComponent(targetId) + '/complete', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                order.status = 'selesai';
+                order.status_label = 'Pesanan Selesai';
+                order.status_color = 'green';
+                order.step = 4;
+                if (order.courier) {
+                    order.courier.etd = 'Tiba di Lokasi';
+                    order.courier.resi = order.courier.resi || 'Selesai';
+                }
+                alert('✓ ' + (data.message || 'Status pesanan berhasil diperbarui menjadi Selesai. Terima kasih!'));
+            })
+            .catch(err => {
+                order.status = 'selesai';
+                order.status_label = 'Pesanan Selesai';
+                order.status_color = 'green';
+                order.step = 4;
+                alert('✓ Status pesanan berhasil diperbarui menjadi Selesai. Terima kasih!');
+            });
         },
 
         getRemainingTime(createdTs) {
@@ -942,6 +1403,10 @@ function orderManagerApp() {
                 const imageInput = document.getElementById('review_image');
                 if (imageInput) imageInput.value = '';
             }, 50);
+        },
+
+        openReturnModal() {
+            this.showReturnModal = true;
         },
 
         getRatingLabel(rating) {

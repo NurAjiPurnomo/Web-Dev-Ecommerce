@@ -19,6 +19,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if (config('app.url') && str_contains(config('app.url'), 'http')) {
+            \Illuminate\Support\Facades\URL::forceRootUrl(config('app.url'));
+            if (str_contains(config('app.url'), 'https')) {
+                \Illuminate\Support\Facades\URL::forceScheme('https');
+            }
+        }
+
+
         \Illuminate\Support\Facades\View::composer('*', function ($view) {
             $pages = \App\Models\Page::where('status', 'aktif')->get();
             $navbarPages = $pages->where('show_in_navbar', true);

@@ -47,10 +47,10 @@ class HomeController extends Controller
                 ->whereIn('id', $weeklyIds)
                 ->get()
                 ->sortByDesc(fn($p) => $weeklySales[$p->id] ?? 0)
-                ->take(5);
+                ->take(6);
 
-            if ($bestSellerModels->count() < 5) {
-                $needed = 5 - $bestSellerModels->count();
+            if ($bestSellerModels->count() < 6) {
+                $needed = 6 - $bestSellerModels->count();
                 $existingIds = $bestSellerModels->pluck('id')->toArray();
                 $additional = Product::where('status', 'aktif')
                     ->withAvg('reviews', 'rating')
@@ -66,7 +66,7 @@ class HomeController extends Controller
                 ->withAvg('reviews', 'rating')
                 ->orderByDesc('sold')
                 ->orderByDesc('updated_at')
-                ->take(5)
+                ->take(6)
                 ->get();
         }
 
@@ -89,14 +89,14 @@ class HomeController extends Controller
 
         $categories = [
             [
-                'name'    => 'Pakaian',
+                'name'    => 'Pakaian & Fashion',
                 'slug'    => 'Pakaian',
-                'icon'    => 'M9 2a1 1 0 00-.894.553L6.382 6H3a1 1 0 00-1 1v4a1 1 0 001 1h2v8a1 1 0 001 1h12a1 1 0 001-1v-8h2a1 1 0 001-1V7a1 1 0 00-1-1h-3.382l-1.724-3.447A1 1 0 0015 2H9z',
+                'icon'    => 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z',
                 'emoji'   => '👕',
-                'bgLight' => 'bg-blue-50 text-blue-700 border-blue-200 group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 shadow-2xs'
+                'bgLight' => 'bg-blue-50 text-blue-700 border-blue-200 group-hover:bg-blue-700 group-hover:text-white group-hover:border-blue-700 shadow-2xs'
             ],
             [
-                'name'    => 'Sepatu',
+                'name'    => 'Sepatu & Sneakers',
                 'slug'    => 'Sepatu',
                 'icon'    => 'M3 17a3 3 0 003 3h12a3 3 0 003-3v-3a2 2 0 00-2-2H5a2 2 0 00-2 2v3zM14 7l-4 5m0-5l4 5',
                 'emoji'   => '👟',
@@ -138,9 +138,9 @@ class HomeController extends Controller
             ->latest('updated_at')
             ->get();
 
-        // If there are fewer than 5 promo products, fill up with latest active products
-        if ($promoModels->count() < 5) {
-            $needed = 5 - $promoModels->count();
+        // If there are fewer than 6 promo products, fill up with latest active products
+        if ($promoModels->count() < 6) {
+            $needed = 6 - $promoModels->count();
             $existingIds = $promoModels->pluck('id')->toArray();
             $additionalPromo = Product::where('status', 'aktif')
                 ->withAvg('reviews', 'rating')
@@ -150,7 +150,7 @@ class HomeController extends Controller
                 ->get();
             $promoModels = $promoModels->concat($additionalPromo);
         } else {
-            $promoModels = $promoModels->take(5);
+            $promoModels = $promoModels->take(6);
         }
 
         $flashSaleProducts = $promoModels->values()->map(function($p) {
@@ -168,7 +168,7 @@ class HomeController extends Controller
             ];
         })->all();
 
-        $recommendedProducts = $allProducts->values()->all();
+        $recommendedProducts = $allProducts->take(18)->values()->all();
         $banners             = \App\Models\Banner::where('status', 'aktif')->orderBy('order_column', 'asc')->get();
 
         return view('pages.home', compact('banners', 'flashSaleProducts', 'bestSellerProducts', 'recommendedProducts', 'categories'));
@@ -212,7 +212,7 @@ class HomeController extends Controller
         } else {
             $query->latest();
         }
-        $paginatedProducts = $query->paginate(15)->withQueryString();
+        $paginatedProducts = $query->paginate(18)->withQueryString();
 
         $paginatedProducts->getCollection()->transform(function($p) {
             return [
@@ -259,20 +259,41 @@ class HomeController extends Controller
             abort(404, 'Produk tidak ditemukan');
         }
 
-        $reviews = \App\Models\ProductReview::with('user')
+        $rawReviews = \App\Models\ProductReview::with('user')
             ->where('product_id', $dbProduct->id)
             ->latest()
             ->get();
 
         $ratingCounts = [
-            5 => $reviews->where('rating', 5)->count(),
-            4 => $reviews->where('rating', 4)->count(),
-            3 => $reviews->where('rating', 3)->count(),
-            2 => $reviews->where('rating', 2)->count(),
-            1 => $reviews->where('rating', 1)->count(),
+            5 => $rawReviews->where('rating', 5)->count(),
+            4 => $rawReviews->where('rating', 4)->count(),
+            3 => $rawReviews->where('rating', 3)->count(),
+            2 => $rawReviews->where('rating', 2)->count(),
+            1 => $rawReviews->where('rating', 1)->count(),
         ];
+
+        $reviews = $rawReviews->map(function($r) {
+            $name = $r->is_anonymous ? 'Pengguna Anonim' : ($r->user->name ?? 'Pembeli Setia');
+            $avatar = $r->user->avatar ?? null;
+            if (!$avatar) {
+                $avatar = 'https://ui-avatars.com/api/?name=' . urlencode($name) . '&background=0D8ABC&color=fff';
+            }
+            return [
+                'id'          => $r->id,
+                'userName'    => $name,
+                'userAvatar'  => $avatar,
+                'rating'      => (int) $r->rating,
+                'comment'     => $r->comment ?: 'Tidak ada ulasan tertulis.',
+                'date'        => $r->created_at ? $r->created_at->format('d M Y') : 'Baru saja',
+                'variant'     => 'Variasi Standar',
+                'images'      => $r->image ? [asset($r->image)] : [],
+                'isVerified'  => true,
+                'likes'       => rand(1, 5),
+            ];
+        })->toArray();
         
-        $reviewImages = $reviews->whereNotNull('image')->pluck('image')->all();
+        $reviewImages = $rawReviews->whereNotNull('image')->pluck('image')->map(fn($img) => asset($img))->all();
+
 
 
         // Dynamic product images (main image + all variant images)
@@ -300,14 +321,30 @@ class HomeController extends Controller
         // Dynamic sizes
         $productSizes = (!empty($dbProduct->sizes) && is_array($dbProduct->sizes))
             ? $dbProduct->sizes
-            : ['S', 'M', 'L', 'XL'];
+            : [];
+        if (empty($productSizes) && !empty($dbProduct->variants) && is_array($dbProduct->variants)) {
+            $productSizes = array_values(array_unique(array_filter(array_map(function($v) {
+                return $v['size'] ?? null;
+            }, $dbProduct->variants))));
+        }
+        if (empty($productSizes)) {
+            $productSizes = ['S', 'M', 'L', 'XL'];
+        }
 
         // Dynamic colors
         $productColors = (!empty($dbProduct->colors) && is_array($dbProduct->colors))
             ? array_map(function($c) {
                 return is_array($c) ? ($c['name'] ?? 'Varian') : $c;
             }, $dbProduct->colors)
-            : ['Navy Blue', 'Hitam', 'Silver / White'];
+            : [];
+        if (empty($productColors) && !empty($dbProduct->variants) && is_array($dbProduct->variants)) {
+            $productColors = array_values(array_unique(array_filter(array_map(function($v) {
+                return $v['color'] ?? null;
+            }, $dbProduct->variants))));
+        }
+        if (empty($productColors)) {
+            $productColors = ['Navy Blue', 'Hitam', 'Silver / White'];
+        }
 
         $product = [
             'id'            => $dbProduct->id,
@@ -343,7 +380,7 @@ class HomeController extends Controller
             ->withAvg('reviews', 'rating')
             ->where('id', '!=', $dbProduct->id)
             ->latest()
-            ->take(5)
+            ->take(6)
             ->get()
             ->map(function($p) {
                 return [
@@ -393,10 +430,10 @@ class HomeController extends Controller
             $query->where('category', $selectedCategory);
         }
 
-        $paginatedPromo = $query->paginate(15)->withQueryString();
+        $paginatedPromo = $query->paginate(18)->withQueryString();
 
         if ($paginatedPromo->isEmpty() && $selectedCategory === 'all') {
-            $paginatedPromo = Product::where('status', 'aktif')->withAvg('reviews', 'rating')->latest()->paginate(15)->withQueryString();
+            $paginatedPromo = Product::where('status', 'aktif')->withAvg('reviews', 'rating')->latest()->paginate(18)->withQueryString();
         }
 
         $paginatedPromo->getCollection()->transform(function($p) {
@@ -491,5 +528,41 @@ class HomeController extends Controller
             ->get();
 
         return view('articles.show', compact('article', 'relatedArticles'));
+    }
+
+    /**
+     * Mark a specific notification as read and redirect to target page.
+     */
+    public function readNotification($id)
+    {
+        $ann = \App\Models\Announcement::find($id);
+        if ($ann) {
+            $ann->update(['is_read' => true]);
+
+            $searchStr = strtolower($ann->title . ' ' . $ann->content);
+            if (str_contains($searchStr, 'promo') || str_contains($searchStr, 'diskon') || str_contains($searchStr, 'voucher') || str_contains($searchStr, 'vocer')) {
+                return redirect()->route('promo');
+            } elseif (str_contains($searchStr, 'pesanan') || str_contains($searchStr, 'order') || str_contains($searchStr, 'dikemas') || str_contains($searchStr, 'dikirim')) {
+                return redirect()->route('orders');
+            }
+        }
+
+        return redirect()->route('home');
+    }
+
+    /**
+     * Mark all active notifications for current user as read.
+     */
+    public function readAllNotifications()
+    {
+        $userId = auth()->id() ?? (session('user.id') ?? null);
+        if ($userId) {
+            \App\Models\Announcement::where(function($q) use ($userId) {
+                $q->where('user_id', $userId)
+                  ->orWhereNull('user_id');
+            })->where('is_read', false)->update(['is_read' => true]);
+        }
+
+        return back()->with('success', 'Semua notifikasi telah ditandai sebagai dibaca.');
     }
 }

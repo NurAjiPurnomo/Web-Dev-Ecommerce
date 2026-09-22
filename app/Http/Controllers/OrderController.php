@@ -83,17 +83,62 @@ class OrderController extends Controller
                     ->where('user_id', $user->id ?? null)
                     ->exists();
 
+                $prod = $i->product_id ? \App\Models\Product::find($i->product_id) : null;
+                $img = null;
+
+                if ($prod && !empty($prod->variants) && is_array($prod->variants)) {
+                    foreach ($prod->variants as $var) {
+                        $varColor = $var['color'] ?? '';
+                        $varSize  = $var['size'] ?? '';
+
+                        if (!empty($varColor) && stripos($i->product_name, $varColor) !== false) {
+                            if (!empty($varSize) && stripos($i->product_name, $varSize) !== false) {
+                                if (!empty($var['image'])) {
+                                    $img = $var['image'];
+                                    break;
+                                }
+                            } else if (!empty($var['image'])) {
+                                $img = $var['image'];
+                            }
+                        }
+                    }
+                }
+
+                if (!$img && $prod && !empty($prod->colors) && is_array($prod->colors)) {
+                    foreach ($prod->colors as $c) {
+                        $cName = is_array($c) ? ($c['name'] ?? '') : $c;
+                        $cImg  = is_array($c) ? ($c['image'] ?? '') : '';
+                        if (!empty($cName) && !empty($cImg) && stripos($i->product_name, $cName) !== false) {
+                            $img = $cImg;
+                            break;
+                        }
+                    }
+                }
+
+                if (!$img) {
+                    $img = $i->image ?? ($prod?->image ?? null);
+                }
+
+                if (!$img) {
+                    $img = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80';
+                }
+
+                if ($img && !str_starts_with($img, 'http') && !str_starts_with($img, 'assets/')) {
+                    $img = asset(ltrim($img, '/'));
+                }
+
                 return [
                     'id'       => $i->product_id,
                     'name'     => $i->product_name,
-                    'variant'  => 'Varian Produk',
+                    'variant'  => 'Varian Standar',
                     'price'    => (float)$i->price,
                     'qty'      => (int)$i->quantity,
                     'subtotal' => (float)($i->price * $i->quantity),
-                    'image'    => $i->image ?? 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=600',
+                    'image'    => $img,
                     'is_reviewed' => $isReviewed,
                 ];
             })->toArray();
+
 
             $trackingData = \App\Services\CourierTrackingService::getTimeline(
                 $orderStatus,
@@ -205,11 +250,19 @@ class OrderController extends Controller
             }
 
             // Check if DB orders already contains this order to prevent duplicates
-            $alreadyInDb = collect($userOrders)->contains(function($item) use ($lastOrder) {
-                return isset($item['raw_id']) && $item['raw_id'] === ($lastOrder['order_id'] ?? '');
+            $targetSessionId = str_replace('-', '/', $lastOrder['order_id'] ?? '');
+
+            $matchingDbOrder = collect($userOrders)->first(function($item) use ($targetSessionId) {
+                $itemId = str_replace('-', '/', $item['id'] ?? '');
+                $itemRawId = str_replace('-', '/', $item['raw_id'] ?? '');
+                return ($itemId && $itemId === $targetSessionId) || ($itemRawId && $itemRawId === $targetSessionId);
             });
 
-            if (!$alreadyInDb) {
+            if ($matchingDbOrder) {
+                // Synchronize session last_order status with live DB status so it never gets stale
+                $lastOrder['status'] = $matchingDbOrder['status'];
+                session()->put('last_order', $lastOrder);
+            } else {
                 $lastOrderTs = !empty($lastOrder['created_at_timestamp'])
                     ? (int)$lastOrder['created_at_timestamp']
                     : (isset($lastOrder['created_at']) ? (strtotime(str_replace(' WIB', '', $lastOrder['created_at'])) ?: time()) : time());
@@ -335,61 +388,102 @@ class OrderController extends Controller
     }
 
     /**
-     * Create a dummy order for testing review functionality.
+     * Konfirmasi Pesanan Diterima oleh Pelanggan (Status: dikirim -> selesai).
      */
-    public function setupDummyOrder()
+    public function complete($id)
     {
-        $user = Auth::user();
-        
-        if (!$user && session()->has('user')) {
-            $userId = session('user.id') ?? (is_array(session('user')) ? (session('user')['id'] ?? null) : null);
-            if ($userId) {
-                $user = \App\Models\User::find($userId);
+        $order = \App\Models\Order::where('invoice_number', $id)
+            ->orWhere('id', $id)
+            ->orWhere('invoice_number', str_replace('/', '-', $id))
+            ->first();
+
+        if ($order) {
+            $order->status = 'selesai';
+            $order->save();
+        }
+
+        // Also check last_order in session
+        $lastOrder = session('last_order');
+        if ($lastOrder) {
+            $lastOrder['status'] = 'selesai';
+            session()->put('last_order', $lastOrder);
+        }
+
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Terima kasih! Pesanan berhasil diselesaikan.',
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Status pesanan diperbarui menjadi Selesai.');
+    }
+
+    /**
+     * Submit Return / Complaint request with Photo & Video Unboxing proof.
+     */
+    public function submitReturn(Request $request)
+    {
+        $request->validate([
+            'order_id'    => 'required|string',
+            'reason'      => 'required|string|in:barang_cacat,barang_kurang,salah_kirim,lainnya',
+            'description' => 'required|string|max:2000',
+            'photo_proof' => 'required|file|mimes:jpeg,jpg,png,webp|max:5120', // 5MB Max Photo
+            'video_proof' => 'required|file|mimes:mp4,mov,avi,mkv,webm|max:51200', // 50MB Max Video
+        ]);
+
+        $order = \App\Models\Order::where('invoice_number', $request->order_id)
+            ->orWhere('id', $request->order_id)
+            ->first();
+
+        if (!$order) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['status' => 'error', 'message' => 'Pesanan tidak ditemukan.'], 404);
             }
+            return redirect()->back()->with('error', 'Pesanan tidak ditemukan.');
         }
 
-        // If STILL no user, let's just grab the first user in DB for testing purposes so they don't get stuck!
-        if (!$user) {
-            $user = \App\Models\User::first();
+        $photoPath = null;
+        if ($request->hasFile('photo_proof')) {
+            $photoPath = '/storage/' . $request->file('photo_proof')->store('returns/photos', 'public');
         }
 
-        if (!$user) {
-            return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
+        $videoPath = null;
+        if ($request->hasFile('video_proof')) {
+            $videoPath = '/storage/' . $request->file('video_proof')->store('returns/videos', 'public');
         }
 
-        $orderId = 'INV/' . date('Ymd') . '/TK/DUMMY' . rand(100, 999);
-        
-        $dbOrder = \App\Models\Order::create([
-            'invoice_number'   => $orderId,
-            'user_id'          => $user->id,
-            'subtotal'         => 150000,
-            'shipping_cost'    => 15000,
-            'discount_amount'  => 0,
-            'total'            => 165000,
-            'courier'          => 'J&T Express',
-            'payment_method'   => 'transfer',
-            'status'           => 'selesai',
-            'shipping_address' => $user->address ?? 'Alamat Dummy',
-            'recipient_name'   => $user->name ?? 'Dummy User',
-            'recipient_phone'  => $user->phone ?? '081234567890',
-            'created_at'       => now()->subDays(3), // 3 days ago so it looks realistic
+        $orderReturn = \App\Models\OrderReturn::create([
+            'order_id'    => $order->id,
+            'user_id'     => Auth::id() ?? $order->user_id,
+            'reason'      => $request->reason,
+            'description' => trim($request->description),
+            'photo_proof' => $photoPath,
+            'video_proof' => $videoPath,
+            'status'      => 'pending',
         ]);
 
-        \App\Models\OrderItem::create([
-            'order_id'     => $dbOrder->id,
-            'product_id'   => 16,
-            'product_name' => 'GOZEAL Kaos Polos Hitam',
-            'quantity'     => 1,
-            'price'        => 150000,
-        ]);
-
-        // Automatically update the sold count for the dummy product
-        $dummyProduct = \App\Models\Product::find(16);
-        if ($dummyProduct) {
-            $dummyProduct->sold += 1;
-            $dummyProduct->save();
+        // Create System Announcement for User
+        if (Auth::id() || $order->user_id) {
+            \App\Models\Announcement::create([
+                'user_id' => Auth::id() ?? $order->user_id,
+                'title'   => '📦 Pengajuan Retur Pesanan #' . $order->invoice_number . ' Terkirim',
+                'content' => 'Pengajuan retur & komplain barang Anda telah kami terima dengan bukti video unboxing. Tim admin toko akan melakukan peninjauan dalam 1x24 jam.',
+                'type'    => 'notifikasi',
+                'target'  => 'pelanggan',
+                'status'  => 'ditayangkan'
+            ]);
         }
 
-        return redirect()->route('orders')->with('success', 'Pesanan dummy berhasil ditambahkan. Silakan uji coba fitur ulasan dan cek angka penjualan produk bertambah.');
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Pengajuan retur & komplain berhasil dikirim! Tim Admin Toko akan meninjau bukti foto & video unboxing Anda.',
+                'data'    => $orderReturn
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Pengajuan retur & komplain berhasil dikirim! Tim Admin Toko akan meninjau bukti foto & video unboxing Anda.');
     }
 }
+

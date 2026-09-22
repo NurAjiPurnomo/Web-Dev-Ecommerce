@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 70" width="240" height="70">
+  <rect width="240" height="70" rx="10" fill="#005E6A"/>
+  <g transform="translate(18, 15)">
+    <!-- BNI 46 Orange Ribbon Emblem -->
+    <path d="M0,8 L15,0 L30,12 L30,32 L15,40 L0,28 Z" fill="#F37023"/>
+    <circle cx="15" cy="20" r="6" fill="#FFFFFF"/>
+  </g>
+  <text x="140" y="47" fill="#FFFFFF" font-family="'Outfit', 'Inter', sans-serif" font-weight="900" font-size="34" text-anchor="middle" letter-spacing="2">BNI</text>
+  <text x="195" y="47" fill="#F37023" font-family="'Outfit', 'Inter', sans-serif" font-weight="900" font-size="28" text-anchor="middle">46</text>
+</svg>

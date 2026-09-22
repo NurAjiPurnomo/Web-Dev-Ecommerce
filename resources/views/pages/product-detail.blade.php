@@ -309,21 +309,9 @@
 
             <!-- Description Tab Content -->
             <div x-show="activeTab === 'desc'" class="space-y-4 text-sm text-slate-700 leading-relaxed">
-                <p class="font-medium text-slate-800 text-base">
-                    {{ $product['description'] }}
-                </p>
-                
-                <h4 class="font-bold text-slate-900 pt-2">Keunggulan & Detail Produk:</h4>
-                <ul class="list-disc list-inside space-y-1.5 text-slate-700 pl-1">
-                    <li>Material original grade premium dengan jaminan daya tahan maksimal.</li>
-                    <li>Sangat nyaman digunakan untuk pemakaian harian maupun perjalanan.</li>
-                    <li>Desain modern, stylish, dan eksklusif sesuai tren terbaru.</li>
-                    <li>100% Original Brand dengan Garansi Resmi Toko.</li>
-                </ul>
-
-                <p class="pt-2 text-xs text-gray-500">
-                    * Catatan: Harap lakukan video unboxing saat paket diterima untuk verifikasi garansi.
-                </p>
+                <div class="font-medium text-slate-800 text-base leading-relaxed whitespace-pre-line">
+                    {!! nl2br(e($product['description'])) !!}
+                </div>
             </div>
 
             <!-- Guide Tab Content -->
@@ -553,8 +541,8 @@
             </a>
         </div>
 
-        <!-- 4-Column Grid of Product Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5">
+        <!-- 6-Column Grid of Product Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
             @foreach($relatedProducts as $rel)
                 <x-product-card 
                     :id="$rel['id']"

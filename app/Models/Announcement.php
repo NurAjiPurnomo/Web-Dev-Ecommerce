@@ -16,6 +16,7 @@ class Announcement extends Model
         'type',
         'target',
         'status',
+        'is_read',
     ];
 
     public function user()
