@@ -171,7 +171,11 @@ class HomeController extends Controller
         $recommendedProducts = $allProducts->take(18)->values()->all();
         $banners             = \App\Models\Banner::where('status', 'aktif')->orderBy('order_column', 'asc')->get();
 
-        return view('pages.home', compact('banners', 'flashSaleProducts', 'bestSellerProducts', 'recommendedProducts', 'categories'));
+        $storeSettings     = \App\Models\StoreSetting::getSettings();
+        $flashSaleEndTime  = $storeSettings->flash_sale_end_time ? $storeSettings->flash_sale_end_time->format('Y-m-d\TH:i:s') : null;
+        $flashSaleIsActive = $storeSettings->flash_sale_is_active ?? true;
+
+        return view('pages.home', compact('banners', 'flashSaleProducts', 'bestSellerProducts', 'recommendedProducts', 'categories', 'flashSaleEndTime', 'flashSaleIsActive'));
     }
 
     /**

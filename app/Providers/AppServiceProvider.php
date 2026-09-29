@@ -32,8 +32,15 @@ class AppServiceProvider extends ServiceProvider
             $navbarPages = $pages->where('show_in_navbar', true);
             $footerPages = $pages->whereNotNull('footer_column');
             
+            try {
+                $recentPurchases = \App\Services\RecentPurchasesService::getRecentPurchases();
+            } catch (\Throwable $e) {
+                $recentPurchases = [];
+            }
+            
             $view->with('navbarPages', $navbarPages)
-                 ->with('footerPages', $footerPages);
+                 ->with('footerPages', $footerPages)
+                 ->with('recentPurchases', $recentPurchases);
         });
     }
 }

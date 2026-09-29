@@ -36,10 +36,10 @@
             <!-- Logo Header -->
             <div class="h-16 px-6 flex items-center justify-between border-b border-slate-800/80 bg-slate-950/50">
                 <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2.5 font-semibold text-lg text-white">
-                    <div class="w-8 h-8 rounded-lg bg-blue-700 text-white flex items-center justify-center font-bold text-sm shadow-md">
+                    <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
                         TO
                     </div>
-                    <span class="tracking-tight">Admin<span class="text-blue-400">Panel</span></span>
+                    <span class="tracking-tight font-bold">TokoOnline <span class="text-xs text-blue-400 font-normal px-1.5 py-0.5 rounded bg-blue-900/40 border border-blue-800">Admin</span></span>
                 </a>
                 <button @click="sidebarOpen = false" class="lg:hidden text-slate-400 hover:text-white">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -200,24 +200,21 @@
             </nav>
 
             <!-- Bottom Profile Box -->
-            <div class="p-3 border-t border-slate-800 bg-slate-950/60">
-                <div class="flex items-center justify-between px-2 py-1.5">
+            <div class="p-3 border-t border-slate-800 bg-slate-900/80">
+                <div class="flex items-center justify-between px-2 py-1">
                     <div class="flex items-center gap-2.5 truncate">
-                        <div class="relative shrink-0">
-                            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 text-white font-extrabold flex items-center justify-center text-xs ring-2 ring-slate-800 shadow-sm shadow-indigo-500/30">
-                                {{ strtoupper(substr(auth()->check() ? auth()->user()->name : (session('user.name') ?? 'Admin'), 0, 1)) }}
-                            </div>
-                            <span class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-slate-900"></span>
+                        <div class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 font-bold flex items-center justify-center text-xs shrink-0">
+                            {{ strtoupper(substr(auth()->check() ? auth()->user()->name : (session('user.name') ?? 'Admin'), 0, 1)) }}
                         </div>
                         <div class="truncate">
-                            <p class="text-xs font-bold text-white truncate leading-snug">{{ auth()->check() ? auth()->user()->name : (session('user.name') ?? 'Administrator') }}</p>
-                            <span class="inline-block text-[9px] font-extrabold text-blue-400 uppercase tracking-wider">Super Admin</span>
+                            <p class="text-xs font-semibold text-slate-200 truncate leading-tight">{{ auth()->check() ? auth()->user()->name : (session('user.name') ?? 'Administrator') }}</p>
+                            <p class="text-[11px] text-slate-400 font-normal leading-tight mt-0.5">Admin</p>
                         </div>
                     </div>
                     <form action="{{ route('admin.logout') }}" method="POST">
                         @csrf
-                        <button type="submit" class="text-slate-400 hover:text-red-400 p-1.5 rounded-lg hover:bg-slate-800/80 transition-colors cursor-pointer" title="Keluar Admin">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <button type="submit" class="text-slate-400 hover:text-red-400 p-1.5 rounded-md hover:bg-slate-800 transition-colors cursor-pointer" title="Keluar">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
                             </svg>
                         </button>
@@ -237,10 +234,15 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                         </svg>
                     </button>
-                    <span class="text-xs sm:text-sm font-bold text-slate-500 hidden sm:inline">Panel Administrator Toko Online</span>
+                    <span class="text-xs sm:text-sm font-semibold text-slate-600 hidden sm:inline">Admin Panel</span>
                 </div>
 
-                <div></div>
+                <div class="flex items-center gap-3">
+                    <a href="{{ url('/') }}" target="_blank" class="text-xs font-semibold text-slate-600 hover:text-blue-600 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg border border-slate-200 transition-colors flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        Lihat Toko
+                    </a>
+                </div>
             </header>
 
             <!-- DYNAMIC CONTENT -->

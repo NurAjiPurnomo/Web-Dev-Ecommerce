@@ -1,6 +1,6 @@
 @extends('admin.layout')
 
-@section('title', 'Manajemen Penjualan & Transaksi')
+@section('title', 'Pesanan')
 
 @section('content')
 @php
@@ -36,25 +36,20 @@
 <div x-data="{ ordersMap: @js($ordersMap), selectedOrder: null, showDetailModal: false, showAwbPrintModal: false }" class="space-y-6">
 
     <!-- Page Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-2xs">
         <div>
-            <div class="flex items-center gap-2">
-                <span class="bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider">Manajemen Penjualan</span>
-                <span class="text-slate-400 text-xs">•</span>
-                <span class="text-xs text-slate-500 font-medium">Monitoring Transaksi &amp; Shipping AWB</span>
-            </div>
-            <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mt-1">Pusat Manajemen Penjualan &amp; Transaksi</h1>
-            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Monitoring transaksi pelanggan, status pengiriman ekspedisi, dan pencetakan label Airway Bill (AWB)</p>
+            <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Pesanan Pelanggan</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Kelola transaksi toko, pemrosesan pesanan, dan pencetakan label resi.</p>
         </div>
         <div class="shrink-0">
             <a 
                 href="{{ route('admin.orders.export', ['status' => $status]) }}" 
-                class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-3 rounded-xl transition-all shadow-xs flex items-center gap-2 cursor-pointer"
+                class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-3.5 py-2.5 rounded-lg transition-all shadow-2xs flex items-center gap-2 cursor-pointer"
             >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
-                <span>Export Laporan (.csv)</span>
+                <span>Export CSV</span>
             </a>
         </div>
     </div>
@@ -132,84 +127,100 @@
             </div>
         </div>
     </div>
-
     <!-- Filter Tabs -->
-    <div class="bg-white border border-slate-200 rounded-2xl p-2 shadow-2xs">
-        <div class="flex items-center overflow-x-auto gap-1 text-xs font-semibold">
-            <a href="{{ route('admin.orders', ['status' => 'semua']) }}" class="px-4 py-2 rounded-xl transition-all whitespace-nowrap {{ $status === 'semua' ? 'bg-blue-700 text-white font-bold shadow-2xs' : 'text-slate-600 hover:bg-slate-100' }}">Semua Status</a>
-            <a href="{{ route('admin.orders', ['status' => 'belum_bayar']) }}" class="px-4 py-2 rounded-xl transition-all whitespace-nowrap {{ in_array($status, ['belum_bayar', 'belum_dibayar']) ? 'bg-blue-700 text-white font-bold shadow-2xs' : 'text-slate-600 hover:bg-slate-100' }}">Belum Bayar</a>
-            <a href="{{ route('admin.orders', ['status' => 'dikemas']) }}" class="px-4 py-2 rounded-xl transition-all whitespace-nowrap {{ in_array($status, ['dikemas', 'diproses']) ? 'bg-blue-700 text-white font-bold shadow-2xs' : 'text-slate-600 hover:bg-slate-100' }}">Sedang Dikemas</a>
-            <a href="{{ route('admin.orders', ['status' => 'dikirim']) }}" class="px-4 py-2 rounded-xl transition-all whitespace-nowrap {{ $status === 'dikirim' ? 'bg-blue-700 text-white font-bold shadow-2xs' : 'text-slate-600 hover:bg-slate-100' }}">Dalam Pengiriman</a>
-            <a href="{{ route('admin.orders', ['status' => 'selesai']) }}" class="px-4 py-2 rounded-xl transition-all whitespace-nowrap {{ $status === 'selesai' ? 'bg-blue-700 text-white font-bold shadow-2xs' : 'text-slate-600 hover:bg-slate-100' }}">Pesanan Selesai</a>
+    <div class="bg-white border border-slate-200/80 rounded-xl p-1.5 shadow-2xs">
+        <div class="flex items-center overflow-x-auto gap-1 text-xs font-medium">
+            <a href="{{ route('admin.orders', ['status' => 'semua']) }}" class="px-3.5 py-2 rounded-lg transition-all whitespace-nowrap {{ $status === 'semua' ? 'bg-slate-900 text-white font-semibold shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">Semua Status</a>
+            <a href="{{ route('admin.orders', ['status' => 'belum_bayar']) }}" class="px-3.5 py-2 rounded-lg transition-all whitespace-nowrap {{ in_array($status, ['belum_bayar', 'belum_dibayar']) ? 'bg-slate-900 text-white font-semibold shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">Belum Bayar</a>
+            <a href="{{ route('admin.orders', ['status' => 'dikemas']) }}" class="px-3.5 py-2 rounded-lg transition-all whitespace-nowrap {{ in_array($status, ['dikemas', 'diproses']) ? 'bg-slate-900 text-white font-semibold shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">Sedang Dikemas</a>
+            <a href="{{ route('admin.orders', ['status' => 'dikirim']) }}" class="px-3.5 py-2 rounded-lg transition-all whitespace-nowrap {{ $status === 'dikirim' ? 'bg-slate-900 text-white font-semibold shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">Dalam Pengiriman</a>
+            <a href="{{ route('admin.orders', ['status' => 'selesai']) }}" class="px-3.5 py-2 rounded-lg transition-all whitespace-nowrap {{ $status === 'selesai' ? 'bg-slate-900 text-white font-semibold shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">Pesanan Selesai</a>
         </div>
     </div>
 
     <!-- Orders Table -->
-    <div class="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden">
+    <div class="bg-white border border-slate-200/90 rounded-2xl shadow-2xs overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse text-xs sm:text-sm">
-                <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold text-xs uppercase">
+                <thead class="bg-slate-50/70 border-b border-slate-200/80 text-slate-500 font-semibold text-[11px] uppercase tracking-wider">
                     <tr>
-                        <th class="px-5 py-3.5">No. Invoice &amp; Waktu</th>
+                        <th class="px-5 py-3.5">Invoice &amp; Waktu</th>
                         <th class="px-5 py-3.5">Pelanggan</th>
                         <th class="px-5 py-3.5">Pengiriman &amp; Pembayaran</th>
-                        <th class="px-5 py-3.5">Resi Cashless (AWB)</th>
+                        <th class="px-5 py-3.5">Resi (AWB)</th>
                         <th class="px-5 py-3.5">Status Pesanan</th>
-                        <th class="px-5 py-3.5 text-right">Aksi &amp; Label</th>
+                        <th class="px-5 py-3.5 text-right">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100 font-medium text-slate-800">
+                <tbody class="divide-y divide-slate-100 font-normal text-slate-800">
                     @forelse($orders as $o)
-                        <tr class="hover:bg-slate-50/80 transition-colors">
+                        <tr class="hover:bg-slate-50/70 transition-colors">
                             <td class="px-5 py-4">
-                                <div class="font-mono font-semibold text-slate-900">{{ $o->invoice_number }}</div>
-                                <div class="text-[11px] text-slate-400">{{ $o->created_at->format('d M Y, H:i') }}</div>
+                                <div class="font-mono font-bold text-slate-900 text-xs tracking-tight">{{ $o->invoice_number }}</div>
+                                <div class="text-[11px] text-slate-400 mt-0.5">{{ $o->created_at->format('d M Y, H:i') }}</div>
                             </td>
                             <td class="px-5 py-4">
                                 <div class="font-semibold text-slate-900">{{ $o->user->name ?? $o->recipient_name }}</div>
-                                <div class="text-[11px] text-slate-500 font-mono">{{ $o->recipient_phone ?: ($o->user->phone ?? '-') }}</div>
+                                <div class="text-[11px] text-slate-500 font-mono mt-0.5">{{ $o->recipient_phone ?: ($o->user->phone ?? '-') }}</div>
                             </td>
                             <td class="px-5 py-4">
-                                <div class="font-bold text-slate-800">{{ $o->courier ?: 'J&T Express' }}</div>
-                                <div class="text-[11px] text-slate-500">{{ $o->payment_method ?: 'BCA Virtual Account' }}</div>
+                                <div class="font-semibold text-slate-800">{{ $o->courier ?: 'J&T Express' }}</div>
+                                <div class="text-[11px] text-slate-500 mt-0.5">{{ $o->payment_method ?: 'BCA Virtual Account' }}</div>
                             </td>
                             <td class="px-5 py-4">
                                 @php
                                     $resi = $o->tracking_number ?: ('JT' . date('Ymd') . rand(10000, 99999));
                                 @endphp
-                                <div class="flex items-center gap-1.5">
-                                    <span class="bg-slate-100 text-slate-800 font-mono font-semibold text-xs px-2.5 py-1 rounded border border-slate-200">{{ $resi }}</span>
-                                    <button type="button" @click="navigator.clipboard.writeText('{{ $resi }}'); alert('Nomor Resi Cashless {{ $resi }} berhasil disalin!')" class="text-slate-400 hover:text-slate-700 transition-colors cursor-pointer" title="Salin Resi">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div class="inline-flex items-center gap-1.5 font-mono text-[12px] font-semibold text-slate-800 bg-slate-100/90 px-2.5 py-1 rounded-md border border-slate-200/90">
+                                    <span>{{ $resi }}</span>
+                                    <button type="button" @click="navigator.clipboard.writeText('{{ $resi }}'); alert('Nomor Resi {{ $resi }} berhasil disalin!')" class="text-slate-400 hover:text-slate-700 transition-colors cursor-pointer" title="Salin Resi">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                                         </svg>
                                     </button>
                                 </div>
-                                <div class="text-[10px] text-emerald-700 font-bold mt-0.5">Auto Booking Active</div>
+                                <div class="text-[10px] text-emerald-600 font-medium mt-1 flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                    <span>Auto Booking Active</span>
+                                </div>
                             </td>
                             <td class="px-5 py-4">
                                 @if($o->status === 'dikemas' || $o->status === 'diproses')
-                                    <span class="bg-blue-50 text-blue-700 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-blue-200">SEDANG DIKEMAS</span>
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-sky-50 text-sky-700 border border-sky-200/80">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span>
+                                        SEDANG DIKEMAS
+                                    </span>
                                 @elseif($o->status === 'dikirim')
-                                    <span class="bg-purple-50 text-purple-700 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-purple-200">DALAM PENGIRIMAN</span>
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/80">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                                        DALAM PENGIRIMAN
+                                    </span>
                                 @elseif($o->status === 'selesai')
-                                    <span class="bg-emerald-50 text-emerald-700 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-emerald-200">SELESAI</span>
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                        SELESAI
+                                    </span>
                                 @elseif($o->status === 'batal')
-                                    <span class="bg-red-50 text-red-700 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-red-200">DIBATALKAN</span>
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/80">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                        DIBATALKAN
+                                    </span>
                                 @else
-                                    <span class="bg-amber-50 text-amber-700 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-amber-200">BELUM BAYAR</span>
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                        BELUM BAYAR
+                                    </span>
                                 @endif
                             </td>
                             <td class="px-5 py-4 text-right">
-                                <div class="flex items-center justify-end gap-1.5">
-                                    <!-- Button Cetak Label Pengiriman Biteship / A6 PDF -->
+                                <div class="flex items-center justify-end gap-2">
                                     <a 
                                         href="{{ $o->waybill_pdf_url ?: route('admin.orders.shippingLabel', $o->id) }}" 
                                         target="_blank"
-                                        class="text-xs font-bold text-white bg-blue-700 hover:bg-blue-800 border border-blue-800 px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
+                                        class="text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 border border-slate-900 px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
                                         title="Cetak Shipping Label Resmi A6 (Siap Cetak Thermal)"
                                     >
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-3.5 h-3.5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
                                         </svg>
                                         <span>Cetak Resi (PDF)</span>
@@ -219,8 +230,8 @@
                                         <form action="{{ route('admin.orders.update', $o->id) }}" method="POST" class="inline">
                                             @csrf
                                             <input type="hidden" name="status" value="dikirim">
-                                            <button type="submit" class="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5" title="Konfirmasi Penyerahan Paket ke Kurir">
-                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <button type="submit" class="text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5" title="Konfirmasi Penyerahan Paket ke Kurir">
+                                                <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                                                 </svg>
                                                 <span>Serahkan ke Kurir</span>
@@ -228,14 +239,13 @@
                                         </form>
                                     @endif
 
-                                    <!-- Button Detail Monitoring -->
                                     <button 
                                         type="button" 
                                         @click="selectedOrder = ordersMap[{{ $o->id }}]; showDetailModal = true"
-                                        class="text-xs font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg border border-slate-300 transition-colors cursor-pointer flex items-center gap-1.5"
-                                        title="Rincian Pesanan & Lacak"
+                                        class="text-xs font-semibold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs transition-colors cursor-pointer flex items-center gap-1.5"
+                                        title="Rincian Pesanan &amp; Lacak"
                                     >
-                                        <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                         </svg>

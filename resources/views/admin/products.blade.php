@@ -1,6 +1,6 @@
 @extends('admin.layout')
 
-@section('title', 'Manajemen Produk')
+@section('title', 'Produk')
 
 @section('content')
 <div x-data="productManager()" class="space-y-6">
@@ -8,23 +8,23 @@
     <!-- Header & Action Button -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
-            <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Manajemen Katalog Produk</h1>
-            <p class="text-xs sm:text-sm text-slate-500 mt-1">Kelola data barang, harga, varian warna/ukuran, stok, dan riwayat update katalog.</p>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Katalog Produk</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Kelola data produk, harga, varian, dan persediaan stok.</p>
         </div>
         <button 
             type="button" 
             @click="showAddModal = true"
-            class="bg-blue-700 hover:bg-blue-800 text-white font-semibold text-xs sm:text-sm px-5 py-3 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer shrink-0"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-lg transition-all shadow-2xs flex items-center justify-center gap-2 cursor-pointer shrink-0"
         >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
-            <span>Tambah Produk Baru</span>
+            <span>Tambah Produk</span>
         </button>
     </div>
 
     <!-- 4 QUICK KPI SUMMARY CARDS FOR PRODUCTS -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         @php
             $totalProductsCount = count($products);
             $totalStockCount = $products->sum('stock');
@@ -33,27 +33,27 @@
         @endphp
 
         <!-- SKU TOTAL -->
-        <div class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-1.5">
+        <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs space-y-1">
             <div class="flex items-center justify-between">
-                <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Total SKU</span>
-                <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center">
+                <span class="text-xs font-semibold text-slate-500">Total SKU</span>
+                <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                 </div>
             </div>
-            <h3 class="text-xl sm:text-2xl font-bold text-slate-900">{{ number_format($totalProductsCount, 0, ',', '.') }} Produk</h3>
-            <p class="text-[11px] text-blue-700 font-bold">Terdaftar di Sistem</p>
+            <h3 class="text-xl font-bold text-slate-900">{{ number_format($totalProductsCount, 0, ',', '.') }} Produk</h3>
+            <p class="text-[11px] text-slate-500">Item terdaftar</p>
         </div>
 
         <!-- STOK AKTIF -->
-        <div class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-1.5">
+        <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs space-y-1">
             <div class="flex items-center justify-between">
-                <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Produk Aktif</span>
-                <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                <span class="text-xs font-semibold text-slate-500">Produk Aktif</span>
+                <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </div>
             </div>
-            <h3 class="text-xl sm:text-2xl font-bold text-slate-900">{{ number_format($activeProductsCount, 0, ',', '.') }} SKU</h3>
-            <p class="text-[11px] text-emerald-700 font-bold">Siap Dijual</p>
+            <h3 class="text-xl font-bold text-slate-900">{{ number_format($activeProductsCount, 0, ',', '.') }} SKU</h3>
+            <p class="text-[11px] text-slate-500">Siap dijual</p>
         </div>
 
         <!-- TOTAL STOK FISIK -->

@@ -1,6 +1,6 @@
 @extends('admin.layout')
 
-@section('title', 'Manajemen Banner Promo')
+@section('title', 'Banner Utama')
 
 @section('content')
 <div x-data="bannerManager()" class="space-y-6">
@@ -8,8 +8,8 @@
     <!-- Header & Action -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 class="text-xl sm:text-2xl font-semibold text-slate-900 tracking-tight">Manajemen Banner Promo Slide</h1>
-            <p class="text-xs sm:text-sm text-slate-500">Kelola gambar banner slider, judul promo, badge, dan link tujuan di halaman utama</p>
+            <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Banner Utama</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Kelola gambar slide banner promosi di halaman utama.</p>
         </div>
         <button 
             @click="openCreate()" 

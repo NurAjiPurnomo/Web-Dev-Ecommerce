@@ -1,6 +1,6 @@
 @extends('admin.layout')
 
-@section('title', 'Manajemen Voucher Promo')
+@section('title', 'Voucher')
 
 @section('content')
 <div x-data="{ showAddModal: false }" class="space-y-6">
@@ -8,8 +8,8 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 class="text-xl sm:text-2xl font-semibold text-slate-900 tracking-tight">Manajemen Voucher Promo</h1>
-            <p class="text-xs sm:text-sm text-slate-500">Buat, atur diskon, gratis ongkir, dan atur syarat minimal belanja voucher toko</p>
+            <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Voucher Diskon</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Buat kupon diskon belanja dan syarat penggunaan voucher.</p>
         </div>
         <button 
             type="button" 

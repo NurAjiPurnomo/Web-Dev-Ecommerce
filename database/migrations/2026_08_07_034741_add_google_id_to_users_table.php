@@ -15,7 +15,7 @@ return new class extends Migration
             $table->string('google_id')->nullable()->after('email');
             $table->string('password')->nullable()->change();
         });
-    }
+    }https://127.0.0.1:51692/static/artifacts/4be1c4f8-2881-4cda-b60e-f18102094838/.user_uploaded/media_1790147535435.png?csrf=1aac340b-b012-4b44-b6e9-e615fb8a6a6a
 
     /**
      * Reverse the migrations.

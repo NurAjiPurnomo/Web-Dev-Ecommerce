@@ -30,6 +30,9 @@ Route::get('/orders/{id}/track', [ShippingController::class, 'trackOrder'])->nam
 Route::get('/lacak/{waybill?}', [ShippingController::class, 'publicTrackingPage'])->name('tracking.public');
 Route::get('/track/{waybill?}', [ShippingController::class, 'publicTrackingPage']);
 Route::get('/api/tracking/search', [ShippingController::class, 'publicTrackApi'])->name('tracking.public.api');
+Route::get('/api/recent-purchases', function () {
+    return response()->json(\App\Services\RecentPurchasesService::getRecentPurchases());
+})->name('api.recent-purchases');
 
 // Cart Routes
 Route::get('/cart', [CartController::class, 'index'])->name('cart');
@@ -146,6 +149,7 @@ Route::middleware([AdminMiddleware::class])->prefix('admin')->group(function () 
 
     // Promo Page Management
     Route::get('/promos', [AdminController::class, 'promos'])->name('admin.promos');
+    Route::post('/promos/flash-sale', [AdminController::class, 'updateFlashSale'])->name('admin.promos.flash-sale.update');
 
     // Banner Promo Management
     Route::get('/banners', [AdminController::class, 'banners'])->name('admin.banners');

@@ -1,20 +1,15 @@
 @extends('admin.layout')
 
-@section('title', 'Pusat Manajemen Promo & Campaign - Admin Panel')
+@section('title', 'Promo')
 
 @section('content')
 <div x-data="{ showAddNotifModal: false }" class="space-y-6">
 
     <!-- Page Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-2xs">
         <div>
-            <div class="flex items-center gap-2">
-                <span class="bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider">Pusat Pemasaran</span>
-                <span class="text-slate-400 text-xs">•</span>
-                <span class="text-xs text-slate-500 font-medium">Pengaturan Tampilan Promo &amp; Broadcast</span>
-            </div>
-            <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mt-1">Pusat Kelola Halaman Promo</h1>
-            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Kelola banner promo, voucher toko, produk flash sale, dan pengumuman broadcast yang dibuat oleh Admin</p>
+            <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Promo &amp; Campaign</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Kelola banner promo, voucher toko, dan pengumuman campaign.</p>
         </div>
     </div>
 
@@ -192,6 +187,48 @@
                 <span>Edit Diskon di Manajemen Produk</span>
             </a>
         </div>
+
+        <!-- Flash Sale Timer Settings Form -->
+        <form action="{{ route('admin.promos.flash-sale.update') }}" method="POST" class="bg-purple-50/60 border border-purple-200 rounded-xl p-4 space-y-3">
+            @csrf
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-purple-200/60 pb-3">
+                <div>
+                    <h4 class="text-xs font-bold text-purple-900 uppercase tracking-wider flex items-center gap-1.5">
+                        <svg class="w-4 h-4 text-purple-700" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                        </svg>
+                        Pengaturan Timer &amp; Status Flash Sale Beranda
+                    </h4>
+                    <p class="text-[11px] text-purple-700">Atur status penayangan dan batas waktu countdown berakhirnya Flash Sale di Halaman Utama Toko</p>
+                </div>
+                <button type="submit" class="bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-xs shrink-0 cursor-pointer flex items-center gap-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span>Simpan Waktu Flash Sale</span>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                <!-- Status Switch -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Status Flash Sale Halaman Utama</label>
+                    <select name="flash_sale_is_active" class="w-full text-xs border border-slate-300 rounded-xl px-3 py-2 bg-white focus:outline-none focus:border-purple-600 font-semibold text-slate-800">
+                        <option value="1" {{ ($settings->flash_sale_is_active ?? true) ? 'selected' : '' }}>🟢 Aktif (Tampilkan Section Flash Sale)</option>
+                        <option value="0" {{ !($settings->flash_sale_is_active ?? true) ? 'selected' : '' }}>🔴 Sembunyikan (Nonaktifkan Flash Sale)</option>
+                    </select>
+                </div>
+
+                <!-- Datetime Picker -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Batas Waktu Berakhir (Countdown Timer)</label>
+                    <input type="datetime-local" name="flash_sale_end_time" 
+                        value="{{ optional($settings->flash_sale_end_time)->format('Y-m-d\TH:i') }}"
+                        class="w-full text-xs border border-slate-300 rounded-xl px-3 py-2 bg-white focus:outline-none focus:border-purple-600 font-semibold text-slate-800">
+                    <span class="text-[10px] text-slate-500 mt-1 block">Kosongkan jika ingin countdown otomatis 24 jam setiap harinya.</span>
+                </div>
+            </div>
+        </form>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             @forelse($promoProducts->take(8) as $p)

@@ -1,13 +1,13 @@
 @extends('admin.layout')
-@section('title', 'Manajemen Berita')
+@section('title', 'Berita & Artikel')
 @section('content')
 <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div>
-        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Manajemen Berita (Blog)</h1>
-        <p class="text-sm text-slate-500 mt-1">Kelola artikel berita, promo, dan info terbaru toko Anda.</p>
+        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Berita &amp; Artikel</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Kelola artikel blog, berita promo, dan edukasi produk toko.</p>
     </div>
-    <button onclick="openAddModal()" class="inline-flex items-center justify-center gap-2 bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-sm transition-all focus:ring-4 focus:ring-blue-100">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+    <button onclick="openAddModal()" class="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-lg shadow-2xs transition-all cursor-pointer">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         Tambah Artikel
     </button>
 </div>

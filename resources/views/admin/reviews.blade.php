@@ -1,6 +1,6 @@
 @extends('admin.layout')
 
-@section('title', 'Penilaian & Ulasan Produk')
+@section('title', 'Ulasan Produk')
 
 @section('content')
 <div class="space-y-6">
@@ -8,8 +8,8 @@
     <!-- Header & Action -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 class="text-xl sm:text-2xl font-semibold text-slate-900 tracking-tight">Penilaian &amp; Ulasan Produk</h1>
-            <p class="text-xs sm:text-sm text-slate-500">Kelola ulasan pembeli, statistik rating bintang, dan kepuasan pelanggan toko</p>
+            <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Ulasan Produk</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Pantau ulasan pembeli dan statistik rating produk.</p>
         </div>
     </div>
 

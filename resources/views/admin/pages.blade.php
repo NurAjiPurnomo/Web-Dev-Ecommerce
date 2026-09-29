@@ -1,14 +1,14 @@
 @extends('admin.layout')
 
-@section('title', 'Manajemen Halaman (CMS)')
+@section('title', 'Halaman CMS')
 
 @section('content')
 <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div>
-        <h1 class="text-2xl font-bold text-slate-800">Manajemen Halaman (CMS)</h1>
-        <p class="text-slate-500 text-sm mt-1">Kelola halaman statis dan bangun struktur halaman dengan Page Builder.</p>
+        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Halaman CMS</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Kelola halaman statis toko seperti Syarat &amp; Ketentuan, Kebijakan, dan Info Toko.</p>
     </div>
-    <button onclick="openAddModal()" class="px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 font-medium transition-colors flex items-center gap-2 text-sm shadow-sm">
+    <button onclick="openAddModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors flex items-center gap-2 text-xs sm:text-sm shadow-2xs cursor-pointer">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
         Tambah Halaman
     </button>

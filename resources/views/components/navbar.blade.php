@@ -1,4 +1,4 @@
-<header x-data="{ mobileMenuOpen: false }" class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-2xs transition-all">
+<header x-data="{ mobileMenuOpen: false }" class="relative z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-2xs transition-all">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-16 gap-4 md:gap-8">
             

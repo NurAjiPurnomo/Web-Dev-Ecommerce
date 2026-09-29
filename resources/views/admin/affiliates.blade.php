@@ -1,6 +1,6 @@
 @extends('admin.layout')
 
-@section('title', 'Manajemen Program Afiliasi')
+@section('title', 'Program Afiliasi')
 
 @section('content')
 <div class="space-y-6">
@@ -8,11 +8,11 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 class="text-xl sm:text-2xl font-semibold text-slate-900 tracking-tight">Manajemen Program Afiliasi</h1>
-            <p class="text-xs sm:text-sm text-slate-500">Pantau perolehan komisi mitra afiliasi, kode referral, dan pencairan dana komisi</p>
+            <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Program Afiliasi</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Pantau perolehan komisi mitra dan transaksi referral.</p>
         </div>
-        <div class="text-xs font-bold text-slate-500 bg-white border border-slate-200 px-3.5 py-2 rounded-xl shadow-2xs">
-            Total Komisi: <span class="text-emerald-600 font-semibold">Rp {{ number_format($affiliates->sum('commission_earned'), 0, ',', '.') }}</span>
+        <div class="text-xs font-semibold text-slate-600 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-2xs">
+            Total Komisi: <span class="text-emerald-600 font-bold">Rp {{ number_format($affiliates->sum('commission_earned'), 0, ',', '.') }}</span>
         </div>
     </div>
 

@@ -69,40 +69,14 @@
     @endphp
 
     @if(!$isAuthPage)
-        @php
-            try {
-                $topAnnouncement = \App\Models\Announcement::where('status', 'ditayangkan')
-                    ->where(function($q) {
-                        $q->where('type', 'banner')->orWhere('type', 'popup');
-                    })
-                    ->latest()
-                    ->first();
-            } catch (\Throwable $e) {
-                $topAnnouncement = null;
-            }
-        @endphp
+        <!-- STICKY TOP HEADER CONTAINER -->
+        <div class="sticky top-0 z-50">
+            <!-- RECENT PURCHASES RUNNING TICKER BANNER -->
+            @include('components.recent-purchases-ticker')
 
-        @if($topAnnouncement)
-            <!-- TOP ANNOUNCEMENT BROADCAST BANNER -->
-            <div x-data="{ bannerOpen: true }" x-show="bannerOpen" class="bg-blue-900 border-b border-blue-950 text-white text-xs py-2.5 px-4 shadow-xs relative z-50">
-                <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
-                    <div class="flex items-center gap-2 font-medium truncate">
-                        <span class="bg-amber-400 text-slate-950 font-black text-[10px] uppercase px-2 py-0.5 rounded shrink-0">PROMO</span>
-                        <span class="font-extrabold truncate">{{ $topAnnouncement->title }}</span>
-                        @if($topAnnouncement->content)
-                            <span class="hidden md:inline text-blue-100 font-normal truncate">— {{ $topAnnouncement->content }}</span>
-                        @endif
-                    </div>
-                    <div class="flex items-center gap-3 shrink-0">
-                        <a href="{{ route('promo') }}" class="underline hover:text-amber-300 font-bold text-[11px] hidden sm:inline">Lihat Detail Promo →</a>
-                        <button type="button" @click="bannerOpen = false" class="text-blue-200 hover:text-white font-bold p-0.5 cursor-pointer">✕</button>
-                    </div>
-                </div>
-            </div>
-        @endif
-
-        <!-- Navbar Component -->
-        @include('components.navbar')
+            <!-- Navbar Component -->
+            @include('components.navbar')
+        </div>
     @endif
 
     <!-- Global Floating Toast Notification (3-Second Pop-up) -->

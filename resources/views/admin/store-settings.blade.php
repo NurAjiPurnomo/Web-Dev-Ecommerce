@@ -1,11 +1,11 @@
 @extends('admin.layout')
-@section('title', 'Pengaturan Toko & Kurir Pengiriman')
+@section('title', 'Pengaturan Toko')
 @section('content')
 
 <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div>
-        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Pengaturan Lokasi Toko & Kurir Aktif</h1>
-        <p class="text-sm text-slate-500 mt-1">Kelola titik lokasi asal toko (Origin Pengiriman) & filter kurir yang tampil di checkout pembeli.</p>
+        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Pengaturan Toko &amp; Kurir</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Atur lokasi asal pengiriman toko dan pilihan kurir aktif.</p>
     </div>
 </div>
 
@@ -31,55 +31,55 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Nama Toko / Pengirim <span class="text-red-500">*</span></label>
-                <input type="text" name="store_name" value="{{ old('store_name', $settings->store_name) }}" required class="w-full rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500 text-sm p-3 border bg-white" placeholder="Contoh: Toko Online Official">
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Nama Toko / Pengirim <span class="text-red-500">*</span></label>
+                <input type="text" name="store_name" value="{{ old('store_name', $settings->store_name) }}" required class="w-full rounded-lg border-slate-300 focus:border-blue-600 focus:ring-blue-600 text-xs sm:text-sm p-2.5 border bg-white" placeholder="Contoh: Toko Online Store">
             </div>
 
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Nama Kontak Pengirim <span class="text-red-500">*</span></label>
-                <input type="text" name="sender_name" value="{{ old('sender_name', $settings->sender_name) }}" required class="w-full rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500 text-sm p-3 border bg-white" placeholder="Contoh: Admin Gudang">
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Nama Kontak Pengirim <span class="text-red-500">*</span></label>
+                <input type="text" name="sender_name" value="{{ old('sender_name', $settings->sender_name) }}" required class="w-full rounded-lg border-slate-300 focus:border-blue-600 focus:ring-blue-600 text-xs sm:text-sm p-2.5 border bg-white" placeholder="Contoh: Admin Toko">
             </div>
 
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">No. HP / Telepon Toko <span class="text-red-500">*</span></label>
-                <input type="text" name="sender_phone" value="{{ old('sender_phone', $settings->sender_phone) }}" required class="w-full rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500 text-sm p-3 border bg-white" placeholder="Contoh: 081234567890">
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">No. HP / Telepon Toko <span class="text-red-500">*</span></label>
+                <input type="text" name="sender_phone" value="{{ old('sender_phone', $settings->sender_phone) }}" required class="w-full rounded-lg border-slate-300 focus:border-blue-600 focus:ring-blue-600 text-xs sm:text-sm p-2.5 border bg-white" placeholder="Contoh: 081234567890">
             </div>
 
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Kode Pos <span class="text-red-500">*</span></label>
-                <input type="text" name="postal_code" value="{{ old('postal_code', $settings->postal_code) }}" required class="w-full rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500 text-sm p-3 border bg-white" placeholder="Contoh: 10110">
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Kode Pos <span class="text-red-500">*</span></label>
+                <input type="text" name="postal_code" value="{{ old('postal_code', $settings->postal_code) }}" required class="w-full rounded-lg border-slate-300 focus:border-blue-600 focus:ring-blue-600 text-xs sm:text-sm p-2.5 border bg-white" placeholder="Contoh: 10110">
             </div>
 
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Provinsi <span class="text-red-500">*</span></label>
-                <input type="text" name="province" value="{{ old('province', $settings->province) }}" required class="w-full rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500 text-sm p-3 border bg-white" placeholder="Contoh: DKI Jakarta">
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Provinsi <span class="text-red-500">*</span></label>
+                <input type="text" name="province" value="{{ old('province', $settings->province) }}" required class="w-full rounded-lg border-slate-300 focus:border-blue-600 focus:ring-blue-600 text-xs sm:text-sm p-2.5 border bg-white" placeholder="Contoh: DKI Jakarta">
             </div>
 
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Kota / Kabupaten <span class="text-red-500">*</span></label>
-                <input type="text" name="city" value="{{ old('city', $settings->city) }}" required class="w-full rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500 text-sm p-3 border bg-white" placeholder="Contoh: Jakarta Pusat">
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Kota / Kabupaten <span class="text-red-500">*</span></label>
+                <input type="text" name="city" value="{{ old('city', $settings->city) }}" required class="w-full rounded-lg border-slate-300 focus:border-blue-600 focus:ring-blue-600 text-xs sm:text-sm p-2.5 border bg-white" placeholder="Contoh: Jakarta Pusat">
             </div>
 
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Kecamatan <span class="text-red-500">*</span></label>
-                <input type="text" name="district" value="{{ old('district', $settings->district) }}" required class="w-full rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500 text-sm p-3 border bg-white" placeholder="Contoh: Gambir">
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Kecamatan <span class="text-red-500">*</span></label>
+                <input type="text" name="district" value="{{ old('district', $settings->district) }}" required class="w-full rounded-lg border-slate-300 focus:border-blue-600 focus:ring-blue-600 text-xs sm:text-sm p-2.5 border bg-white" placeholder="Contoh: Gambir">
             </div>
 
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Desa / Kelurahan <span class="text-red-500">*</span></label>
-                <input type="text" name="village" value="{{ old('village', $settings->village) }}" required class="w-full rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500 text-sm p-3 border bg-white" placeholder="Contoh: Gambir">
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Desa / Kelurahan <span class="text-red-500">*</span></label>
+                <input type="text" name="village" value="{{ old('village', $settings->village) }}" required class="w-full rounded-lg border-slate-300 focus:border-blue-600 focus:ring-blue-600 text-xs sm:text-sm p-2.5 border bg-white" placeholder="Contoh: Gambir">
             </div>
 
             <div class="md:col-span-2">
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Alamat Detail (Jalan / RT / RW / No. Bangunan) <span class="text-red-500">*</span></label>
-                <textarea name="address_detail" rows="3" required class="w-full rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500 text-sm p-3 border bg-white" placeholder="Contoh: Jl. Merdeka No. 123, RT 01 / RW 02 (Pagar Hitam Depan Masjid)">{{ old('address_detail', $settings->address_detail) }}</textarea>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Alamat Detail (Jalan / RT / RW / No. Bangunan) <span class="text-red-500">*</span></label>
+                <textarea name="address_detail" rows="3" required class="w-full rounded-lg border-slate-300 focus:border-blue-600 focus:ring-blue-600 text-xs sm:text-sm p-2.5 border bg-white" placeholder="Contoh: Jl. Merdeka No. 123, RT 01 / RW 02">{{ old('address_detail', $settings->address_detail) }}</textarea>
             </div>
 
             <div class="md:col-span-2 relative">
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
-                    Biteship Area ID Toko (Auto Realtime Search) <span class="text-red-500">*</span>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Area Pengiriman Toko (Biteship Area ID) <span class="text-red-500">*</span>
                 </label>
                 <div class="flex gap-2 relative">
                     <input 
@@ -87,21 +87,29 @@
                         name="biteship_area_id" 
                         id="biteship_area_id" 
                         value="{{ old('biteship_area_id', $settings->biteship_area_id) }}" 
-                        class="w-full rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500 text-sm p-3 border bg-slate-50 font-mono" 
-                        placeholder="Ketik Kecamatan / Kota toko Anda..."
+                        class="w-full rounded-lg border-slate-300 focus:border-blue-600 focus:ring-blue-600 text-xs sm:text-sm p-2.5 border bg-slate-50 font-mono" 
+                        placeholder="Ketik nama kecamatan atau kode pos lokasi toko..."
                         oninput="onAreaSearchInput(this.value)"
                     >
-                    <button type="button" onclick="searchStoreArea()" class="bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold px-4 py-3 rounded-xl transition-all shrink-0 flex items-center gap-1.5 cursor-pointer">
+                    <button type="button" onclick="searchStoreArea()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3.5 py-2.5 rounded-lg transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                        Cek Real-Time Area ID
+                        Cari Area
                     </button>
                 </div>
 
                 <!-- Realtime Suggestions Dropdown for Admin -->
-                <div id="adminAreaDropdown" class="hidden absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-56 overflow-y-auto divide-y divide-slate-100 text-xs"></div>
+                <div id="adminAreaDropdown" class="hidden absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-56 overflow-y-auto divide-y divide-slate-100 text-xs"></div>
 
-                <p class="text-xs text-slate-500 mt-1">💡 <strong>Status:</strong> Terhubung 100% Real-Time ke Biteship API (`/v1/maps/areas`). Mengunci titik penjemputan barang (Origin) presisi.</p>
-                <div id="areaSearchResult" class="mt-2 text-xs hidden bg-blue-50 border border-blue-200 text-blue-800 p-3 rounded-xl"></div>
+                <p class="text-xs text-slate-500 mt-1.5">Pilih wilayah asal pengiriman untuk perhitungan ongkir otomatis ke pembeli.</p>
+                
+                @if($settings->biteship_area_id)
+                    <div id="areaSearchResult" class="mt-2 text-xs bg-slate-50 border border-slate-200 text-slate-800 p-2.5 rounded-lg flex items-center justify-between gap-2">
+                        <span><strong class="text-blue-700">✓ Area Pengiriman Terpilih:</strong> {{ $settings->district ? $settings->district.', ' : '' }}{{ $settings->city }} {{ $settings->province }} ({{ $settings->postal_code }})</span>
+                        <span class="text-[11px] font-mono text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">ID: {{ $settings->biteship_area_id }}</span>
+                    </div>
+                @else
+                    <div id="areaSearchResult" class="mt-2 text-xs hidden bg-slate-50 border border-slate-200 text-slate-800 p-2.5 rounded-lg"></div>
+                @endif
             </div>
         </div>
     </div>
@@ -389,7 +397,8 @@
 
         const resultDiv = document.getElementById('areaSearchResult');
         resultDiv.classList.remove('hidden');
-        resultDiv.innerHTML = '🟢 <strong>100% Realtime Area Biteship Dikunci:</strong> ' + name + ' (ID: <code>' + id + '</code>)';
+        resultDiv.className = 'mt-2 text-xs bg-slate-50 border border-slate-200 text-slate-800 p-2.5 rounded-lg flex items-center justify-between gap-2';
+        resultDiv.innerHTML = '<span><strong class="text-blue-700">✓ Area Pengiriman Terpilih:</strong> ' + name + '</span><span class="text-[11px] font-mono text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">ID: ' + id + '</span>';
     }
 
     function searchStoreArea() {

@@ -1,27 +1,22 @@
 @extends('admin.layout')
 
-@section('title', 'Log Notifikasi Otomatis Status Pesanan - Admin Panel')
+@section('title', 'Notifikasi')
 
 @section('content')
 <div class="space-y-6">
 
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-2xs">
         <div>
-            <div class="flex items-center gap-2">
-                <span class="text-blue-700 text-xs font-bold uppercase tracking-wider">Log Sistem Otomatis</span>
-                <span class="text-slate-300 text-xs">/</span>
-                <span class="text-xs text-slate-500 font-medium">Status Pengiriman &amp; Pesanan</span>
-            </div>
-            <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mt-1">Riwayat Notifikasi Otomatis Pesanan</h1>
-            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Notifikasi ini terbit secara otomatis saat Admin mengubah status pesanan di Manajemen Penjualan (/admin/orders)</p>
+            <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Notifikasi Pesanan</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Riwayat notifikasi otomatis perubahan status pesanan ke pelanggan.</p>
         </div>
         <div>
-            <a href="{{ route('admin.orders') }}" class="bg-blue-700 hover:bg-blue-800 text-white font-semibold text-xs sm:text-sm px-5 py-2.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer shrink-0">
+            <a href="{{ route('admin.orders') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-lg transition-all shadow-2xs flex items-center justify-center gap-2 cursor-pointer shrink-0">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                 </svg>
-                <span>Kelola Status Pesanan (/admin/orders)</span>
+                <span>Kelola Pesanan</span>
             </a>
         </div>
     </div>

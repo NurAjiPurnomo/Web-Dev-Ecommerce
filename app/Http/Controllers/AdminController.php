@@ -1036,8 +1036,28 @@ class AdminController extends Controller
                 });
             })->latest()->get();
         $announcements = Announcement::where('type', '!=', 'notifikasi')->latest()->get();
+        $settings = \App\Models\StoreSetting::getSettings();
 
-        return view('admin.promos', compact('banners', 'vouchers', 'promoProducts', 'announcements'));
+        return view('admin.promos', compact('banners', 'vouchers', 'promoProducts', 'announcements', 'settings'));
+    }
+
+    /**
+     * Update Pengaturan Flash Sale (Timer & Status)
+     */
+    public function updateFlashSale(Request $request)
+    {
+        $validated = $request->validate([
+            'flash_sale_is_active' => 'required|boolean',
+            'flash_sale_end_time'   => 'nullable|date',
+        ]);
+
+        $settings = \App\Models\StoreSetting::getSettings();
+        $settings->update([
+            'flash_sale_is_active' => (bool) $request->flash_sale_is_active,
+            'flash_sale_end_time'   => $request->flash_sale_end_time ? $request->flash_sale_end_time : null,
+        ]);
+
+        return redirect()->route('admin.promos')->with('success', 'Pengaturan Flash Sale (Waktu & Status) berhasil diperbarui!');
     }
 
     /**

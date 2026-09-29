@@ -1,11 +1,11 @@
 @extends('admin.layout')
-@section('title', 'Manajer Retur & Komplain Pelanggan')
+@section('title', 'Retur & Komplain')
 @section('content')
 
 <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div>
-        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Manajer Retur & Komplain Pelanggan</h1>
-        <p class="text-sm text-slate-500 mt-1">Tinjau bukti video unboxing & foto barang cacat yang diunggah pembeli sebelum menyetujui pengembalian.</p>
+        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Retur &amp; Komplain</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Kelola pengajuan pengembalian barang, komplain, dan bukti dari pembeli.</p>
     </div>
 </div>
 

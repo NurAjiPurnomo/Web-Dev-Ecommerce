@@ -180,48 +180,7 @@ class OrderController extends Controller
             ];
         }
 
-        // Sample Data Fallback if user has no DB orders
-        if (empty($userOrders)) {
-            $userOrders = [
-                [
-                    'id'            => 'INV-2026-001',
-                    'raw_id'        => 'INV/20260807/TK/A1B2C3D4',
-                    'date'          => '07 Agu 2026, 14:30 WIB',
-                    'status'        => 'dikirim',
-                    'status_label'  => 'Dalam Pengiriman',
-                    'status_color'  => 'purple',
-                    'step'          => 3,
-                    'items_summary' => 'Batik Premium Pria Exclusive + 2 barang lainnya',
-                    'total_amount'  => 485000,
-                    'subtotal'      => 450000,
-                    'shipping_cost' => 15000,
-                    'discount'      => 20000,
-                    'voucher_code'  => 'DISKON20K',
-                    'recipient'     => [
-                        'name'    => $user->name ?? 'Pelanggan',
-                        'phone'   => $user->phone ?? '081234567890',
-                        'address' => $user->address ?? 'Jl. Jendral Sudirman No. 45',
-                        'city'    => $user->city ?? 'Jakarta Selatan',
-                    ],
-                    'courier'       => [
-                        'name'    => 'J&T Express (Standard)',
-                        'resi'    => 'JT8891203912',
-                        'driver'  => 'Budi Prasetyo',
-                        'etd'     => 'Est. Tiba 08 Agu 2026',
-                    ],
-                    'items'         => [
-                        [
-                            'name'     => 'Batik Premium Pria Exclusif Modern Motif Solo',
-                            'variant'  => 'Ukuran: L • Warna: Navy Blue',
-                            'price'    => 250000,
-                            'qty'      => 1,
-                            'subtotal' => 250000,
-                            'image'    => 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=600',
-                        ],
-                    ]
-                ],
-            ];
-        }
+
 
         // Add last order from session if exists
         $lastOrder = session('last_order');

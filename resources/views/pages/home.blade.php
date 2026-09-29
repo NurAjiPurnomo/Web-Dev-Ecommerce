@@ -205,6 +205,7 @@
     </section>
 
     <!-- FLASH SALE SECTION -->
+    @if($flashSaleIsActive ?? true)
     <section id="flash-sale" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
             
@@ -213,7 +214,7 @@
                 <div class="flex items-center gap-2">
                     <span class="p-1 bg-white/10 rounded text-white">
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.57l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.57l7-10a1 1 0 011.12-.384z" clip-rule="evenodd"/>
+                            <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.57l-7 10A1 1 0 018 18v-5H4a1 1 0 01.82-1.57l7-10a1 1 0 011.12-.384z" clip-rule="evenodd"/>
                         </svg>
                     </span>
                     <h2 class="text-base sm:text-lg font-bold text-white uppercase tracking-tight">
@@ -225,11 +226,11 @@
                 <div class="flex items-center gap-2">
                     <span class="text-xs font-bold text-blue-100 uppercase tracking-wider mr-1">Berakhir Dalam:</span>
                     <div class="flex items-center gap-1 text-blue-700 font-bold text-xs">
-                        <span id="hours" class="bg-white px-2 py-0.5 rounded min-w-[28px] text-center font-extrabold">05</span>
+                        <span id="hours" class="bg-white px-2 py-0.5 rounded min-w-[28px] text-center font-extrabold">00</span>
                         <span class="text-white font-bold">:</span>
-                        <span id="minutes" class="bg-white px-2 py-0.5 rounded min-w-[28px] text-center font-extrabold">42</span>
+                        <span id="minutes" class="bg-white px-2 py-0.5 rounded min-w-[28px] text-center font-extrabold">00</span>
                         <span class="text-white font-bold">:</span>
-                        <span id="seconds" class="bg-white px-2 py-0.5 rounded min-w-[28px] text-center font-extrabold">19</span>
+                        <span id="seconds" class="bg-white px-2 py-0.5 rounded min-w-[28px] text-center font-extrabold">00</span>
                     </div>
                 </div>
             </div>
@@ -255,6 +256,7 @@
 
         </div>
     </section>
+    @endif
 
     <!-- PRODUK TERLARIS (BEST SELLERS) SECTION -->
     @if(isset($bestSellerProducts) && count($bestSellerProducts) > 0)
@@ -371,29 +373,41 @@
 <!-- Countdown & Hero Slider JavaScript -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // --- 1. Countdown Timer ---
-        let totalSeconds = 5 * 3600 + 42 * 60 + 19;
+        // --- 1. Dynamic Countdown Timer ---
+        const flashSaleEndTimeRaw = @json($flashSaleEndTime ?? null);
+        let targetTimestamp;
+
+        if (flashSaleEndTimeRaw) {
+            targetTimestamp = new Date(flashSaleEndTimeRaw).getTime();
+        } else {
+            // Default: Countdown until end of current day (23:59:59)
+            const now = new Date();
+            const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+            targetTimestamp = endOfDay.getTime();
+        }
 
         const hoursEl = document.getElementById('hours');
         const minutesEl = document.getElementById('minutes');
         const secondsEl = document.getElementById('seconds');
 
         function updateTimer() {
-            if (totalSeconds <= 0) {
-                totalSeconds = 24 * 3600;
+            const now = new Date().getTime();
+            let diffSeconds = Math.floor((targetTimestamp - now) / 1000);
+
+            if (diffSeconds <= 0) {
+                diffSeconds = 0;
             }
             
-            const hours = Math.floor(totalSeconds / 3600);
-            const minutes = Math.floor((totalSeconds % 3600) / 60);
-            const seconds = totalSeconds % 60;
+            const hours = Math.floor(diffSeconds / 3600);
+            const minutes = Math.floor((diffSeconds % 3600) / 60);
+            const seconds = diffSeconds % 60;
 
             if (hoursEl) hoursEl.textContent = String(hours).padStart(2, '0');
             if (minutesEl) minutesEl.textContent = String(minutes).padStart(2, '0');
             if (secondsEl) secondsEl.textContent = String(seconds).padStart(2, '0');
-
-            totalSeconds--;
         }
 
+        updateTimer();
         setInterval(updateTimer, 1000);
 
         // --- 2. Hero Auto-Playing Slider ---

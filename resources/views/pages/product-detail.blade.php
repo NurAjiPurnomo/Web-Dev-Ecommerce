@@ -383,7 +383,7 @@
 
                             <hr class="border-slate-100">
 
-                            <!-- Topic Filter (Dummy for visuals) -->
+                            <!-- Topic Filter -->
                             <div>
                                 <div class="flex items-center justify-between mb-2">
                                     <h4 class="font-bold text-slate-800 text-sm">Topik Ulasan</h4>
