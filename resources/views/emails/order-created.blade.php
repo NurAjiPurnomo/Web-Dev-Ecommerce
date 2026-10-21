@@ -1,112 +1,268 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invoice Pesanan</title>
+    <title>Invoice Pesanan & Instruksi Pembayaran</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; color: #333; }
-        .container { max-width: 600px; margin: 30px auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .header { background-color: #2563eb; color: #ffffff; padding: 30px 20px; text-align: center; }
-        .header h1 { margin: 0; font-size: 24px; font-weight: bold; }
-        .content { padding: 30px; }
-        .greeting { font-size: 16px; margin-bottom: 20px; }
-        .order-id { text-align: center; margin-bottom: 30px; }
-        .order-id span { display: inline-block; background-color: #eff6ff; color: #1d4ed8; padding: 8px 15px; border-radius: 20px; font-weight: bold; font-family: monospace; font-size: 14px; }
-        .payment-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 30px; text-align: center; }
-        .payment-title { font-size: 14px; color: #64748b; font-weight: 600; text-transform: uppercase; margin-bottom: 10px; }
-        .va-number { font-size: 24px; font-weight: bold; color: #0f172a; letter-spacing: 2px; font-family: monospace; margin: 10px 0; }
-        .total-amount { font-size: 20px; font-weight: bold; color: #2563eb; margin-top: 10px; }
-        .details-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        .details-table th, .details-table td { padding: 12px; text-align: left; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
-        .details-table th { color: #64748b; font-weight: 600; background-color: #f8fafc; }
-        .footer { background-color: #f8fafc; padding: 20px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
-        .btn { display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-weight: bold; margin-top: 20px; font-size: 14px; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #1e293b;
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 0;
+        }
+        .wrapper {
+            width: 100%;
+            table-layout: fixed;
+            background-color: #f8fafc;
+            padding: 40px 0;
+        }
+        .container {
+            max-width: 580px;
+            margin: 0 auto;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .header {
+            background-color: #ffffff;
+            padding: 24px 32px;
+            text-align: left;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .brand-name {
+            font-size: 20px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.5px;
+            text-decoration: none;
+        }
+        .brand-blue {
+            color: #1d4ed8;
+        }
+        .content {
+            padding: 32px;
+        }
+        .status-badge {
+            display: inline-block;
+            background-color: #fef3c7;
+            color: #b45309;
+            border: 1px solid #fde68a;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 20px;
+        }
+        .headline {
+            font-size: 20px;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 0 0 10px 0;
+            line-height: 1.3;
+        }
+        .message-body {
+            font-size: 14px;
+            color: #475569;
+            margin: 0 0 24px 0;
+        }
+        .payment-box {
+            background-color: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .payment-header {
+            font-size: 12px;
+            font-weight: 700;
+            color: #1d4ed8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 10px;
+            margin-bottom: 16px;
+        }
+        .payment-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+        .payment-label {
+            color: #64748b;
+        }
+        .payment-val {
+            color: #0f172a;
+            font-weight: 700;
+            text-align: right;
+        }
+        .va-number {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 22px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: 1.5px;
+            background-color: #ffffff;
+            border: 1px solid #cbd5e1;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 12px 0;
+        }
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 24px;
+        }
+        .details-table th, .details-table td {
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 13px;
+        }
+        .details-table th {
+            color: #64748b;
+            font-weight: 600;
+            text-align: left;
+        }
+        .btn-container {
+            text-align: center;
+            margin: 28px 0 12px 0;
+        }
+        .footer {
+            background-color: #f8fafc;
+            padding: 20px 32px;
+            text-align: center;
+            font-size: 12px;
+            color: #94a3b8;
+            border-top: 1px solid #f1f5f9;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <table border="0" cellpadding="0" cellspacing="0" style="margin: 0 auto; margin-bottom: 15px;">
-                <tr>
-                    <td style="background-color: #1d4ed8; color: #ffffff; border-radius: 8px; width: 36px; height: 36px; text-align: center; vertical-align: middle; font-family: sans-serif; font-weight: bold; font-size: 16px;">
-                        TO
-                    </td>
-                    <td style="padding-left: 10px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 26px; font-weight: 800; letter-spacing: -0.5px; color: #0f172a;">
-                        Toko<span style="color: #1d4ed8;">Online</span>
-                    </td>
-                </tr>
-            </table>
-            <p style="margin: 5px 0 0; opacity: 0.9; font-size: 14px;">Terima kasih atas pesanan Anda!</p>
-        </div>
-        
-        <div class="content">
-            <div class="greeting">
-                Halo <strong>{{ $order->recipient_name ?? 'Pelanggan' }}</strong>,<br>
-                Pesanan Anda telah kami terima dan sedang menunggu pembayaran.
+    <div class="wrapper">
+        <div class="container">
+            <div class="header">
+                <table border="0" cellpadding="0" cellspacing="0">
+                    <tr>
+                        <td style="background-color: #1d4ed8; color: #ffffff; border-radius: 6px; width: 32px; height: 32px; text-align: center; vertical-align: middle; font-weight: bold; font-size: 14px;">
+                            TO
+                        </td>
+                        <td style="padding-left: 10px;">
+                            <span class="brand-name">Toko<span class="brand-blue">Online</span></span>
+                        </td>
+                    </tr>
+                </table>
             </div>
 
-            <div class="order-id">
-                <span>{{ $order->invoice_number }}</span>
+            <div class="content">
+                <div class="status-badge">Menunggu Pembayaran</div>
+
+                <h1 class="headline">Pesanan Anda Berhasil Dibuat</h1>
+                <p class="message-body">
+                    Halo <strong>{{ $order->recipient_name ?? ($order->user->name ?? 'Pelanggan') }}</strong>,<br>
+                    Pesanan Anda dengan nomor invoice <strong>{{ $order->invoice_number }}</strong> telah tercatat di sistem kami. Silakan selesaikan pembayaran ke rekening berikut.
+                </p>
+
+                <!-- INSTRUKSI REKENING PEMBAYARAN FORMAL -->
+                <div class="payment-box">
+                    <div class="payment-header">Instruksi Rekening Pembayaran</div>
+                    
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 13px; margin-bottom: 12px;">
+                        <tr>
+                            <td style="color: #64748b; padding: 4px 0;">Metode Pembayaran:</td>
+                            <td style="color: #0f172a; font-weight: 700; text-align: right; padding: 4px 0;">
+                                {{ strtoupper(str_replace('_va', ' Virtual Account', $order->payment_method)) }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="color: #64748b; padding: 4px 0;">Atas Nama Rekening:</td>
+                            <td style="color: #0f172a; font-weight: 700; text-align: right; padding: 4px 0;">
+                                PT Toko Online Indonesia
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="color: #64748b; padding: 4px 0;">Batas Waktu Pembayaran:</td>
+                            <td style="color: #dc2626; font-weight: 700; text-align: right; padding: 4px 0;">
+                                24 Jam Dari Sekarang
+                            </td>
+                        </tr>
+                    </table>
+
+                    <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 10px; text-align: center;">
+                        Nomor Rekening / Kode VA Pembayaran:
+                    </div>
+                    <div class="va-number">
+                        {{ $order->payment_code ?: '8801234567890' }}
+                    </div>
+
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 14px; margin-top: 10px;">
+                        <tr>
+                            <td style="color: #0f172a; font-weight: 800;">Total Nominal Transfer:</td>
+                            <td style="color: #1d4ed8; font-weight: 800; font-size: 18px; text-align: right;">
+                                Rp {{ number_format($order->total, 0, ',', '.') }}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <h3 style="font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 12px;">Rincian Barang Dipesan</h3>
+                <table class="details-table">
+                    <thead>
+                        <tr>
+                            <th>Produk</th>
+                            <th style="text-align: center;">Qty</th>
+                            <th style="text-align: right;">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($order->items as $item)
+                        <tr>
+                            <td style="color: #0f172a; font-weight: 600;">{{ $item->product_name }}</td>
+                            <td style="text-align: center; color: #64748b;">{{ $item->quantity }}</td>
+                            <td style="text-align: right; font-weight: 700; color: #0f172a;">Rp {{ number_format($item->price * $item->quantity, 0, ',', '.') }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="2" style="color: #64748b;">Subtotal Produk</td>
+                            <td style="text-align: right; font-weight: 700;">Rp {{ number_format($order->subtotal, 0, ',', '.') }}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="color: #64748b;">Ongkos Kirim</td>
+                            <td style="text-align: right; font-weight: 700;">Rp {{ number_format($order->shipping_cost, 0, ',', '.') }}</td>
+                        </tr>
+                        @if($order->discount_amount > 0)
+                        <tr>
+                            <td colspan="2" style="color: #16a34a;">Diskon ({{ $order->voucher_code ?? 'Promo' }})</td>
+                            <td style="text-align: right; font-weight: 700; color: #16a34a;">-Rp {{ number_format($order->discount_amount, 0, ',', '.') }}</td>
+                        </tr>
+                        @endif
+                        <tr>
+                            <td colspan="2" style="font-size: 15px; font-weight: 800; color: #0f172a;">Grand Total Tagihan</td>
+                            <td style="text-align: right; font-size: 16px; font-weight: 800; color: #1d4ed8;">Rp {{ number_format($order->total, 0, ',', '.') }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <!-- EXPLICIT INLINE CONTRAST BUTTON -->
+                <div class="btn-container">
+                    <a href="{{ route('checkout.success') }}?order_id={{ $order->invoice_number }}" style="background-color: #1d4ed8; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 800; font-size: 14px; display: inline-block; text-align: center;">
+                        <span style="color: #ffffff !important; font-weight: 800; text-decoration: none;">Bayar / Konfirmasi Pembayaran &rarr;</span>
+                    </a>
+                </div>
             </div>
 
-            @if($order->payment_method !== 'cod' && $order->payment_code)
-            <div class="payment-box">
-                <div class="payment-title">Menunggu Pembayaran ({{ strtoupper(str_replace('_va', ' Virtual Account', $order->payment_method)) }})</div>
-                <div style="font-size: 13px; color: #64748b; margin-bottom: 15px;">Silakan transfer ke nomor rekening berikut:</div>
-                <div class="va-number">{{ $order->payment_code }}</div>
-                <div class="total-amount">Rp {{ number_format($order->total, 0, ',', '.') }}</div>
+            <div class="footer">
+                &copy; {{ date('Y') }} Toko Online. Hak cipta dilindungi.<br>
+                Pemberitahuan transaksi resmi ini dikirimkan ke {{ $order->user->email ?? 'email Anda' }}.
             </div>
-            @endif
-
-            <h3 style="font-size: 16px; margin-bottom: 10px; color: #1e293b;">Rincian Pesanan</h3>
-            <table class="details-table">
-                <thead>
-                    <tr>
-                        <th>Produk</th>
-                        <th style="text-align: center;">Qty</th>
-                        <th style="text-align: right;">Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($order->items as $item)
-                    <tr>
-                        <td>{{ $item->product_name }}</td>
-                        <td style="text-align: center;">{{ $item->quantity }}</td>
-                        <td style="text-align: right;">Rp {{ number_format($item->price * $item->quantity, 0, ',', '.') }}</td>
-                    </tr>
-                    @endforeach
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <th colspan="2" style="text-align: right;">Subtotal Produk</th>
-                        <td style="text-align: right; font-weight: bold;">Rp {{ number_format($order->subtotal, 0, ',', '.') }}</td>
-                    </tr>
-                    <tr>
-                        <th colspan="2" style="text-align: right;">Ongkos Kirim</th>
-                        <td style="text-align: right; font-weight: bold;">Rp {{ number_format($order->shipping_cost, 0, ',', '.') }}</td>
-                    </tr>
-                    @if($order->discount_amount > 0)
-                    <tr>
-                        <th colspan="2" style="text-align: right; color: #16a34a;">Diskon ({{ $order->voucher_code ?? 'Promo' }})</th>
-                        <td style="text-align: right; font-weight: bold; color: #16a34a;">-Rp {{ number_format($order->discount_amount, 0, ',', '.') }}</td>
-                    </tr>
-                    @endif
-                    <tr>
-                        <th colspan="2" style="text-align: right; font-size: 16px; color: #2563eb;">Total Tagihan</th>
-                        <td style="text-align: right; font-size: 16px; font-weight: bold; color: #2563eb;">Rp {{ number_format($order->total, 0, ',', '.') }}</td>
-                    </tr>
-                </tfoot>
-            </table>
-
-            <div style="text-align: center; margin-top: 30px;">
-                <a href="{{ url('/') }}" class="btn">Kembali ke Toko</a>
-            </div>
-        </div>
-
-        <div class="footer">
-            Email ini dibuat secara otomatis. Harap tidak membalas email ini.<br>
-            &copy; {{ date('Y') }} Toko Online. All rights reserved.
         </div>
     </div>
 </body>

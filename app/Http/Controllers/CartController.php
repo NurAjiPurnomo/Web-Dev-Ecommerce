@@ -7,14 +7,32 @@ use Illuminate\Http\Request;
 class CartController extends Controller
 {
     /**
-     * Tampilkan Halaman Keranjang Belanja.
+     * Check if the incoming request expects a JSON response.
      */
-    public function index()
+    private function isJsonRequest(Request $request): bool
+    {
+        return $request->expectsJson() 
+            || $request->wantsJson() 
+            || $request->ajax() 
+            || $request->isJson() 
+            || $request->header('X-Requested-With') === 'XMLHttpRequest';
+    }
+
+    /**
+     * Get or initialize cart session.
+     */
+    public static function getCart(): array
     {
         $cart = session()->get('cart', []);
 
+        try {
+            $isLoggedIn = session()->has('user') || auth()->check();
+        } catch (\Throwable $e) {
+            $isLoggedIn = false;
+        }
+
         // Jika keranjang di session masih kosong, kita inisialisasi dengan data contoh default jika user sudah login
-        if (empty($cart) && (session()->has('user') || auth()->check()) && !session()->has('cart_initialized')) {
+        if (empty($cart) && $isLoggedIn && !session()->has('cart_initialized')) {
             $cart = [
                 '1_default' => [
                     'id'             => '1_default',
@@ -22,7 +40,7 @@ class CartController extends Controller
                     'variant_id'     => 'v1',
                     'image_id'       => 'img1',
                     'name'           => 'Kemeja Linen Casual Premium Slim Fit - Navy',
-                    'variant'        => 'Varian: Ukuran L, Warna Navy',
+                    'variant'        => 'Ukuran: L, Warna: Navy',
                     'color'          => 'Navy',
                     'size'           => 'L',
                     'price'          => 149000,
@@ -38,7 +56,7 @@ class CartController extends Controller
                     'variant_id'     => 'v2',
                     'image_id'       => 'img2',
                     'name'           => 'Sepatu Sneakers Running Lightweight Air Breathable',
-                    'variant'        => 'Varian: Ukuran 42, Warna Red Chili',
+                    'variant'        => 'Ukuran: 42, Warna: Red Chili',
                     'color'          => 'Red Chili',
                     'size'           => '42',
                     'price'          => 215000,
@@ -52,6 +70,36 @@ class CartController extends Controller
             session()->put('cart', $cart);
             session()->put('cart_initialized', true);
         }
+
+        return is_array($cart) ? $cart : [];
+    }
+
+    /**
+     * Get Cart Items via API (JSON).
+     */
+    public function getItems(Request $request)
+    {
+        $cart = self::getCart();
+        $totalPrice = 0;
+        foreach ($cart as $cItem) {
+            $rawP = preg_replace('/[^0-9]/', '', (string)($cItem['price'] ?? '0'));
+            $totalPrice += (int)$rawP * ($cItem['qty'] ?? 1);
+        }
+
+        return response()->json([
+            'status'     => 'success',
+            'cartCount'  => array_sum(array_column($cart, 'qty')),
+            'cart'       => array_values($cart),
+            'totalPrice' => 'Rp ' . number_format($totalPrice, 0, ',', '.'),
+        ]);
+    }
+
+    /**
+     * Tampilkan Halaman Keranjang Belanja.
+     */
+    public function index()
+    {
+        $cart = self::getCart();
 
         $user = auth()->user();
         if ($user) {
@@ -148,10 +196,15 @@ class CartController extends Controller
 
         $cart = session()->get('cart', []);
 
+        $weight = $dbProduct ? (int) ($dbProduct->weight ?: 1000) : (int) $request->input('weight', 1000);
+
         if (isset($cart[$cartKey])) {
-            $cart[$cartKey]['qty'] += $qty;
+            $item = $cart[$cartKey];
+            unset($cart[$cartKey]);
+            $item['qty'] += $qty;
+            $cart = [$cartKey => $item] + $cart;
         } else {
-            $cart[$cartKey] = [
+            $newItem = [
                 'id'             => $cartKey,
                 'product_id'     => (int) $productId,
                 'variant_id'     => $variantId,
@@ -163,22 +216,31 @@ class CartController extends Controller
                 'price'          => $price,
                 'original_price' => ($originalPrice && $originalPrice > $price) ? $originalPrice : null,
                 'discount'       => ($originalPrice && $originalPrice > $price) ? $discount : null,
+                'weight'         => $weight,
                 'qty'            => $qty,
                 'selected'       => true,
                 'image'          => $image,
             ];
+            $cart = [$cartKey => $newItem] + $cart;
         }
 
         session()->put('cart', $cart);
         session()->put('cart_initialized', true);
 
-        if ($request->wantsJson() || $request->ajax()) {
+        $totalPrice = 0;
+        foreach ($cart as $cItem) {
+            $rawP = preg_replace('/[^0-9]/', '', (string)($cItem['price'] ?? '0'));
+            $totalPrice += (int)$rawP * ($cItem['qty'] ?? 1);
+        }
+
+        if ($this->isJsonRequest($request)) {
             return response()->json([
-                'status'    => 'success',
-                'message'   => 'Produk berhasil ditambahkan ke keranjang!',
-                'cartCount' => array_sum(array_column($cart, 'qty')),
-                'cart'      => array_values($cart),
-                'product'   => [
+                'status'     => 'success',
+                'message'    => 'Produk berhasil ditambahkan ke keranjang!',
+                'cartCount'  => array_sum(array_column($cart, 'qty')),
+                'cart'       => array_values($cart),
+                'totalPrice' => 'Rp ' . number_format($totalPrice, 0, ',', '.'),
+                'product'    => [
                     'name'  => $name,
                     'image' => $image,
                     'qty'   => $qty,
@@ -241,7 +303,7 @@ class CartController extends Controller
 
         session()->put('buy_now_item', $buyNowItem);
 
-        if ($request->wantsJson() || $request->ajax()) {
+        if ($this->isJsonRequest($request)) {
             return response()->json([
                 'status'      => 'success',
                 'redirectUrl' => route('checkout', ['direct' => 1]),
@@ -259,19 +321,25 @@ class CartController extends Controller
         $cartKey = $request->input('cart_key') ?? $request->input('id') ?? $request->input('product_id');
         $qty     = max(1, (int) $request->input('qty', 1));
 
-        $cart = session()->get('cart', []);
+        $cart = self::getCart();
 
         if (isset($cart[$cartKey])) {
             $cart[$cartKey]['qty'] = $qty;
             session()->put('cart', $cart);
         }
 
-        if ($request->wantsJson() || $request->ajax()) {
+        if ($this->isJsonRequest($request)) {
+            $totalPrice = 0;
+            foreach ($cart as $cItem) {
+                $rawP = preg_replace('/[^0-9]/', '', (string)($cItem['price'] ?? '0'));
+                $totalPrice += (int)$rawP * ($cItem['qty'] ?? 1);
+            }
             return response()->json([
-                'status'    => 'success',
-                'message'   => 'Jumlah produk diperbarui.',
-                'cartCount' => array_sum(array_column($cart, 'qty')),
-                'cart'      => array_values($cart),
+                'status'     => 'success',
+                'message'    => 'Jumlah produk diperbarui.',
+                'cartCount'  => array_sum(array_column($cart, 'qty')),
+                'cart'       => array_values($cart),
+                'totalPrice' => 'Rp ' . number_format($totalPrice, 0, ',', '.'),
             ]);
         }
 
@@ -285,19 +353,25 @@ class CartController extends Controller
     {
         $cartKey = $request->input('cart_key') ?? $request->input('id') ?? $request->input('product_id');
 
-        $cart = session()->get('cart', []);
+        $cart = self::getCart();
 
         if (isset($cart[$cartKey])) {
             unset($cart[$cartKey]);
             session()->put('cart', $cart);
         }
 
-        if ($request->wantsJson() || $request->ajax()) {
+        if ($this->isJsonRequest($request)) {
+            $totalPrice = 0;
+            foreach ($cart as $cItem) {
+                $rawP = preg_replace('/[^0-9]/', '', (string)($cItem['price'] ?? '0'));
+                $totalPrice += (int)$rawP * ($cItem['qty'] ?? 1);
+            }
             return response()->json([
-                'status'    => 'success',
-                'message'   => 'Produk telah dihapus dari keranjang.',
-                'cartCount' => array_sum(array_column($cart, 'qty')),
-                'cart'      => array_values($cart),
+                'status'     => 'success',
+                'message'    => 'Produk telah dihapus dari keranjang.',
+                'cartCount'  => array_sum(array_column($cart, 'qty')),
+                'cart'       => array_values($cart),
+                'totalPrice' => 'Rp ' . number_format($totalPrice, 0, ',', '.'),
             ]);
         }
 
@@ -311,7 +385,7 @@ class CartController extends Controller
     {
         $cartKeys = $request->input('cart_keys') ?? $request->input('product_ids') ?? $request->input('ids') ?? [];
 
-        $cart = session()->get('cart', []);
+        $cart = self::getCart();
 
         foreach ($cartKeys as $id) {
             if (isset($cart[$id])) {
@@ -321,12 +395,18 @@ class CartController extends Controller
 
         session()->put('cart', $cart);
 
-        if ($request->wantsJson() || $request->ajax()) {
+        if ($this->isJsonRequest($request)) {
+            $totalPrice = 0;
+            foreach ($cart as $cItem) {
+                $rawP = preg_replace('/[^0-9]/', '', (string)($cItem['price'] ?? '0'));
+                $totalPrice += (int)$rawP * ($cItem['qty'] ?? 1);
+            }
             return response()->json([
-                'status'    => 'success',
-                'message'   => 'Produk yang dipilih berhasil dihapus.',
-                'cartCount' => array_sum(array_column($cart, 'qty')),
-                'cart'      => array_values($cart),
+                'status'     => 'success',
+                'message'    => 'Produk yang dipilih berhasil dihapus.',
+                'cartCount'  => array_sum(array_column($cart, 'qty')),
+                'cart'       => array_values($cart),
+                'totalPrice' => 'Rp ' . number_format($totalPrice, 0, ',', '.'),
             ]);
         }
 
@@ -339,7 +419,7 @@ class CartController extends Controller
     public function updateSelected(Request $request)
     {
         $items = $request->input('items', []);
-        $cart = session()->get('cart', []);
+        $cart = self::getCart();
 
         if (is_array($items)) {
             foreach ($items as $item) {
@@ -351,7 +431,7 @@ class CartController extends Controller
             session()->put('cart', $cart);
         }
 
-        if ($request->wantsJson() || $request->ajax()) {
+        if ($this->isJsonRequest($request)) {
             return response()->json([
                 'status' => 'success',
                 'cart'   => array_values($cart),
@@ -368,12 +448,13 @@ class CartController extends Controller
     {
         session()->forget('cart');
 
-        if ($request->wantsJson() || $request->ajax()) {
+        if ($this->isJsonRequest($request)) {
             return response()->json([
-                'status'    => 'success',
-                'message'   => 'Keranjang berhasil dikosongkan.',
-                'cartCount' => 0,
-                'cart'      => [],
+                'status'     => 'success',
+                'message'    => 'Keranjang berhasil dikosongkan.',
+                'cartCount'  => 0,
+                'cart'       => [],
+                'totalPrice' => 'Rp 0',
             ]);
         }
 

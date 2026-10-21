@@ -26,21 +26,6 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $budi = User::updateOrCreate(
-            ['email' => 'budi.santoso@gmail.com'],
-            [
-                'name' => 'Budi Santoso',
-                'phone' => '081987654321',
-                'password' => \Illuminate\Support\Facades\Hash::make('password123'),
-                'is_admin' => false,
-                'status' => 'active',
-                'address' => 'Jl. Jendral Sudirman No. 45, Kebayoran Baru',
-                'city' => 'Jakarta Selatan',
-                'province' => 'DKI Jakarta',
-                'postal_code' => '12190',
-            ]
-        );
-
         // Seed Products
         $products = [
             [
@@ -402,45 +387,6 @@ class DatabaseSeeder extends Seeder
             \App\Models\Voucher::updateOrCreate(['code' => $v['code']], $v);
         }
 
-        // Seed Sample Orders
-        $order = \App\Models\Order::updateOrCreate(
-            ['invoice_number' => 'INV/20260810/001'],
-            [
-                'user_id' => $budi->id,
-                'subtotal' => 364000,
-                'shipping_cost' => 15000,
-                'discount_amount' => 30000,
-                'total' => 349000,
-                'courier' => 'J&T Express',
-                'payment_method' => 'BCA Virtual Account',
-                'status' => 'diproses',
-                'recipient_name' => 'Budi Santoso',
-                'recipient_phone' => '081987654321',
-                'shipping_address' => 'Jl. Jendral Sudirman No. 45, Kebayoran Baru, Jakarta Selatan',
-            ]
-        );
-
-        \App\Models\OrderItem::updateOrCreate(
-            ['order_id' => $order->id, 'product_name' => 'Kemeja Linen Casual Premium Slim Fit - Navy'],
-            ['product_id' => 1, 'quantity' => 1, 'price' => 149000]
-        );
-
-        \App\Models\OrderItem::updateOrCreate(
-            ['order_id' => $order->id, 'product_name' => 'Sepatu Sneakers Running Lightweight Air Breathable'],
-            ['product_id' => 2, 'quantity' => 1, 'price' => 215000]
-        );
-
-        // Seed Affiliates
-        \App\Models\Affiliate::updateOrCreate(
-            ['user_id' => $budi->id],
-            [
-                'referral_code' => 'BUDI55',
-                'commission_rate' => 5.00,
-                'total_sales' => 14500000,
-                'commission_earned' => 725000,
-                'status' => 'aktif'
-            ]
-        );
 
         // Seed Announcements
         \App\Models\Announcement::updateOrCreate(

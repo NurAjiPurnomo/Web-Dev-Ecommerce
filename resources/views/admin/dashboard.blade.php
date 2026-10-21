@@ -1,250 +1,373 @@
 @extends('admin.layout')
 
-@section('title', 'Dashboard Toko')
+@section('title', 'Dashboard')
 
 @section('content')
 <div class="space-y-6">
 
     <!-- Header Section -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200 pb-5">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Dashboard Toko</h1>
-            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Ringkasan performa penjualan, statistik transaksi, dan analisis produk.</p>
+            <h1 class="text-xl sm:text-2xl font-semibold text-slate-900">Dashboard</h1>
+            <p class="text-sm text-slate-500 mt-0.5">Ringkasan aktivitas penjualan dan operasional toko.</p>
         </div>
-        <div class="flex items-center gap-2">
-            <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-2xs">
-                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                Pembaruan: {{ date('d M Y') }}
-            </span>
+        <div>
+            <a 
+                href="{{ route('admin.products') }}" 
+                class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                <span>Tambah Produk</span>
+            </a>
         </div>
     </div>
 
-    <!-- FILTER BAR (PERIODE BULAN & KATEGORI) -->
-    <div class="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-2xs space-y-3">
-        <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
-                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
-                Filter Periode &amp; Kategori
-            </h3>
-            @if($selectedMonth !== 'all' || $selectedCategory !== 'all')
-                <span class="text-[11px] font-medium text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">Filter Aktif</span>
-            @endif
+    <!-- Perlu Diproses (To-Do List Harian) -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-sm font-semibold text-slate-900">Perlu Diproses</h2>
+            <a href="{{ route('admin.orders') }}" class="text-xs text-blue-600 hover:text-blue-700 font-medium">
+                Semua Pesanan &rarr;
+            </a>
         </div>
 
-        <form action="{{ route('admin.dashboard') }}" method="GET" class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
-            <!-- Select Month -->
-            <div class="sm:col-span-5">
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Periode Bulan</label>
-                <select name="month" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 focus:bg-white focus:border-blue-600 focus:outline-none transition-colors">
-                    <option value="all" {{ $selectedMonth === 'all' ? 'selected' : '' }}>Semua Bulan (Tahun 2026)</option>
-                    @foreach($indonesianMonths as $num => $mName)
-                        <option value="{{ $num }}" {{ (string)$selectedMonth === (string)$num ? 'selected' : '' }}>
-                            Bulan {{ $mName }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <a 
+                href="{{ route('admin.orders') }}?status=diproses" 
+                class="p-3.5 rounded-lg border border-slate-200 bg-slate-50/50 hover:bg-blue-50/50 hover:border-blue-200 transition-colors text-center"
+            >
+                <div class="text-2xl font-semibold {{ $tasks['to_ship'] > 0 ? 'text-blue-600' : 'text-slate-800' }}">
+                    {{ $tasks['to_ship'] }}
+                </div>
+                <div class="text-xs font-medium text-slate-700 mt-1">Perlu Dikemas</div>
+            </a>
 
-            <!-- Select Category -->
-            <div class="sm:col-span-5">
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Kategori Produk</label>
-                <select name="category" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 focus:bg-white focus:border-blue-600 focus:outline-none transition-colors">
-                    <option value="all" {{ $selectedCategory === 'all' ? 'selected' : '' }}>Semua Kategori Produk</option>
-                    <option value="Pakaian" {{ $selectedCategory === 'Pakaian' ? 'selected' : '' }}>Pakaian</option>
-                    <option value="Sepatu" {{ $selectedCategory === 'Sepatu' ? 'selected' : '' }}>Sepatu</option>
-                    <option value="Aksesoris" {{ $selectedCategory === 'Aksesoris' ? 'selected' : '' }}>Aksesoris</option>
-                    <option value="Gadget" {{ $selectedCategory === 'Gadget' ? 'selected' : '' }}>Gadget</option>
-                    <option value="Rumah Tangga" {{ $selectedCategory === 'Rumah Tangga' ? 'selected' : '' }}>Rumah Tangga</option>
-                </select>
-            </div>
+            <a 
+                href="{{ route('admin.orders') }}?status=belum_dibayar" 
+                class="p-3.5 rounded-lg border border-slate-200 bg-slate-50/50 hover:bg-amber-50/50 hover:border-amber-200 transition-colors text-center"
+            >
+                <div class="text-2xl font-semibold {{ $tasks['unpaid'] > 0 ? 'text-amber-600' : 'text-slate-800' }}">
+                    {{ $tasks['unpaid'] }}
+                </div>
+                <div class="text-xs font-medium text-slate-700 mt-1">Belum Bayar</div>
+            </a>
 
-            <!-- Action Buttons -->
-            <div class="sm:col-span-2 flex gap-2">
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs py-2 px-3 rounded-lg shadow-2xs transition-colors flex items-center justify-center gap-1 cursor-pointer">
-                    Terapkan
-                </button>
-                @if($selectedMonth !== 'all' || $selectedCategory !== 'all')
-                    <a href="{{ route('admin.dashboard') }}" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-xs rounded-lg border border-slate-300 transition-colors" title="Reset Filter">
-                        Reset
-                    </a>
-                @endif
-            </div>
-        </form>
+            <a 
+                href="{{ route('admin.orders') }}?status=dikirim" 
+                class="p-3.5 rounded-lg border border-slate-200 bg-slate-50/50 hover:bg-indigo-50/50 hover:border-indigo-200 transition-colors text-center"
+            >
+                <div class="text-2xl font-semibold {{ $tasks['shipping'] > 0 ? 'text-indigo-600' : 'text-slate-800' }}">
+                    {{ $tasks['shipping'] }}
+                </div>
+                <div class="text-xs font-medium text-slate-700 mt-1">Sedang Dikirim</div>
+            </a>
+
+            <a 
+                href="{{ route('admin.returns') }}" 
+                class="p-3.5 rounded-lg border border-slate-200 bg-slate-50/50 hover:bg-rose-50/50 hover:border-rose-200 transition-colors text-center"
+            >
+                <div class="text-2xl font-semibold {{ $tasks['returns'] > 0 ? 'text-rose-600' : 'text-slate-800' }}">
+                    {{ $tasks['returns'] }}
+                </div>
+                <div class="text-xs font-medium text-slate-700 mt-1">Komplain / Retur</div>
+            </a>
+
+            <a 
+                href="{{ route('admin.products') }}" 
+                class="p-3.5 rounded-lg border border-slate-200 bg-slate-50/50 hover:bg-orange-50/50 hover:border-orange-200 transition-colors text-center"
+            >
+                <div class="text-2xl font-semibold {{ $tasks['low_stock'] > 0 ? 'text-orange-600' : 'text-slate-800' }}">
+                    {{ $tasks['low_stock'] }}
+                </div>
+                <div class="text-xs font-medium text-slate-700 mt-1">Stok Menipis</div>
+            </a>
+
+            <a 
+                href="{{ route('admin.orders') }}?status=selesai" 
+                class="p-3.5 rounded-lg border border-slate-200 bg-slate-50/50 hover:bg-emerald-50/50 hover:border-emerald-200 transition-colors text-center"
+            >
+                <div class="text-2xl font-semibold {{ $tasks['completed'] > 0 ? 'text-emerald-600' : 'text-slate-800' }}">
+                    {{ $tasks['completed'] }}
+                </div>
+                <div class="text-xs font-medium text-slate-700 mt-1">Pesanan Selesai</div>
+            </a>
+        </div>
     </div>
 
-    <!-- 4 EXECUTIVE KPI CARDS -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        
-        <!-- CARD 1: PENDAPATAN KOTOR -->
-        <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs space-y-2 hover:border-slate-300 transition-all">
-            <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-500">Pendapatan Kotor</span>
-                <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                </div>
-            </div>
+    <!-- Ringkasan Penjualan -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-                <h3 class="text-xl font-bold text-slate-900 tracking-tight">Rp {{ number_format($stats['gross_revenue'], 0, ',', '.') }}</h3>
-                <p class="text-[11px] text-slate-500 mt-1">Total omset kotor sebelum biaya</p>
+                <h2 class="text-sm font-semibold text-slate-900">Ringkasan Penjualan</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Performa transaksi dan omset toko.</p>
+            </div>
+
+            <!-- Periode Filter Pills -->
+            <div class="inline-flex bg-slate-100 p-0.5 rounded-lg text-xs font-medium">
+                <a 
+                    href="{{ route('admin.dashboard', ['period' => 'all']) }}" 
+                    class="px-3 py-1.5 rounded-md transition-colors {{ $selectedPeriod === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900' }}"
+                >
+                    Semua
+                </a>
+                <a 
+                    href="{{ route('admin.dashboard', ['period' => 'today']) }}" 
+                    class="px-3 py-1.5 rounded-md transition-colors {{ $selectedPeriod === 'today' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900' }}"
+                >
+                    Hari Ini
+                </a>
+                <a 
+                    href="{{ route('admin.dashboard', ['period' => '7days']) }}" 
+                    class="px-3 py-1.5 rounded-md transition-colors {{ $selectedPeriod === '7days' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900' }}"
+                >
+                    7 Hari Terakhir
+                </a>
+                <a 
+                    href="{{ route('admin.dashboard', ['period' => 'this_month']) }}" 
+                    class="px-3 py-1.5 rounded-md transition-colors {{ $selectedPeriod === 'this_month' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900' }}"
+                >
+                    Bulan Ini
+                </a>
             </div>
         </div>
 
-        <!-- CARD 2: PENDAPATAN BERSIH -->
-        <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs space-y-2 hover:border-slate-300 transition-all">
-            <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-500">Estimasi Laba Bersih</span>
-                <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+        <!-- 4 Metric Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
+            <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/40">
+                <div class="text-xs font-medium text-slate-500">Total Penjualan</div>
+                <div class="text-xl sm:text-2xl font-semibold text-slate-900 mt-1">
+                    Rp {{ number_format($stats['gross_revenue'], 0, ',', '.') }}
+                </div>
+                <div class="text-xs text-slate-400 mt-1">
+                    @if($stats['gross_revenue'] > 0)
+                        Subtotal produk: Rp {{ number_format($stats['subtotal_revenue'] ?? 0, 0, ',', '.') }}
+                    @else
+                        Belum ada transaksi
+                    @endif
                 </div>
             </div>
-            <div>
-                <h3 class="text-xl font-bold text-slate-900 tracking-tight">Rp {{ number_format($stats['net_revenue'], 0, ',', '.') }}</h3>
-                <p class="text-[11px] text-slate-500 mt-1">Estimasi margin laba ~85%</p>
-            </div>
-        </div>
 
-        <!-- CARD 3: TOTAL PESANAN -->
-        <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs space-y-2 hover:border-slate-300 transition-all">
-            <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-500">Total Pesanan</span>
-                <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+            <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/40">
+                <div class="text-xs font-medium text-slate-500">Pesanan Berhasil</div>
+                <div class="text-xl sm:text-2xl font-semibold text-slate-900 mt-1">
+                    {{ number_format($stats['total_orders'], 0, ',', '.') }}
+                </div>
+                <div class="text-xs text-slate-400 mt-1">
+                    @if($stats['total_orders'] > 0)
+                        Rata-rata: Rp {{ number_format($stats['avg_order_val'], 0, ',', '.') }}
+                    @else
+                        Belum ada pesanan
+                    @endif
                 </div>
             </div>
-            <div>
-                <h3 class="text-xl font-bold text-slate-900 tracking-tight">{{ number_format($stats['total_orders'], 0, ',', '.') }} Transaksi</h3>
-                <p class="text-[11px] text-slate-500 mt-1">Rata-rata: Rp {{ number_format($stats['avg_order_val'], 0, ',', '.') }}/pesanan</p>
-            </div>
-        </div>
 
-        <!-- CARD 4: PELANGGAN & PRODUK -->
-        <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs space-y-2 hover:border-slate-300 transition-all">
-            <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-500">Pelanggan &amp; Produk</span>
-                <div class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+            <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/40">
+                <div class="text-xs font-medium text-slate-500">Produk Terjual</div>
+                <div class="text-xl sm:text-2xl font-semibold text-slate-900 mt-1">
+                    {{ number_format($stats['items_sold'], 0, ',', '.') }} pcs
                 </div>
+                <div class="text-xs text-slate-400 mt-1">Unit berhasil diproses</div>
             </div>
-            <div>
-                <h3 class="text-xl font-bold text-slate-900 tracking-tight">{{ number_format($stats['total_customers'], 0, ',', '.') }} Pelanggan</h3>
-                <p class="text-[11px] text-slate-500 mt-1">{{ $stats['total_products'] }} Produk aktif di katalog</p>
+
+            <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/40">
+                <div class="text-xs font-medium text-slate-500">Pelanggan Terdaftar</div>
+                <div class="text-xl sm:text-2xl font-semibold text-slate-900 mt-1">
+                    {{ number_format($stats['total_customers'], 0, ',', '.') }}
+                </div>
+                <div class="text-xs text-slate-400 mt-1">{{ $stats['total_products'] }} produk aktif</div>
             </div>
         </div>
-
     </div>
 
-    <!-- TWO COLUMNS FINANCIAL ANALYTICS GRID -->
+    <!-- Grafik Tren & Kategori (2 Kolom) -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-        <!-- LEFT (7 COLS): PERFORMA KATEGORI PRODUK -->
-        <div class="lg:col-span-7 bg-white border border-slate-200 rounded-xl shadow-2xs overflow-hidden space-y-4">
-            <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                <div>
-                    <h2 class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
-                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-                        Performa Penjualan per Kategori
-                    </h2>
-                    <p class="text-xs text-slate-500 mt-0.5">Pendapatan kotor, estimasi laba, dan porsi kontribusi</p>
-                </div>
-            </div>
+        <!-- Kategori Produk (7 Kolom) -->
+        <div class="lg:col-span-7 bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col justify-between">
+            <div>
+                <h3 class="text-sm font-semibold text-slate-900 mb-1">Performa Kategori</h3>
+                <p class="text-xs text-slate-500 mb-4">Rincian pendapatan berdasarkan kategori barang.</p>
 
-            <div class="overflow-x-auto px-4 pb-4">
-                <table class="w-full text-left border-collapse text-xs sm:text-sm">
-                    <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold text-xs">
-                        <tr>
-                            <th class="py-2.5 px-3">Kategori</th>
-                            <th class="py-2.5 px-3 text-center">Unit Terjual</th>
-                            <th class="py-2.5 px-3 text-right">Pendapatan Kotor</th>
-                            <th class="py-2.5 px-3 text-right">Est. Laba Bersih</th>
-                            <th class="py-2.5 px-3 text-right">Porsi</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 text-slate-700">
-                        @foreach($categoryBreakdown as $catData)
-                            <tr class="hover:bg-slate-50 transition-colors">
-                                <td class="py-2.5 px-3 font-semibold text-slate-900">{{ $catData['category'] }}</td>
-                                <td class="py-2.5 px-3 text-center font-mono font-medium">{{ number_format($catData['quantity'], 0, ',', '.') }} pcs</td>
-                                <td class="py-2.5 px-3 text-right font-mono font-semibold text-slate-900">Rp {{ number_format($catData['gross'], 0, ',', '.') }}</td>
-                                <td class="py-2.5 px-3 text-right font-mono font-semibold text-emerald-600">Rp {{ number_format($catData['net'], 0, ',', '.') }}</td>
-                                <td class="py-2.5 px-3 text-right">
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
-                                        {{ $catData['pct'] }}%
-                                    </span>
-                                </td>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs sm:text-sm">
+                        <thead class="text-slate-500 font-medium border-b border-slate-100 text-xs">
+                            <tr>
+                                <th class="pb-2.5">Kategori</th>
+                                <th class="pb-2.5 text-center">Terjual</th>
+                                <th class="pb-2.5 text-right">Pendapatan</th>
+                                <th class="pb-2.5 text-right">Porsi</th>
                             </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-slate-700">
+                            @foreach($categoryBreakdown as $catData)
+                                <tr>
+                                    <td class="py-2.5 font-medium text-slate-900">{{ $catData['category'] }}</td>
+                                    <td class="py-2.5 text-center text-slate-600">{{ $catData['quantity'] }} pcs</td>
+                                    <td class="py-2.5 text-right font-medium text-slate-900">Rp {{ number_format($catData['gross'], 0, ',', '.') }}</td>
+                                    <td class="py-2.5 text-right text-slate-500">{{ $catData['pct'] }}%</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
-        <!-- RIGHT (5 COLS): VISUAL TREN PENJUALAN BULANAN -->
+        <!-- Tren Bulanan (5 Kolom) -->
         @php
             $maxMonthlyGross = max(array_column($monthlyTrend, 'gross') ?: [1]);
             if ($maxMonthlyGross <= 0) $maxMonthlyGross = 1;
         @endphp
-        <div class="lg:col-span-5 bg-white border border-slate-200 rounded-xl shadow-2xs overflow-hidden flex flex-col justify-between">
-            <div class="p-4 border-b border-slate-100 bg-slate-50/50">
-                <h2 class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
-                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                    Grafik Tren Bulanan (2026)
-                </h2>
-                <p class="text-xs text-slate-500 mt-0.5">Visual pergerakan omset selama 12 bulan</p>
+        <div class="lg:col-span-5 bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col justify-between">
+            <div>
+                <h3 class="text-sm font-semibold text-slate-900 mb-1">Tren Bulanan ({{ date('Y') }})</h3>
+                <p class="text-xs text-slate-500 mb-4">Grafik omset penjualan selama 12 bulan.</p>
             </div>
 
-            <!-- Mini Visual Bar Chart -->
-            <div class="p-4 flex-1 flex flex-col justify-end">
-                <div class="h-44 flex items-end justify-between gap-1.5 pt-6 pb-2 border-b border-slate-100">
+            <div>
+                <div class="h-36 flex items-end justify-between gap-1.5 pb-2 border-b border-slate-100">
                     @foreach($monthlyTrend as $mTrend)
                         @php
-                            $heightPct = ($mTrend['gross'] > 0) ? max(10, round(($mTrend['gross'] / $maxMonthlyGross) * 100)) : 4;
+                            $heightPct = ($mTrend['gross'] > 0) ? max(12, round(($mTrend['gross'] / $maxMonthlyGross) * 100)) : 6;
                             $shortName = substr($mTrend['month_name'], 0, 3);
-                            $isSelected = (string)$selectedMonth === (string)$mTrend['month_num'];
                         @endphp
                         <div class="flex-1 h-full flex flex-col justify-end items-center gap-1 group relative">
-                            <!-- Tooltip Hover -->
-                            <div class="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-8 bg-slate-900 text-white text-[10px] font-semibold py-1 px-2 rounded shadow pointer-events-none whitespace-nowrap z-20">
-                                {{ $mTrend['month_name'] }}: Rp {{ number_format($mTrend['gross'], 0, ',', '.') }} ({{ $mTrend['orders'] }} pesanan)
+                            <div class="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-7 bg-slate-900 text-white text-[10px] py-1 px-2 rounded pointer-events-none whitespace-nowrap z-20">
+                                {{ $mTrend['month_name'] }}: Rp {{ number_format($mTrend['gross'], 0, ',', '.') }}
                             </div>
-                            <!-- Visual Bar Container -->
                             <div class="w-full flex-1 flex items-end justify-center">
                                 <div 
                                     style="height: {{ $heightPct }}%" 
-                                    class="w-full max-w-[20px] rounded-t-sm transition-all duration-300 {{ $isSelected ? 'bg-blue-600' : ($mTrend['gross'] > 0 ? 'bg-blue-500 group-hover:bg-blue-600' : 'bg-slate-200') }}"
+                                    class="w-full max-w-[16px] rounded-t-sm transition-all {{ $mTrend['gross'] > 0 ? 'bg-blue-600' : 'bg-slate-200' }}"
                                 ></div>
                             </div>
-                            <span class="text-[10px] font-semibold {{ $isSelected ? 'text-blue-600 font-bold' : 'text-slate-400' }} uppercase">
+                            <span class="text-[10px] text-slate-400">
                                 {{ $shortName }}
                             </span>
                         </div>
                     @endforeach
                 </div>
-                <div class="flex items-center justify-between text-[11px] text-slate-500 mt-2 font-medium">
-                    <span>Jan (Mulai)</span>
-                    <span class="text-blue-600 font-semibold">Tinggi: Rp {{ number_format($maxMonthlyGross, 0, ',', '.') }}</span>
-                    <span>Des (Akhir)</span>
+                <div class="flex items-center justify-between text-xs text-slate-400 mt-2">
+                    <span>Januari</span>
+                    <span>Desember</span>
                 </div>
             </div>
         </div>
 
     </div>
 
-    <!-- RECENT TRANSACTIONS TABLE -->
-    <div class="bg-white border border-slate-200 rounded-xl shadow-2xs overflow-hidden space-y-4">
-        <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <div>
-                <h2 class="font-bold text-slate-900 text-base flex items-center gap-2">
-                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 01-2 2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                    Pesanan Terbaru
-                </h2>
-                <p class="text-xs text-slate-500 mt-0.5">Daftar transaksi pelanggan terbaru</p>
+    <!-- Produk Terlaris & Stok Menipis (2 Kolom) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Produk Terlaris -->
+        @php
+            $periodLabels = [
+                'all'        => 'Semua Waktu',
+                'today'      => 'Hari Ini',
+                '7days'      => '7 Hari Terakhir',
+                '30days'     => '30 Hari Terakhir',
+                'this_month' => 'Bulan Ini',
+            ];
+            $currentPeriodLabel = $periodLabels[$selectedPeriod] ?? 'Periode Ini';
+        @endphp
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h3 class="text-sm font-semibold text-slate-900">Produk Terlaris</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">{{ $currentPeriodLabel }}</p>
+                </div>
+                <a href="{{ route('admin.products') }}" class="text-xs text-blue-600 hover:text-blue-700 font-medium">
+                    Lihat Produk &rarr;
+                </a>
             </div>
-            <a href="{{ route('admin.orders') }}" class="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline">Lihat Semua Pesanan &rarr;</a>
+
+            <div class="space-y-3">
+                @forelse($topProducts as $tp)
+                    <div class="flex items-center gap-3 py-2 border-b border-slate-100 last:border-b-0">
+                        <img src="{{ $tp->image }}" alt="{{ $tp->name }}" class="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0">
+                        <div class="flex-1 min-w-0">
+                            <div class="text-xs sm:text-sm font-medium text-slate-900 truncate">{{ $tp->name }}</div>
+                            <div class="text-xs text-slate-400 mt-0.5">{{ $tp->category }} • {{ $tp->formatted_price }}</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <div class="text-xs font-semibold text-slate-900">{{ $tp->period_sold ?? $tp->sold }} terjual</div>
+                            <div class="text-[11px] text-slate-400">Stok: {{ $tp->stock }}</div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="py-6 text-center text-xs text-slate-400">
+                        Belum ada data produk terjual pada {{ strtolower($currentPeriodLabel) }}.
+                    </div>
+                @endforelse
+            </div>
+        </div>
+
+        <!-- Peringatan Stok Menipis -->
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-sm font-semibold text-slate-900">Peringatan Stok (&le; 5 pcs)</h3>
+                <a href="{{ route('admin.products') }}" class="text-xs text-blue-600 hover:text-blue-700 font-medium">
+                    Kelola Stok &rarr;
+                </a>
+            </div>
+
+            <div class="space-y-3">
+                @forelse($lowStockProducts as $lp)
+                    <div class="flex items-start gap-3 py-2.5 border-b border-slate-100 last:border-b-0">
+                        <img src="{{ $lp->image }}" alt="{{ $lp->name }}" class="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0 mt-0.5">
+                        <div class="flex-1 min-w-0">
+                            <div class="text-xs sm:text-sm font-medium text-slate-900 truncate">{{ $lp->name }}</div>
+                            @if(!empty($lp->low_variants_list))
+                                <div class="mt-1 flex flex-wrap gap-1">
+                                    @foreach($lp->low_variants_list as $lv)
+                                        <span class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-medium {{ $lv['stock'] === 0 ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-amber-50 text-amber-700 border border-amber-200' }}">
+                                            <span>{{ $lv['name'] }}:</span>
+                                            <span class="font-bold">{{ $lv['stock'] === 0 ? 'Habis' : $lv['stock'] . ' pcs' }}</span>
+                                        </span>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="text-xs text-slate-400 mt-0.5">{{ $lp->category }} • {{ $lp->formatted_price }}</div>
+                            @endif
+                        </div>
+                        <div class="text-right shrink-0">
+                            @if(empty($lp->low_variants_list))
+                                <div class="text-xs font-semibold {{ $lp->stock === 0 ? 'text-rose-600' : 'text-orange-600' }}">
+                                    {{ $lp->stock === 0 ? 'Habis' : $lp->stock . ' pcs' }}
+                                </div>
+                            @endif
+                            <a href="{{ route('admin.products') }}" class="text-[11px] text-blue-600 hover:underline block mt-0.5">
+                                Edit Stok
+                            </a>
+                        </div>
+                    </div>
+                @empty
+                    <div class="py-6 text-center text-xs text-slate-400">
+                        Semua stok produk dalam kondisi aman.
+                    </div>
+                @endforelse
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Pesanan Terbaru -->
+    <div class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+        <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-semibold text-slate-900">Pesanan Terbaru</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Transaksi belanja pelanggan terbaru.</p>
+            </div>
+            <a href="{{ route('admin.orders') }}" class="text-xs text-blue-600 hover:text-blue-700 font-medium">
+                Lihat Semua &rarr;
+            </a>
         </div>
 
         <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse text-xs sm:text-sm">
-                <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold text-xs">
+            <table class="w-full text-left text-xs sm:text-sm">
+                <thead class="bg-slate-50 text-slate-600 font-medium border-b border-slate-200 text-xs">
                     <tr>
                         <th class="px-4 py-3">No. Invoice</th>
                         <th class="px-4 py-3">Pelanggan</th>
@@ -257,41 +380,47 @@
                 <tbody class="divide-y divide-slate-100 text-slate-700">
                     @forelse($recentOrders as $order)
                         <tr class="hover:bg-slate-50 transition-colors">
-                            <td class="px-4 py-3 font-mono font-semibold text-slate-900">{{ $order->invoice_number }}</td>
+                            <td class="px-4 py-3 font-mono font-medium text-slate-900">{{ $order->invoice_number }}</td>
                             <td class="px-4 py-3">
-                                <div class="font-semibold text-slate-900">{{ $order->user->name ?? $order->recipient_name }}</div>
-                                <div class="text-[11px] text-slate-500">{{ $order->user->email ?? '-' }}</div>
+                                <div class="font-medium text-slate-900">{{ $order->user->name ?? $order->recipient_name }}</div>
+                                <div class="text-xs text-slate-400">{{ $order->user->email ?? $order->recipient_phone }}</div>
                             </td>
-                            <td class="px-4 py-3 font-semibold text-slate-900">{{ $order->formatted_total }}</td>
+                            <td class="px-4 py-3 font-medium text-slate-900">{{ $order->formatted_total }}</td>
                             <td class="px-4 py-3">
                                 @if($order->status === 'dikemas' || $order->status === 'diproses')
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-50 text-sky-700 border border-sky-200">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-sky-50 text-sky-700 border border-sky-200">
                                         Dikemas
                                     </span>
                                 @elseif($order->status === 'dikirim')
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
-                                        Pengiriman
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                        Dikirim
                                     </span>
                                 @elseif($order->status === 'selesai')
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
                                         Selesai
                                     </span>
+                                @elseif($order->status === 'batal')
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200">
+                                        Batal
+                                    </span>
                                 @else
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
                                         Belum Bayar
                                     </span>
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-slate-500 text-xs">{{ $order->created_at->format('d M Y, H:i') }}</td>
                             <td class="px-4 py-3 text-right">
-                                <a href="{{ route('admin.orders') }}" class="text-xs font-medium text-slate-700 hover:text-blue-600 bg-white hover:bg-slate-50 px-2.5 py-1 rounded border border-slate-200 transition-colors inline-block">
+                                <a href="{{ route('admin.orders') }}" class="text-xs font-medium text-blue-600 hover:text-blue-700">
                                     Detail
                                 </a>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-4 py-6 text-center text-slate-400">Belum ada transaksi masuk.</td>
+                            <td colspan="6" class="px-4 py-8 text-center text-xs text-slate-400">
+                                Belum ada pesanan terbaru.
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -301,4 +430,3 @@
 
 </div>
 @endsection
-

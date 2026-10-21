@@ -28,7 +28,27 @@
                         alt="{{ $product['title'] }}" 
                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     >
-                    <span class="absolute top-3 left-3 bg-blue-700 text-white text-[10px] font-bold px-2.5 py-1 rounded shadow-2xs">
+                    @php
+                        $detailDiscount = null;
+                        if (!empty($product['discount'])) {
+                            $dVal = trim(str_ireplace(['hemat', 'diskon', 'promo', ' '], '', $product['discount']));
+                            if ($dVal !== '') {
+                                $detailDiscount = str_starts_with($dVal, '-') ? $dVal : '-' . $dVal;
+                            }
+                        }
+                    @endphp
+                    <span 
+                        x-show="currentDiscount" 
+                        x-text="currentDiscount"
+                        class="absolute top-0 left-0 bg-blue-50 text-blue-700 font-bold text-xs sm:text-sm px-2.5 py-1 rounded-br-xl shadow-2xs border-b border-r border-blue-200 z-10 leading-normal select-none"
+                        style="{{ $detailDiscount ? '' : 'display: none;' }}"
+                    >
+                        {{ $detailDiscount }}
+                    </span>
+                    <span 
+                        class="absolute top-3 bg-blue-700 text-white text-[10px] font-bold px-2.5 py-1 rounded shadow-2xs transition-all"
+                        :class="currentDiscount ? 'right-3' : 'left-3'"
+                    >
                         GARANSI RESMI
                     </span>
                 </div>
@@ -89,15 +109,25 @@
                 <!-- Price Box (bg-gray-50) -->
                 <div class="bg-gray-50 p-4 sm:p-5 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div class="flex items-center gap-3.5 flex-wrap">
-                        @if($product['originalPrice'])
-                            <span class="text-sm sm:text-base text-gray-400 line-through font-medium" x-text="formattedOriginalTotalPrice"></span>
-                        @endif
-                        <span class="text-2xl sm:text-3xl font-extrabold text-blue-700" x-text="formattedTotalPrice"></span>
-                        @if($product['discount'])
-                            <span class="bg-red-100 text-red-700 text-xs font-extrabold px-2.5 py-1 rounded shadow-2xs">
-                                Diskon {{ $product['discount'] }}
-                            </span>
-                        @endif
+                        <span 
+                            class="text-sm sm:text-base text-gray-400 line-through font-medium" 
+                            x-show="originalUnitPrice && originalUnitPrice > unitPrice" 
+                            x-text="formattedOriginalTotalPrice"
+                            style="{{ ($product['originalPrice'] && $product['price'] && (int)preg_replace('/[^0-9]/', '', $product['originalPrice']) > (int)preg_replace('/[^0-9]/', '', $product['price'])) ? '' : 'display: none;' }}"
+                        >
+                            {{ $product['originalPrice'] }}
+                        </span>
+                        <span class="text-2xl sm:text-3xl font-extrabold text-blue-700" x-text="formattedTotalPrice">
+                            {{ $product['price'] }}
+                        </span>
+                        <span 
+                            x-show="currentDiscount" 
+                            x-text="currentDiscount" 
+                            class="bg-blue-50 text-blue-700 text-xs font-bold px-2.5 py-1 rounded shadow-2xs border border-blue-200"
+                            style="{{ $detailDiscount ? '' : 'display: none;' }}"
+                        >
+                            {{ $detailDiscount ?? $product['discount'] }}
+                        </span>
                     </div>
 
                     <!-- Dynamic Subtotal Info / Per-unit price badge when Qty > 1 -->
@@ -169,8 +199,8 @@
                                 <button 
                                     type="button" 
                                     @click="if(qty > 1) qty--" 
-                                    :disabled="qty <= 1"
-                                    :class="qty <= 1 ? 'opacity-40 cursor-not-allowed bg-gray-50' : 'hover:bg-blue-50 hover:text-blue-700 cursor-pointer'"
+                                    :disabled="qty <= 1 || remainingStock <= 0"
+                                    :class="(qty <= 1 || remainingStock <= 0) ? 'opacity-40 cursor-not-allowed bg-gray-50' : 'hover:bg-blue-50 hover:text-blue-700 cursor-pointer'"
                                     class="px-3.5 py-2 text-gray-600 font-bold text-sm transition-colors select-none"
                                     aria-label="Kurangi kuantitas"
                                 >
@@ -178,17 +208,18 @@
                                 </button>
                                 <input 
                                     type="number" 
-                                    min="1" 
+                                    :min="remainingStock > 0 ? 1 : 0" 
                                     :max="remainingStock" 
                                     x-model.number="qty"
-                                    @input="if(!qty || qty < 1) qty = 1; if(qty > remainingStock) qty = remainingStock;"
-                                    class="w-14 py-1.5 text-center text-sm font-bold text-slate-900 border-x border-gray-200 bg-gray-50/50 focus:bg-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    :disabled="remainingStock <= 0"
+                                    @input="if(remainingStock <= 0) { qty = 0; } else { if(!qty || qty < 1) qty = 1; if(qty > remainingStock) qty = remainingStock; }"
+                                    class="w-14 py-1.5 text-center text-sm font-bold text-slate-900 border-x border-gray-200 bg-gray-50/50 focus:bg-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:bg-gray-100 disabled:text-gray-400"
                                 >
                                 <button 
                                     type="button" 
                                     @click="if(qty < remainingStock) qty++" 
-                                    :disabled="qty >= remainingStock"
-                                    :class="qty >= remainingStock ? 'opacity-40 cursor-not-allowed bg-gray-50' : 'hover:bg-blue-50 hover:text-blue-700 cursor-pointer'"
+                                    :disabled="qty >= remainingStock || remainingStock <= 0"
+                                    :class="(qty >= remainingStock || remainingStock <= 0) ? 'opacity-40 cursor-not-allowed bg-gray-50' : 'hover:bg-blue-50 hover:text-blue-700 cursor-pointer'"
                                     class="px-3.5 py-2 text-gray-600 font-bold text-sm transition-colors select-none"
                                     aria-label="Tambah kuantitas"
                                 >
@@ -196,7 +227,12 @@
                                 </button>
                             </div>
                             <span class="text-xs text-gray-500">
-                                Tersisa <strong class="text-slate-800 font-bold" x-text="remainingStock - qty >= 0 ? remainingStock - qty : 0"></strong> buah
+                                <template x-if="remainingStock > 0">
+                                    <span>Tersisa <strong class="text-slate-800 font-bold" x-text="remainingStock"></strong> buah</span>
+                                </template>
+                                <template x-if="remainingStock <= 0">
+                                    <span class="text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded border border-rose-200">Stok Habis</span>
+                                </template>
                             </span>
                         </div>
                     </div>
@@ -207,22 +243,26 @@
                     <!-- Left: Outline Blue Button -->
                     <button 
                         type="button" 
-                        @click="addToCart()"
-                        class="w-full bg-white hover:bg-blue-50 border-2 border-blue-700 text-blue-700 font-bold py-3 px-4 rounded-xl shadow-2xs transition-colors flex items-center justify-center gap-2 text-sm sm:text-base cursor-pointer"
+                        @click="addToCart($event)"
+                        :disabled="remainingStock <= 0"
+                        :class="remainingStock <= 0 ? 'opacity-50 cursor-not-allowed bg-gray-100 border-gray-300 text-gray-400' : 'bg-white hover:bg-blue-50 border-2 border-blue-700 text-blue-700 cursor-pointer'"
+                        class="w-full font-bold py-3 px-4 rounded-xl shadow-2xs transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
                     >
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/>
                         </svg>
-                        + Tambah ke Keranjang
+                        <span x-text="remainingStock <= 0 ? 'Stok Habis' : '+ Tambah ke Keranjang'"></span>
                     </button>
 
                     <!-- Right: Solid Blue Button -->
                     <button 
                         type="button" 
                         @click="buyNow()"
-                        class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 px-4 rounded-xl shadow-2xs transition-colors text-center text-sm sm:text-base cursor-pointer"
+                        :disabled="remainingStock <= 0"
+                        :class="remainingStock <= 0 ? 'opacity-50 cursor-not-allowed bg-gray-300 text-gray-500' : 'bg-blue-700 hover:bg-blue-800 text-white cursor-pointer'"
+                        class="w-full font-bold py-3 px-4 rounded-xl shadow-2xs transition-colors text-center text-sm sm:text-base"
                     >
-                        Beli Langsung
+                        <span x-text="remainingStock <= 0 ? 'Stok Habis' : 'Beli Langsung'"></span>
                     </button>
                 </div>
 
@@ -237,7 +277,7 @@
                     
                     <div class="w-px h-4 bg-slate-300 hidden sm:block"></div>
                     
-                    <button type="button" @click="toggleWishlist()" :class="isWishlisted ? 'text-red-500' : 'text-slate-600 hover:text-red-500'" class="flex items-center gap-1.5 transition-colors font-medium text-sm cursor-pointer">
+                    <button type="button" @click="toggleWishlist($event)" :class="isWishlisted ? 'text-red-500' : 'text-slate-600 hover:text-red-500'" class="flex items-center gap-1.5 transition-colors font-medium text-sm cursor-pointer">
                         <svg class="w-5 h-5" :fill="isWishlisted ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                         </svg>
@@ -295,15 +335,51 @@
         <!-- Content Area -->
         <div class="p-5 sm:p-6">
             
-            <!-- Specs Tab Content (2-Column Table) -->
-            <div x-show="activeTab === 'specs'" class="space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-sm">
-                    @foreach($product['specs'] as $specKey => $specVal)
-                        <div class="flex border-b border-slate-100 pb-2.5">
-                            <span class="w-36 text-gray-500 font-medium shrink-0">{{ $specKey }}</span>
-                            <span class="text-slate-800 font-semibold">{{ $specVal }}</span>
-                        </div>
-                    @endforeach
+            <!-- Specs Tab Content (Shopee Style Layout) -->
+            <div x-show="activeTab === 'specs'" class="space-y-8">
+                <div>
+                    <h3 class="text-base sm:text-lg font-bold text-slate-900 mb-5">Spesifikasi Produk</h3>
+                    
+                    <div class="space-y-4 text-sm">
+                        @foreach($product['specs'] as $specKey => $specVal)
+                            <div class="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
+                                <!-- Label (Shopee style soft grey) -->
+                                <span class="w-48 sm:w-60 text-slate-400 font-normal shrink-0">{{ $specKey }}</span>
+                                
+                                <!-- Value (Shopee style) -->
+                                <div class="text-slate-800 font-normal flex-1">
+                                    @if(is_array($specVal) && ($specVal['type'] ?? '') === 'breadcrumb')
+                                        <div class="flex items-center flex-wrap gap-1.5 text-blue-700">
+                                            @foreach($specVal['items'] as $bIdx => $bItem)
+                                                @if(!empty($bItem['url']))
+                                                    <a href="{{ $bItem['url'] }}" class="text-blue-700 hover:text-blue-800 hover:underline transition-colors">{{ $bItem['name'] }}</a>
+                                                @else
+                                                    <span class="text-blue-700">{{ $bItem['name'] }}</span>
+                                                @endif
+                                                @if(!$loop->last)
+                                                    <span class="text-slate-400 text-xs">&gt;</span>
+                                                @endif
+                                            @endforeach
+                                        </div>
+                                    @elseif(is_array($specVal) && ($specVal['type'] ?? '') === 'link')
+                                        <a href="{{ $specVal['url'] }}" class="text-blue-700 hover:text-blue-800 hover:underline transition-colors font-medium">
+                                            {{ $specVal['value'] }}
+                                        </a>
+                                    @else
+                                        <span>{{ $specVal }}</span>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+
+                <!-- Shopee Style: Deskripsi Produk Directly Below Specs -->
+                <div class="pt-6 border-t border-slate-100">
+                    <h3 class="text-base sm:text-lg font-bold text-slate-900 mb-4">Deskripsi Produk</h3>
+                    <div class="font-normal text-slate-700 text-sm leading-relaxed whitespace-pre-line">
+                        {!! nl2br(e($product['description'])) !!}
+                    </div>
                 </div>
             </div>
 
@@ -443,8 +519,8 @@
                     </div>
                 </div>
 
-                <!-- Review Items List -->
-                <div class="max-h-[600px] overflow-y-auto pr-3 custom-scrollbar">
+                <!-- Review Items List (In-Page Paginated Shopee Style) -->
+                <div id="product-reviews-section">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-bold text-slate-900 text-sm uppercase">ULASAN PILIHAN</h3>
                         <div class="flex items-center gap-2 text-sm text-slate-600">
@@ -458,41 +534,98 @@
                         </div>
                     </div>
                     
-                    <p class="text-xs text-slate-500 mb-4" x-text="`Menampilkan ${filteredReviews.length} dari {{ $product['reviewCount'] }} ulasan`"></p>
+                    <p class="text-xs text-slate-500 mb-3" x-text="`Menampilkan ${paginatedReviews.length} dari ${filteredReviews.length} ulasan`"></p>
 
-                    <div class="space-y-6">
-                        <template x-for="review in filteredReviews" :key="review.id">
-                            <div class="border-b border-slate-100 pb-6 space-y-3">
-                                <!-- Stars & Date -->
-                                <div class="flex items-center gap-2 text-xs text-slate-500">
-                                    <div class="flex text-yellow-400">
-                                        <template x-for="i in 5">
-                                            <svg class="w-3.5 h-3.5" :class="i <= review.rating ? 'fill-current' : 'text-slate-200 fill-slate-200'" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                                        </template>
+                    <style>
+                        #reviews-scroll-list::-webkit-scrollbar {
+                            width: 6px;
+                        }
+                        #reviews-scroll-list::-webkit-scrollbar-track {
+                            background: #f8fafc;
+                            border-radius: 9999px;
+                        }
+                        #reviews-scroll-list::-webkit-scrollbar-thumb {
+                            background: #cbd5e1;
+                            border-radius: 9999px;
+                        }
+                        #reviews-scroll-list::-webkit-scrollbar-thumb:hover {
+                            background: #94a3b8;
+                        }
+                    </style>
+
+                    <!-- Scrollable reviews list container (Rating summary stays still / diem aja) -->
+                    <div id="reviews-scroll-list" class="space-y-6 max-h-[540px] sm:max-h-[600px] overflow-y-auto pr-2 sm:pr-3 overscroll-contain" style="scrollbar-width: thin; scrollbar-color: #cbd5e1 #f8fafc;">
+                        <template x-for="review in paginatedReviews" :key="review.id">
+                            <div class="border-b border-slate-100 pb-5 space-y-2.5">
+                                <!-- Top Row: Avatar + User Info + Stars + Date & Variant -->
+                                <div class="flex items-start gap-3">
+                                    <template x-if="review.userAvatar">
+                                        <img :src="review.userAvatar" alt="Avatar" class="w-9 h-9 rounded-full object-cover shrink-0 border border-slate-200">
+                                    </template>
+                                    <template x-if="!review.userAvatar">
+                                        <div class="w-9 h-9 rounded-full bg-slate-200 text-slate-500 font-bold flex items-center justify-center text-xs uppercase shrink-0" x-text="getInitial(review)"></div>
+                                    </template>
+
+                                    <div class="flex-1 min-w-0">
+                                        <h4 class="text-xs sm:text-sm font-medium text-slate-800 leading-tight" x-text="getUserName(review)"></h4>
+                                        
+                                        <!-- Stars (Consistent Yellow / Amber Rating) -->
+                                        <div class="flex text-amber-400 my-1">
+                                            <template x-for="i in 5">
+                                                <svg class="w-3.5 h-3.5" :class="i <= review.rating ? 'fill-current' : 'text-slate-200 fill-slate-200'" viewBox="0 0 20 20">
+                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                                </svg>
+                                            </template>
+                                        </div>
+
+                                        <!-- Date & Variant (Shopee format: YYYY-MM-DD HH:mm | Variasi: ...) -->
+                                        <div class="text-[11px] sm:text-xs text-slate-400">
+                                            <span x-text="formatShopeeDate(review.created_at || review.date)"></span>
+                                            <span class="mx-1 text-slate-300">|</span>
+                                            <span>Variasi: </span>
+                                            <span x-text="review.variant ? review.variant.replace(/^(Varian(si)?:\s*)+/i, '') : 'Standar'"></span>
+                                        </div>
                                     </div>
-                                    <span x-text="formatDate(review.created_at)"></span>
                                 </div>
-                                
-                                <!-- User Info -->
-                                <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 font-bold flex items-center justify-center text-xs shadow-2xs uppercase" x-text="getInitial(review)"></div>
-                                    <div>
-                                        <h4 class="text-sm font-bold text-slate-900" x-text="getUserName(review)"></h4>
-                                        <p class="text-[10px] text-slate-500">Varian: Standar</p>
+
+                                <!-- Body: Comment Text, Photo Thumbnails, and Thumbs Up -->
+                                <div class="pl-12 space-y-3">
+                                    <!-- Comment Text -->
+                                    <p class="text-xs sm:text-sm text-slate-800 leading-relaxed font-normal whitespace-pre-line" x-text="review.comment || 'Sangat memuaskan.'"></p>
+
+                                    <!-- Photo Thumbnails -->
+                                    <template x-if="review.image">
+                                        <div class="flex flex-wrap gap-2 pt-1">
+                                            <button 
+                                                type="button" 
+                                                @click="openImagePreview(review)" 
+                                                class="block w-18 h-18 sm:w-20 sm:h-20 rounded-md overflow-hidden border border-slate-200 hover:border-blue-500 transition-all cursor-zoom-in group relative text-left bg-slate-50"
+                                                title="Klik untuk melihat foto lebih besar"
+                                            >
+                                                <img :src="review.image" alt="Foto Ulasan" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200">
+                                                <div class="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
+                                                </div>
+                                            </button>
+                                        </div>
+                                    </template>
+
+                                    <!-- Thumbs Up / Helpful Action Button -->
+                                    <div class="pt-0.5">
+                                        <button 
+                                            type="button" 
+                                            @click="toggleLike(review)" 
+                                            class="inline-flex items-center gap-1.5 text-xs transition-colors cursor-pointer group active:scale-95"
+                                            :class="review.isLiked ? 'text-blue-600 font-semibold' : 'text-slate-400 hover:text-slate-600'"
+                                            title="Membantu"
+                                        >
+                                            <svg class="w-3.5 h-3.5 transition-transform group-hover:-translate-y-0.5" :class="review.isLiked ? 'fill-current text-blue-600' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"/>
+                                            </svg>
+                                            <span x-text="review.likes || 0"></span>
+                                        </button>
                                     </div>
                                 </div>
-                                
-                                <!-- Comment -->
-                                <p class="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal" x-text="review.comment || 'Sangat memuaskan.'"></p>
-                                
-                                <!-- Image -->
-                                <template x-if="review.image">
-                                    <div class="mt-3">
-                                        <a :href="review.image" target="_blank" class="block w-20 h-20 rounded-lg overflow-hidden border border-slate-200 hover:border-blue-500 transition-colors cursor-zoom-in">
-                                            <img :src="review.image" alt="Foto Ulasan" class="w-full h-full object-cover">
-                                        </a>
-                                    </div>
-                                </template>
                             </div>
                         </template>
 
@@ -503,18 +636,196 @@
                         </template>
                     </div>
 
-                    <!-- Bottom Action Button -->
+                    <!-- Consistent Blue Pagination matching user brand -->
                     <template x-if="filteredReviews.length > 0">
-                        <div class="pt-4">
+                        <div class="flex items-center justify-center sm:justify-end gap-6 sm:gap-7 pt-8 pb-4">
+                            <!-- Prev Chevron (<) -->
                             <button 
                                 type="button" 
-                                class="border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 font-bold text-xs sm:text-sm py-2.5 px-6 rounded-lg transition-colors mx-auto block cursor-pointer"
+                                @click="changePage(currentPage - 1)" 
+                                :disabled="currentPage === 1"
+                                class="transition-colors cursor-pointer disabled:cursor-not-allowed flex items-center justify-center p-1"
+                                :class="currentPage === 1 ? 'text-slate-300' : 'text-slate-400 hover:text-blue-600'"
+                                title="Halaman Sebelumnya"
                             >
-                                Lihat Semua Ulasan
+                                <svg class="w-4 h-4 stroke-[1.6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+                                </svg>
+                            </button>
+
+                            <!-- Pages and Ellipsis -->
+                            <template x-for="(pageItem, idx) in visiblePages" :key="idx">
+                                <div class="flex items-center justify-center">
+                                    <!-- Active Page (Solid Blue Box) -->
+                                    <template x-if="pageItem !== '...' && currentPage === pageItem">
+                                        <button 
+                                            type="button" 
+                                            class="w-7 h-7 sm:w-8 sm:h-8 rounded-[3px] bg-blue-600 text-white flex items-center justify-center text-sm font-normal shadow-2xs select-none"
+                                            x-text="pageItem"
+                                        ></button>
+                                    </template>
+
+                                    <!-- Inactive Page (Plain Text, No Border, No Box) -->
+                                    <template x-if="pageItem !== '...' && currentPage !== pageItem">
+                                        <button 
+                                            type="button" 
+                                            @click="changePage(pageItem)" 
+                                            class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-sm font-normal text-slate-400 hover:text-blue-600 transition-colors cursor-pointer select-none"
+                                            x-text="pageItem"
+                                        ></button>
+                                    </template>
+
+                                    <!-- Ellipsis (...) -->
+                                    <template x-if="pageItem === '...'">
+                                        <span class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-sm font-normal text-slate-400 select-none">
+                                            ...
+                                        </span>
+                                    </template>
+                                </div>
+                            </template>
+
+                            <!-- Next Chevron (>) -->
+                            <button 
+                                type="button" 
+                                @click="changePage(currentPage + 1)" 
+                                :disabled="currentPage === totalPages"
+                                class="transition-colors cursor-pointer disabled:cursor-not-allowed flex items-center justify-center p-1"
+                                :class="currentPage === totalPages ? 'text-slate-300' : 'text-slate-400 hover:text-blue-600'"
+                                title="Halaman Selanjutnya"
+                            >
+                                <svg class="w-4 h-4 stroke-[1.6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                                </svg>
                             </button>
                         </div>
                     </template>
                 </div>
+            </div>
+        </div>
+
+        <!-- SHOPEE STYLE: MEDIA REVIEW VIEWER MODAL (FULLSCREEN & PROMINENT CLOSE BUTTON) -->
+        <div 
+            x-show="previewImageUrl" 
+            x-cloak 
+            @keydown.escape.window="closeImagePreview()"
+            class="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex flex-col"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+        >
+            <!-- TOP BAR: SHOPEE STYLE WITH HIGH VISIBILITY CLOSE BUTTON -->
+            <div class="h-16 px-4 sm:px-6 bg-neutral-900/90 border-b border-white/10 flex items-center justify-between shrink-0 text-white z-20 shadow-md">
+                <div class="flex items-center gap-3">
+                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white/10 text-yellow-400">
+                        <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                    </span>
+                    <div>
+                        <h3 class="font-bold text-white text-sm sm:text-base leading-tight">Foto Ulasan Pembeli</h3>
+                        <p class="text-[11px] text-slate-400">Klik tombol Tutup atau tekan ESC untuk keluar</p>
+                    </div>
+                </div>
+
+                <!-- CLEAR & PROMINENT CLOSE BUTTON (X) -->
+                <button 
+                    type="button" 
+                    @click="closeImagePreview()" 
+                    class="group flex items-center gap-2 px-4 py-2 rounded-xl bg-white/15 hover:bg-red-600 text-white font-bold text-xs sm:text-sm transition-all duration-200 cursor-pointer border border-white/20 hover:border-red-500 shadow-lg active:scale-95"
+                    title="Tutup (Esc)"
+                >
+                    <span class="tracking-wide">Tutup</span>
+                    <svg class="w-4 h-4 transition-transform group-hover:rotate-90 duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- MAIN VIEWER BODY (SPLIT VIEW SHOPEE CONCEPT) -->
+            <div class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+                <!-- LEFT / CENTER: PHOTO DISPLAY (CLICK OUTSIDE CLOSES) -->
+                <div class="flex-1 flex items-center justify-center p-4 sm:p-8 relative bg-black/60 overflow-hidden" @click="closeImagePreview()">
+                    <div class="relative max-w-full max-h-full flex items-center justify-center" @click.stop>
+                        <img 
+                            :src="previewImageUrl" 
+                            alt="Foto Ulasan Pembeli" 
+                            class="max-w-full max-h-[72vh] md:max-h-[82vh] object-contain rounded-xl shadow-2xl border border-white/10 select-none"
+                        >
+                    </div>
+
+                    <!-- Floating Close Button for Mobile -->
+                    <button 
+                        type="button" 
+                        @click.stop="closeImagePreview()" 
+                        class="md:hidden absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-black/70 text-white border border-white/20 flex items-center justify-center cursor-pointer shadow-lg active:scale-90"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <!-- RIGHT SIDE: SHOPEE REVIEW DETAILS PANEL -->
+                <template x-if="activeReviewForMedia">
+                    <div class="w-full md:w-80 lg:w-96 bg-neutral-900 border-t md:border-t-0 md:border-l border-white/10 p-5 sm:p-6 text-white flex flex-col justify-between shrink-0 overflow-y-auto max-h-[35vh] md:max-h-full custom-scrollbar">
+                        <div class="space-y-4">
+                            <!-- User Profile & Stars -->
+                            <div class="flex items-center gap-3">
+                                <template x-if="activeReviewForMedia.userAvatar">
+                                    <img :src="activeReviewForMedia.userAvatar" alt="Avatar" class="w-10 h-10 rounded-full object-cover border border-white/20 shrink-0">
+                                </template>
+                                <template x-if="!activeReviewForMedia.userAvatar">
+                                    <div class="w-10 h-10 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-sm uppercase shrink-0" x-text="getInitial(activeReviewForMedia)"></div>
+                                </template>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <h4 class="text-sm font-bold text-white" x-text="getUserName(activeReviewForMedia)"></h4>
+                                        <span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.2 rounded font-medium">Terverifikasi</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 mt-0.5">
+                                        <div class="flex text-amber-400">
+                                            <template x-for="i in 5">
+                                                <svg class="w-3.5 h-3.5" :class="i <= activeReviewForMedia.rating ? 'fill-current' : 'text-slate-600 fill-slate-600'" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                            </template>
+                                        </div>
+                                        <span class="text-xs text-slate-400 font-medium" x-text="formatShopeeDate(activeReviewForMedia.created_at || activeReviewForMedia.date)"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Variant Info -->
+                            <div class="bg-white/5 border border-white/10 rounded-lg p-2.5 text-xs text-slate-300">
+                                <span class="text-slate-400 font-medium">Varian Produk:</span>
+                                <span class="font-bold text-white ml-1" x-text="activeReviewForMedia.variant ? activeReviewForMedia.variant.replace(/^(Varian(si)?:\s*)+/i, '') : 'Standar'"></span>
+                            </div>
+
+                            <!-- Comment Text -->
+                            <div class="space-y-1">
+                                <p class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Ulasan:</p>
+                                <p class="text-xs sm:text-sm text-slate-200 leading-relaxed font-normal whitespace-pre-line" x-text="activeReviewForMedia.comment || 'Sangat memuaskan.'"></p>
+                            </div>
+                        </div>
+
+                        <!-- Bottom Helper action in Shopee style -->
+                        <div class="pt-4 border-t border-white/10 flex items-center justify-between text-xs text-slate-400">
+                            <button 
+                                type="button" 
+                                @click="toggleLike(activeReviewForMedia)"
+                                class="flex items-center gap-1.5 transition-colors cursor-pointer group active:scale-95"
+                                :class="activeReviewForMedia.isLiked ? 'text-blue-500 font-semibold' : 'text-slate-400 hover:text-white'"
+                            >
+                                <svg class="w-4 h-4 transition-transform group-hover:-translate-y-0.5" :class="activeReviewForMedia.isLiked ? 'fill-current text-blue-500' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"/></svg>
+                                <span>Membantu (<span x-text="activeReviewForMedia.likes || 0"></span>)</span>
+                            </button>
+                            <button 
+                                type="button" 
+                                @click="closeImagePreview()" 
+                                class="px-4 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium transition-colors cursor-pointer"
+                            >
+                                Tutup
+                            </button>
+                        </div>
+                    </div>
+                </template>
             </div>
         </div>
 
@@ -578,6 +889,8 @@ function productDetailApp() {
         remainingStock: {{ $product['stock'] }},
         unitPrice: parseInt(@json($product['price']).replace(/[^0-9]/g, ''), 10) || 0,
         originalUnitPrice: parseInt(@json($product['originalPrice'] ?? '').replace(/[^0-9]/g, ''), 10) || 0,
+        baseOriginalUnitPrice: parseInt(@json($product['originalPrice'] ?? '').replace(/[^0-9]/g, ''), 10) || 0,
+        defaultDiscount: @json($detailDiscount ?? $product['discount'] ?? ''),
         activeTab: 'specs',
         reviewFilters: ['Semua', '5 Bintang', '4 Bintang', 'Dengan Foto', 'Dengan Komentar'],
 
@@ -596,12 +909,23 @@ function productDetailApp() {
         },
 
         get formattedOriginalTotalPrice() {
-            if (!this.originalUnitPrice) return '';
+            if (!this.originalUnitPrice || this.originalUnitPrice <= this.unitPrice) return '';
             return 'Rp ' + (this.originalUnitPrice * (this.qty || 1)).toLocaleString('id-ID');
         },
 
         get formattedUnitPrice() {
             return 'Rp ' + this.unitPrice.toLocaleString('id-ID');
+        },
+
+        get currentDiscount() {
+            if (this.originalUnitPrice && this.unitPrice && this.originalUnitPrice > this.unitPrice) {
+                let pct = Math.round(((this.originalUnitPrice - this.unitPrice) / this.originalUnitPrice) * 100);
+                return pct > 0 ? `-${pct}%` : '';
+            }
+            if (!this.originalUnitPrice && this.defaultDiscount) {
+                return this.defaultDiscount;
+            }
+            return '';
         },
 
         variantsList: @json($product['variantsList'] ?? []),
@@ -630,6 +954,12 @@ function productDetailApp() {
                     if (firstMatch.price !== undefined && firstMatch.price !== null) {
                         this.unitPrice = parseInt(String(firstMatch.price).replace(/[^0-9]/g, ''), 10);
                     }
+                    if (firstMatch.original_price !== undefined && firstMatch.original_price !== null && firstMatch.original_price !== '') {
+                        this.originalUnitPrice = parseInt(String(firstMatch.original_price).replace(/[^0-9]/g, ''), 10);
+                    } else {
+                        this.originalUnitPrice = this.baseOriginalUnitPrice;
+                    }
+                    this.qty = this.remainingStock > 0 ? 1 : 0;
                 }
             } else {
                 if (this.colorVariants && this.colorVariants[index] && this.colorVariants[index].image) {
@@ -637,6 +967,8 @@ function productDetailApp() {
                 } else if (this.images && this.images[index]) {
                     this.activeImage = this.images[index];
                 }
+                this.originalUnitPrice = this.baseOriginalUnitPrice;
+                this.qty = this.remainingStock > 0 ? 1 : 0;
             }
         },
         selectSize(sz) {
@@ -648,7 +980,14 @@ function productDetailApp() {
                 if (matchVar.price !== undefined && matchVar.price !== null) {
                     this.unitPrice = parseInt(String(matchVar.price).replace(/[^0-9]/g, ''), 10);
                 }
+                if (matchVar.original_price !== undefined && matchVar.original_price !== null && matchVar.original_price !== '') {
+                    this.originalUnitPrice = parseInt(String(matchVar.original_price).replace(/[^0-9]/g, ''), 10);
+                } else {
+                    this.originalUnitPrice = this.baseOriginalUnitPrice;
+                }
             }
+            // Reset kuantitas beli ke 1 saat berganti varian / ukuran (atau 0 jika stok habis)
+            this.qty = this.remainingStock > 0 ? 1 : 0;
         },
 
         selectImage(img) {
@@ -668,10 +1007,15 @@ function productDetailApp() {
             let parts = [];
             if (this.selectedColor) parts.push('Warna: ' + this.selectedColor);
             if (this.selectedSize) parts.push('Ukuran: ' + this.selectedSize);
-            return 'Varian: ' + (parts.join(', ') || 'Standar');
+            return parts.join(', ') || 'Standar';
         },
 
-        addToCart() {
+        addToCart(e) {
+            let startEl = (e && e.currentTarget) ? e.currentTarget : null;
+            if (window.flyToElement && startEl) {
+                window.flyToElement(startEl, 'cart', this.activeImage);
+            }
+
             let matchVar = Array.isArray(this.variantsList) ? this.variantsList.find(v => (v.color || '').toLowerCase() === (this.selectedColor || '').toLowerCase() && (v.size === this.selectedSize || (Array.isArray(v.sizes) && v.sizes.includes(this.selectedSize)) || v.sizes === this.selectedSize)) : null;
             let variantId = matchVar ? (matchVar.id || matchVar.variant_id) : null;
             let imageId = matchVar ? (matchVar.image_id || null) : null;
@@ -708,7 +1052,11 @@ function productDetailApp() {
                 // Update cart count badge live
                 if (data.cartCount !== undefined) {
                     window.dispatchEvent(new CustomEvent('cart-count-updated', {
-                        detail: { count: data.cartCount }
+                        detail: { 
+                            count: data.cartCount,
+                            cart: data.cart,
+                            product: data.product 
+                        }
                     }));
                 }
             }).catch(err => {
@@ -741,18 +1089,24 @@ function productDetailApp() {
                     qty: this.qty
                 })
             }).then(res => res.json()).then(data => {
-                window.location.href = "{{ route('checkout') }}";
+                window.location.href = data.redirectUrl || "{{ route('checkout', ['direct' => 1]) }}";
             }).catch(err => {
                 console.error("Buy now error", err);
             });
         },
 
-        toggleWishlist() {
+        toggleWishlist(e) {
+            let startEl = (e && e.currentTarget) ? e.currentTarget : null;
             if (!this.isLoggedIn) {
                 alert('Silakan login terlebih dahulu untuk menyimpan ke Wishlist.');
                 window.location.href = "{{ route('login') }}";
                 return;
             }
+
+            if (!this.isWishlisted && window.flyToElement && startEl) {
+                window.flyToElement(startEl, 'wishlist', this.activeImage);
+            }
+
             fetch("{{ route('wishlist.toggle') }}", {
                 method: 'POST',
                 headers: {
@@ -766,6 +1120,11 @@ function productDetailApp() {
             }).then(res => res.json()).then(data => {
                 if (data.success) {
                     this.isWishlisted = (data.status === 'added');
+                    if (data.wishlist_count !== undefined) {
+                        window.dispatchEvent(new CustomEvent('wishlist-count-updated', {
+                            detail: { count: data.wishlist_count }
+                        }));
+                    }
                 }
             }).catch(err => {
                 console.error("Wishlist error", err);
@@ -795,6 +1154,74 @@ function productReviews(reviewsData) {
         filterRatings: [], // array of selected ratings, e.g. ["5", "4"]
         filterTopics: [], // array of selected topics
         sortBy: 'terbaru',
+        currentPage: 1,
+        perPage: 6, // 6 ulasan per halaman sesuai permintaan user
+        
+        // Lightbox states
+        previewImageUrl: null,
+        activeReviewForMedia: null,
+        
+        init() {
+            this.$watch('filterMedia', () => { this.currentPage = 1; });
+            this.$watch('filterRatings', () => { this.currentPage = 1; });
+            this.$watch('filterTopics', () => { this.currentPage = 1; });
+            this.$watch('sortBy', () => { this.currentPage = 1; });
+        },
+        
+        get totalPages() {
+            return Math.ceil(this.filteredReviews.length / this.perPage) || 1;
+        },
+        
+        get paginatedReviews() {
+            const start = (this.currentPage - 1) * this.perPage;
+            return this.filteredReviews.slice(start, start + this.perPage);
+        },
+
+        get visiblePages() {
+            const total = this.totalPages;
+            const current = this.currentPage;
+
+            if (total <= 6) {
+                let pages = [];
+                for (let i = 1; i <= total; i++) pages.push(i);
+                return pages;
+            }
+
+            // Ketika total > 6 (seperti di screenshot Shopee)
+            if (current <= 4) {
+                return [1, 2, 3, 4, 5, '...', total];
+            } else if (current >= total - 3) {
+                return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+            } else {
+                return [1, '...', current - 1, current, current + 1, '...', total];
+            }
+        },
+        
+        changePage(page) {
+            if (page === '...' || page < 1 || page > this.totalPages) return;
+            this.currentPage = page;
+            const scrollEl = document.getElementById('reviews-scroll-list');
+            if (scrollEl) {
+                scrollEl.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        },
+        
+        openImagePreview(reviewOrUrl) {
+            if (typeof reviewOrUrl === 'object' && reviewOrUrl !== null) {
+                this.activeReviewForMedia = reviewOrUrl;
+                this.previewImageUrl = reviewOrUrl.image;
+            } else {
+                this.activeReviewForMedia = this.allReviews.find(r => r.image === reviewOrUrl) || null;
+                this.previewImageUrl = reviewOrUrl;
+            }
+            document.body.style.overflow = 'hidden';
+        },
+        
+        closeImagePreview() {
+            this.previewImageUrl = null;
+            this.activeReviewForMedia = null;
+            document.body.style.overflow = '';
+        },
         
         get filteredReviews() {
             let filtered = this.allReviews.filter(review => {
@@ -852,23 +1279,110 @@ function productReviews(reviewsData) {
         
         formatDate(dateStr) {
             if (!dateStr) return '';
+            if (typeof dateStr === 'string' && !dateStr.includes('T') && !dateStr.includes('-')) {
+                return dateStr;
+            }
             const d = new Date(dateStr);
-            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            if (isNaN(d.getTime())) return dateStr;
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            return String(d.getDate()).padStart(2, '0') + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+        },
+        
+        formatShopeeDate(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const hours = String(d.getHours()).padStart(2, '0');
+            const mins = String(d.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day} ${hours}:${mins}`;
+        },
+        
+        async toggleLike(review) {
+            if (!review || !review.id) return;
+            if (review.isLiking) return; // debounce
+            review.isLiking = true;
+
+            // Optimistic update
+            const prevLiked = !!review.isLiked;
+            const prevLikes = Number(review.likes || 0);
+
+            if (prevLiked) {
+                review.likes = Math.max(0, prevLikes - 1);
+                review.isLiked = false;
+            } else {
+                review.likes = prevLikes + 1;
+                review.isLiked = true;
+            }
+
+            // Sync with activeReviewForMedia if currently open
+            if (this.activeReviewForMedia && this.activeReviewForMedia.id === review.id) {
+                this.activeReviewForMedia.likes = review.likes;
+                this.activeReviewForMedia.isLiked = review.isLiked;
+            }
+
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                const res = await fetch(`/reviews/${review.id}/like`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken || ''
+                    }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.success) {
+                        review.likes = data.likes_count;
+                        review.isLiked = data.is_liked;
+
+                        // Sync to other references in allReviews array
+                        const target = this.allReviews.find(r => r.id === review.id);
+                        if (target && target !== review) {
+                            target.likes = data.likes_count;
+                            target.isLiked = data.is_liked;
+                        }
+                        if (this.activeReviewForMedia && this.activeReviewForMedia.id === review.id) {
+                            this.activeReviewForMedia.likes = data.likes_count;
+                            this.activeReviewForMedia.isLiked = data.is_liked;
+                        }
+                    }
+                } else {
+                    // Revert if request failed
+                    review.likes = prevLikes;
+                    review.isLiked = prevLiked;
+                    if (this.activeReviewForMedia && this.activeReviewForMedia.id === review.id) {
+                        this.activeReviewForMedia.likes = prevLikes;
+                        this.activeReviewForMedia.isLiked = prevLiked;
+                    }
+                }
+            } catch (err) {
+                console.error("Like error:", err);
+                review.likes = prevLikes;
+                review.isLiked = prevLiked;
+                if (this.activeReviewForMedia && this.activeReviewForMedia.id === review.id) {
+                    this.activeReviewForMedia.likes = prevLikes;
+                    this.activeReviewForMedia.isLiked = prevLiked;
+                }
+            } finally {
+                review.isLiking = false;
+            }
         },
         
         getUserName(review) {
-            if (review && review.user && review.user.name) {
-                // Return masked name like Y***q
-                let name = review.user.name;
-                if (name.length <= 2) return name;
-                return name.charAt(0) + '***' + name.charAt(name.length - 1);
-            }
-            return 'Guest';
+            if (!review) return 'Pembeli Setia';
+            if (review.userName) return review.userName;
+            if (review.user && review.user.name) return review.user.name;
+            return 'Pembeli Setia';
         },
         
         getInitial(review) {
             let name = this.getUserName(review);
-            return name ? name.charAt(0) : 'G';
+            return name ? name.charAt(0).toUpperCase() : 'P';
         }
     }
 }

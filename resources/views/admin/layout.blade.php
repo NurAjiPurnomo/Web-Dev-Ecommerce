@@ -4,23 +4,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>@yield('title', 'Admin Dashboard') - Toko Online Admin</title>
-    <!-- Tailwind CSS -->
+    <!-- Tailwind CSS with Plus Jakarta Sans Configuration -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <!-- Google Fonts Inter -->
+    <!-- Google Fonts: Plus Jakarta Sans (Unified with Storefront) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
     <style>
         [x-cloak] { display: none !important; }
         html {
             scroll-behavior: smooth;
         }
+        *, ::before, ::after {
+            font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            letter-spacing: -0.012em;
+        }
         body {
             width: 100%;
             overflow-x: clip;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
+        h1, h2, h3, h4, h5, h6, .font-bold, .font-extrabold {
+            letter-spacing: -0.022em;
         }
     </style>
 </head>
@@ -35,11 +56,18 @@
         >
             <!-- Logo Header -->
             <div class="h-16 px-6 flex items-center justify-between border-b border-slate-800/80 bg-slate-950/50">
-                <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2.5 font-semibold text-lg text-white">
-                    <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
-                        TO
+                <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2.5 font-semibold text-lg text-white group">
+                    <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm group-hover:bg-blue-500 transition-colors shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                        </svg>
                     </div>
-                    <span class="tracking-tight font-bold">TokoOnline <span class="text-xs text-blue-400 font-normal px-1.5 py-0.5 rounded bg-blue-900/40 border border-blue-800">Admin</span></span>
+                    <div class="flex items-center gap-2">
+                        <span class="tracking-tight font-bold text-white text-base">
+                            Toko<span class="text-blue-400">Online</span>
+                        </span>
+                        <span class="text-[11px] text-blue-400 font-semibold px-1.5 py-0.5 rounded bg-blue-950/80 border border-blue-800 shadow-2xs">Admin</span>
+                    </div>
                 </a>
                 <button @click="sidebarOpen = false" class="lg:hidden text-slate-400 hover:text-white">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -86,12 +114,22 @@
 
                 <a 
                     href="{{ route('admin.returns') }}" 
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors {{ request()->routeIs('admin.returns*') ? 'bg-slate-800 text-white' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}"
+                    class="flex items-center justify-between px-3 py-2 rounded-lg transition-colors {{ request()->routeIs('admin.returns*') ? 'bg-slate-800 text-white' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}"
                 >
-                    <svg class="w-5 h-5 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 15v-1a4 4 0 00-4-4H4m0 0l4-4m-4 4l4 4"/>
-                    </svg>
-                    <span>Retur & Komplain</span>
+                    <div class="flex items-center gap-3">
+                        <svg class="w-5 h-5 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 15v-1a4 4 0 00-4-4H4m0 0l4-4m-4 4l4 4"/>
+                        </svg>
+                        <span>Pengembalian Barang</span>
+                    </div>
+                    @php
+                        $pendingReturnsCount = \App\Models\OrderReturn::where('status', 'pending')->count();
+                    @endphp
+                    @if($pendingReturnsCount > 0)
+                        <span class="bg-rose-600 text-white font-extrabold text-[10px] px-2 py-0.5 rounded-full animate-pulse shadow-xs">
+                            {{ $pendingReturnsCount }} Baru
+                        </span>
+                    @endif
                 </a>
 
                 <a 
@@ -246,22 +284,76 @@
             </header>
 
             <!-- DYNAMIC CONTENT -->
-            <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+            <main class="flex-1 overflow-y-auto p-4 sm:p-5 lg:p-6">
                 @if(session('success'))
-                    <div class="mb-6 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-xs sm:text-sm text-emerald-800 font-bold flex items-center gap-2">
-                        <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <span>{{ session('success') }}</span>
+                    <div 
+                        x-data="{ show: true }" 
+                        x-show="show" 
+                        x-transition:enter="transition ease-out duration-200"
+                        x-transition:enter-start="opacity-0 -translate-y-2"
+                        x-transition:enter-end="opacity-100 translate-y-0"
+                        x-transition:leave="transition ease-in duration-150"
+                        x-transition:leave-start="opacity-100 translate-y-0"
+                        x-transition:leave-end="opacity-0 -translate-y-2"
+                        class="mb-6 bg-gradient-to-r from-emerald-50/95 via-emerald-50/70 to-teal-50/60 border border-emerald-200/90 rounded-2xl p-3.5 sm:p-4 shadow-xs shadow-emerald-500/5 flex items-start sm:items-center justify-between gap-3 text-slate-800"
+                    >
+                        <div class="flex items-start sm:items-center gap-3 min-w-0">
+                            <div class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs shadow-emerald-600/30">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            <div class="text-xs sm:text-sm leading-relaxed">
+                                <span class="font-bold text-emerald-950 mr-1.5 tracking-tight">Berhasil:</span>
+                                <span class="font-medium text-emerald-900/90">{{ session('success') }}</span>
+                            </div>
+                        </div>
+                        <button 
+                            type="button" 
+                            @click="show = false" 
+                            class="text-emerald-700/60 hover:text-emerald-950 p-1.5 rounded-lg hover:bg-emerald-100/60 transition-colors cursor-pointer shrink-0" 
+                            title="Tutup notifikasi"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
                     </div>
                 @endif
 
                 @if(session('error'))
-                    <div class="mb-6 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs sm:text-sm text-red-800 font-bold flex items-center gap-2">
-                        <svg class="w-4 h-4 text-red-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <span>{{ session('error') }}</span>
+                    <div 
+                        x-data="{ show: true }" 
+                        x-show="show" 
+                        x-transition:enter="transition ease-out duration-200"
+                        x-transition:enter-start="opacity-0 -translate-y-2"
+                        x-transition:enter-end="opacity-100 translate-y-0"
+                        x-transition:leave="transition ease-in duration-150"
+                        x-transition:leave-start="opacity-100 translate-y-0"
+                        x-transition:leave-end="opacity-0 -translate-y-2"
+                        class="mb-6 bg-gradient-to-r from-rose-50/95 via-rose-50/70 to-red-50/60 border border-rose-200/90 rounded-2xl p-3.5 sm:p-4 shadow-xs shadow-rose-500/5 flex items-start sm:items-center justify-between gap-3 text-slate-800"
+                    >
+                        <div class="flex items-start sm:items-center gap-3 min-w-0">
+                            <div class="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-xs shadow-rose-600/30">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </div>
+                            <div class="text-xs sm:text-sm leading-relaxed">
+                                <span class="font-bold text-rose-950 mr-1.5 tracking-tight">Perhatian:</span>
+                                <span class="font-medium text-rose-900/90">{{ session('error') }}</span>
+                            </div>
+                        </div>
+                        <button 
+                            type="button" 
+                            @click="show = false" 
+                            class="text-rose-700/60 hover:text-rose-950 p-1.5 rounded-lg hover:bg-rose-100/60 transition-colors cursor-pointer shrink-0" 
+                            title="Tutup notifikasi"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
                     </div>
                 @endif
 
@@ -297,5 +389,6 @@
         </div>
     </div>
 
+    @stack('scripts')
 </body>
 </html>

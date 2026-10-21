@@ -1,32 +1,26 @@
 @extends('layouts.app')
 
 @section('content')
-<!-- Leaflet CSS & JS for Live GPS Tracking Map -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <div x-data="publicTrackingApp()" x-init="init()" class="min-h-screen bg-slate-50 py-8 sm:py-12">
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
 
-        <!-- BRANDED HEADER -->
-        <div class="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-3xl p-6 sm:p-10 shadow-xl relative overflow-hidden">
-            <!-- Decorative Accent circles -->
-            <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-blue-500/10 rounded-full blur-2xl"></div>
-            <div class="absolute -left-10 -top-10 w-48 h-48 bg-indigo-500/10 rounded-full blur-2xl"></div>
-
-            <div class="relative z-10 max-w-3xl space-y-4">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-200 text-xs font-semibold uppercase tracking-wider">
-                    <svg class="w-4 h-4 text-blue-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <!-- BRANDED HEADER (LIGHT THEME) -->
+        <div class="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-8 shadow-xs space-y-4">
+            <div class="max-w-3xl space-y-3">
+                <div class="inline-flex items-center gap-1.5 text-blue-700 text-xs font-bold uppercase tracking-wider">
+                    <svg class="w-4 h-4 text-blue-700 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                     </svg>
-                    <span>Pelacakan Paket Resmi - {{ $store->store_name ?? 'Toko Online' }}</span>
+                    <span>Pelacakan Paket Resmi &bull; {{ $store->store_name ?? 'TokoOnline' }} Official</span>
                 </div>
 
-                <h1 class="text-2xl sm:text-4xl font-extrabold tracking-tight">
+                <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
                     Lacak Pengiriman Paket Anda
                 </h1>
-                <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
-                    Masukkan nomor resi ekspedisi (AWB) atau nomor invoice transaksi Anda untuk memantau perjalanan posisi paket secara real-time.
+                <p class="text-slate-500 text-xs sm:text-sm leading-relaxed">
+                    Masukkan nomor resi pengiriman (AWB) atau nomor invoice transaksi Anda untuk memantau perjalanan posisi paket secara real-time.
                 </p>
 
                 <!-- SEARCH FORM INPUT -->
@@ -36,19 +30,19 @@
                             type="text" 
                             x-model="searchQuery" 
                             placeholder="Contoh: BITESHIP123456 / INV/2026..." 
-                            class="w-full bg-white text-slate-900 placeholder-slate-400 font-medium text-sm sm:text-base rounded-2xl pl-4 pr-32 py-3.5 sm:py-4 focus:outline-none focus:ring-4 focus:ring-blue-500/30 shadow-lg border-0"
+                            class="w-full bg-slate-50 text-slate-900 placeholder-slate-400 font-semibold text-xs sm:text-sm rounded-xl pl-4 pr-32 py-3.5 focus:outline-none focus:ring-2 focus:ring-blue-700 focus:bg-white border border-slate-200 shadow-2xs transition-all"
                             required
                         >
                         <button 
                             type="submit" 
                             :disabled="loading"
-                            class="absolute right-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm px-5 py-2.5 sm:py-3 rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                            class="absolute right-1.5 bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs px-4 py-2.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
                         >
-                            <svg x-show="loading" class="animate-spin -ml-1 mr-1 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                            <svg x-show="loading" class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
-                            <svg x-show="!loading" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg x-show="!loading" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                             </svg>
                             <span>Lacak Paket</span>
@@ -119,20 +113,6 @@
                     </div>
                 </template>
 
-                <!-- LEAFLET.JS GPS INTERACTIVE TRACKING MAP -->
-                <div>
-                    <div class="flex items-center justify-between mb-3">
-                        <h3 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
-                            </svg>
-                            <span>Live GPS Tracking Map</span>
-                        </h3>
-                        <span class="text-xs text-slate-400">Peta Rute & Posisi Kurir Terkini</span>
-                    </div>
-
-                    <div id="public-tracking-map" class="w-full h-72 sm:h-80 rounded-2xl border border-slate-200 shadow-inner z-10 bg-slate-100"></div>
-                </div>
             </div>
 
             <!-- CHRONOLOGICAL TIMELINE OF TRACKING UPDATES -->
@@ -187,8 +167,6 @@ function publicTrackingApp() {
         loading: false,
         errorMessage: '',
         trackingData: null,
-        map: null,
-        markers: [],
 
         init() {
             if (this.searchQuery) {
@@ -210,11 +188,6 @@ function publicTrackingApp() {
                 if (data.status === 'success') {
                     this.trackingData = data;
                     this.searchWaybill = this.searchQuery;
-                    
-                    // Render Map on next tick
-                    this.$nextTick(() => {
-                        this.renderMap();
-                    });
                 } else {
                     this.errorMessage = data.message || 'Nomor resi atau invoice tidak ditemukan.';
                 }
@@ -224,40 +197,6 @@ function publicTrackingApp() {
             } finally {
                 this.loading = false;
             }
-        },
-
-        renderMap() {
-            const mapContainer = document.getElementById('public-tracking-map');
-            if (!mapContainer) return;
-
-            if (this.map) {
-                this.map.remove();
-                this.map = null;
-            }
-
-            // Coordinates setup (Origin Jakarta / Store -> Destination / Courier Hub)
-            const originCoords = [-6.2088, 106.8456]; // Jakarta Store
-            const courierCoords = [-6.2300, 106.8600]; // Courier Transit
-            const destCoords = [-6.3000, 106.8900];   // Destination
-
-            this.map = L.map('public-tracking-map').setView(courierCoords, 11);
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(this.map);
-
-            // Add Store Origin Marker
-            L.marker(originCoords).addTo(this.map)
-                .bindPopup("<b>Lokasi Toko Pengirim</b><br>{{ $store->store_name ?? 'Toko Online' }}")
-                .openPopup();
-
-            // Add Courier Position Marker
-            const courierMarker = L.marker(courierCoords).addTo(this.map)
-                .bindPopup(`<b>Posisi Paket Kurir (${this.trackingData?.courier_name || 'Biteship'})</b><br>Status: ${this.trackingData?.current_status || 'IN_TRANSIT'}`);
-
-            // Add Polyline route path
-            const latlngs = [originCoords, courierCoords, destCoords];
-            L.polyline(latlngs, {color: '#2563eb', weight: 4, opacity: 0.8, dashArray: '8, 8'}).addTo(this.map);
         }
     };
 }

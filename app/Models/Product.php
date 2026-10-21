@@ -10,6 +10,7 @@ class Product extends Model
     use HasFactory;
 
     protected $fillable = [
+        'sku',
         'name',
         'category',
         'price',
@@ -20,6 +21,7 @@ class Product extends Model
         'sold',
         'image',
         'description',
+        'specs',
         'size_guide_image',
         'sizes',
         'colors',
@@ -29,6 +31,7 @@ class Product extends Model
     ];
 
     protected $casts = [
+        'specs' => 'array',
         'sizes' => 'array',
         'colors' => 'array',
         'images' => 'array',
@@ -135,5 +138,23 @@ class Product extends Model
             return (int) $this->attributes['reviews_count'];
         }
         return $this->reviews()->count();
+    }
+
+    /**
+     * Helper to format sold count (e.g. 2 terjual, 10+ terjual, 1.5rb+ terjual)
+     */
+    public function getFormattedSoldAttribute()
+    {
+        $sold = (int) ($this->sold ?? 0);
+        if ($sold >= 1000) {
+            return round($sold / 1000, 1) . 'rb+';
+        }
+        if ($sold >= 10) {
+            return $sold . '+';
+        }
+        if ($sold > 0) {
+            return (string) $sold;
+        }
+        return '0';
     }
 }

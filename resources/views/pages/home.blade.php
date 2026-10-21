@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="space-y-6 sm:space-y-8 pb-12">
+<div class="space-y-6 sm:space-y-8 pb-4 sm:pb-6">
 
     <!-- HERO SLIDER SECTION (Clean, Compact, Solid Blue Theme - 5 Slides Auto Slideshow) -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
@@ -205,7 +205,7 @@
     </section>
 
     <!-- FLASH SALE SECTION -->
-    @if($flashSaleIsActive ?? true)
+    @if(($flashSaleIsActive ?? true) && !empty($flashSaleProducts))
     <section id="flash-sale" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
             
@@ -306,6 +306,7 @@
     </section>
     @endif
 
+
     <!-- MID-PAGE SPECIAL CAMPAIGN BANNER -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="bg-blue-700 rounded-xl p-6 sm:p-8 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xs">
@@ -357,12 +358,15 @@
             @endforeach
         </div>
 
-        <!-- Tombol Lihat Selengkapnya (Standard Tokopedia & Shopee) -->
-        <div class="mt-8 text-center">
-            <a href="{{ route('catalog') }}" class="inline-flex items-center justify-center gap-2 px-8 py-3 bg-white hover:bg-blue-50 text-blue-700 font-extrabold text-xs sm:text-sm border-2 border-blue-700 rounded-xl transition-all shadow-xs hover:shadow-md cursor-pointer group">
-                <span>Lihat Selengkapnya di Katalog Produk</span>
-                <svg class="w-4 h-4 text-blue-700 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+        <!-- Tombol Lihat Semua Produk (Clean E-Commerce Style) -->
+        <div class="mt-8 flex justify-center">
+            <a 
+                href="{{ route('catalog') }}" 
+                class="w-full sm:w-80 inline-flex items-center justify-center gap-2 px-8 py-3 bg-white hover:bg-slate-50 text-slate-800 hover:text-blue-700 font-bold text-xs sm:text-sm rounded-xl border border-slate-300 hover:border-slate-400 shadow-2xs hover:shadow-xs transition-all duration-150 cursor-pointer group"
+            >
+                <span>Lihat Selengkapnya di Katalog</span>
+                <svg class="w-4 h-4 text-slate-400 group-hover:text-blue-700 group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                 </svg>
             </a>
         </div>

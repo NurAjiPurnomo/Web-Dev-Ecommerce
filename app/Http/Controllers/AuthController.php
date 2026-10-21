@@ -27,40 +27,85 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
-        // Normalisasi email ke lowercase sebelum validasi
-        $request->merge(['email' => strtolower(trim($request->email))]);
+        $loginInput = trim($request->input('login', $request->input('email', '')));
+        $password = $request->input('password');
 
         $request->validate([
-            'email'    => ['required', 'email:rfc,dns', 'regex:/^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/'],
+            'login'    => ['required', 'string'],
             'password' => ['required', 'min:6'],
         ], [
-            'email.required'  => 'Alamat email wajib diisi.',
-            'email.email'     => 'Format email tidak valid. Contoh: nama@gmail.com',
-            'email.regex'     => 'Email harus menggunakan huruf kecil semua (tidak boleh ada huruf kapital).',
+            'login.required'    => 'Alamat email atau nomor HP wajib diisi.',
             'password.required' => 'Kata sandi wajib diisi.',
             'password.min'      => 'Kata sandi minimal 6 karakter.',
         ]);
 
-        if (Auth::attempt(['email' => $request->email, 'password' => $request->password], $request->boolean('remember'))) {
-            $user = Auth::user();
-            
-            if ($user->is_admin) {
-                Auth::logout();
-                return back()
-                    ->withInput($request->only('email', 'remember'))
-                    ->withErrors(['email' => 'Akun Admin tidak bisa masuk dari sini. Silakan masuk melalui halaman Admin.']);
+        // Rate limiting key: login attempt throttle (max 5 attempts per minute)
+        $throttleKey = 'login_attempt:' . strtolower($loginInput) . '|' . $request->ip();
+
+        if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = \Illuminate\Support\Facades\RateLimiter::availableIn($throttleKey);
+            return back()
+                ->withInput($request->only('login', 'email', 'remember'))
+                ->withErrors(['login' => "Terlalu banyak percobaan login yang gagal (maksimal 5 kali). Silakan coba lagi dalam {$seconds} detik."]);
+        }
+
+        // Tentukan apakah input berupa email atau nomor HP
+        $isEmail = filter_var($loginInput, FILTER_VALIDATE_EMAIL);
+        $user = null;
+
+        if ($isEmail) {
+            $normalizedEmail = strtolower($loginInput);
+            $user = User::where('email', $normalizedEmail)->first();
+        } else {
+            // Pembersihan dan pencarian nomor HP (08xx, 628xx, +628xx)
+            $cleanPhone = preg_replace('/[^0-9]/', '', $loginInput);
+            $altPhone = '';
+            if (str_starts_with($cleanPhone, '08')) {
+                $altPhone = '628' . substr($cleanPhone, 2);
+            } elseif (str_starts_with($cleanPhone, '628')) {
+                $altPhone = '08' . substr($cleanPhone, 3);
             }
 
+            $user = User::where('phone', $cleanPhone)
+                ->orWhere('phone', $loginInput)
+                ->when($altPhone, fn($q) => $q->orWhere('phone', $altPhone))
+                ->first();
+        }
+
+        if ($user && Hash::check($password, $user->password)) {
+            // 1. Cek Status Aktif / Suspend Akun User
+            if ($user->status && in_array(strtolower((string)$user->status), ['suspended', 'inactive', 'blocked', 'nonaktif', '0', 'disabled'])) {
+                \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 60);
+                return back()
+                    ->withInput($request->only('login', 'email', 'remember'))
+                    ->withErrors(['login' => 'Akun Anda sedang ditangguhkan atau nonaktif. Silakan hubungi Customer Service.']);
+            }
+
+            // 2. Cek apakah pengguna adalah Admin
+            if ($user->is_admin) {
+                \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 60);
+                return back()
+                    ->withInput($request->only('login', 'email', 'remember'))
+                    ->withErrors(['login' => 'Akun Admin tidak bisa masuk dari sini. Silakan masuk melalui halaman Admin.']);
+            }
+
+            // Login Berhasil -> Reset Rate Limiter & Regenerate Session
+            Auth::login($user, $request->boolean('remember'));
             $request->session()->regenerate();
+            \Illuminate\Support\Facades\RateLimiter::clear($throttleKey);
+
             session(['user' => $user->toArray()]);
 
             return redirect()->intended(route('home'))
                 ->with('success', 'Selamat datang kembali, ' . $user->name . '!');
         }
 
+        // Login Gagal -> Tambahkan Hit ke Rate Limiter
+        \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 60);
+
         return back()
-            ->withInput($request->only('email', 'remember'))
-            ->withErrors(['email' => 'Email atau kata sandi salah. Periksa kembali dan coba lagi.']);
+            ->withInput($request->only('login', 'email', 'remember'))
+            ->withErrors(['login' => 'Email / Nomor HP atau kata sandi yang Anda masukkan salah. Periksa kembali dan coba lagi.']);
     }
 
     /**
@@ -145,32 +190,54 @@ class AuthController extends Controller
     {
         try {
             $googleUser = Socialite::driver('google')->user();
+            $email = strtolower($googleUser->email);
 
             $user = User::where('google_id', $googleUser->id)
-                ->orWhere('email', strtolower($googleUser->email))
+                ->orWhere('email', $email)
                 ->first();
 
             if ($user) {
+                $updates = [];
                 if (!$user->google_id) {
-                    $user->update(['google_id' => $googleUser->id]);
+                    $updates['google_id'] = $googleUser->id;
+                }
+                if (!$user->email_verified_at) {
+                    $updates['email_verified_at'] = \Carbon\Carbon::now();
+                }
+                if (!empty($updates)) {
+                    $user->update($updates);
                 }
             } else {
                 $user = User::create([
-                    'name'      => $googleUser->name ?? 'Pengguna Google',
-                    'email'     => strtolower($googleUser->email),
-                    'google_id' => $googleUser->id,
-                    'password'  => null,
+                    'name'              => $googleUser->name ?? 'Pengguna Google',
+                    'email'             => $email,
+                    'google_id'         => $googleUser->id,
+                    'email_verified_at' => \Carbon\Carbon::now(),
+                    'password'          => null,
                 ]);
+            }
+
+            // 1. Cek Status Aktif / Suspend Akun User
+            if ($user->status && in_array(strtolower((string)$user->status), ['suspended', 'inactive', 'blocked', 'nonaktif', '0', 'disabled'])) {
+                return redirect()->route('login')
+                    ->withErrors(['login' => 'Akun Anda sedang ditangguhkan atau nonaktif. Silakan hubungi Customer Service.']);
+            }
+
+            // 2. Cek apakah pengguna adalah Admin
+            if ($user->is_admin) {
+                return redirect()->route('login')
+                    ->withErrors(['login' => 'Akun Admin tidak bisa masuk dari sini. Silakan masuk melalui halaman Admin.']);
             }
 
             Auth::login($user, true);
             $request->session()->regenerate();
+            session(['user' => $user->toArray()]);
 
-            return redirect()->route('home')
+            return redirect()->intended(route('home'))
                 ->with('success', 'Berhasil masuk dengan akun Google: ' . $user->name);
         } catch (\Exception $e) {
             return redirect()->route('login')
-                ->withErrors(['email' => 'Gagal masuk dengan Google: ' . $e->getMessage()]);
+                ->withErrors(['login' => 'Gagal masuk dengan Google: ' . $e->getMessage()]);
         }
     }
 

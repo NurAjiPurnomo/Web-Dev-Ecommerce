@@ -25,33 +25,54 @@ class ForgotPasswordController extends Controller
      */
     public function sendResetOtp(Request $request)
     {
-        // Normalisasi email ke lowercase sebelum validasi
-        $email = strtolower(trim($request->input('email', '')));
-        $request->merge(['email' => $email]);
+        $loginInput = trim($request->input('login', $request->input('email', '')));
 
         $request->validate([
-            'email' => [
-                'required',
-                'email:rfc',
-                'regex:/^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/',
-                'exists:users,email',
-            ],
+            'login' => ['required', 'string'],
         ], [
-            'email.required' => 'Alamat email wajib diisi.',
-            'email.email'    => 'Format email tidak valid. Contoh: nama@gmail.com',
-            'email.regex'    => 'Email harus menggunakan huruf kecil semua (tidak boleh ada huruf kapital).',
-            'email.exists'   => 'Alamat email tidak terdaftar di sistem Toko Online. Periksa kembali atau daftar akun baru.',
+            'login.required' => 'Alamat email atau nomor HP wajib diisi.',
         ]);
 
-        // Hapus kode OTP reset lama jika ada
+        $isEmail = filter_var($loginInput, FILTER_VALIDATE_EMAIL);
+        $user = null;
+
+        if ($isEmail) {
+            $user = User::where('email', strtolower($loginInput))->first();
+        } else {
+            $cleanPhone = preg_replace('/[^0-9]/', '', $loginInput);
+            $altPhone = '';
+            if (str_starts_with($cleanPhone, '08')) {
+                $altPhone = '628' . substr($cleanPhone, 2);
+            } elseif (str_starts_with($cleanPhone, '628')) {
+                $altPhone = '08' . substr($cleanPhone, 3);
+            }
+
+            $user = User::where('phone', $cleanPhone)
+                ->orWhere('phone', $loginInput)
+                ->when($altPhone, fn($q) => $q->orWhere('phone', $altPhone))
+                ->first();
+        }
+
+        if (!$user) {
+            return back()
+                ->withInput($request->only('login', 'email'))
+                ->withErrors(['login' => 'Akun dengan Email atau Nomor HP tersebut tidak terdaftar di sistem Toko Online.']);
+        }
+
+        $email = $user->email;
+
+        // Hapus kode OTP reset lama milik email ini (Auto-Cleanup)
         OtpCode::where('email', $email)->delete();
 
-        // Buat kode OTP 6-digit baru
+        // Buat kode OTP 6-digit baru (Sesuai Spesifikasi Backlog)
         $code = sprintf('%06d', mt_rand(100000, 999999));
         OtpCode::create([
-            'email'      => $email,
-            'code'       => $code,
-            'expires_at' => Carbon::now()->addMinutes(5),
+            'user_id'     => $user->id,
+            'email'       => $email,
+            'code'        => $code,
+            'action_type' => 'password_reset',
+            'is_used'     => false,
+            'expires_at'  => Carbon::now()->addMinutes(5),
         ]);
 
         // Simpan email sementara di session
@@ -60,10 +81,10 @@ class ForgotPasswordController extends Controller
         // Kirim email OTP Reset
         try {
             Mail::to($email)->send(new PasswordResetMail($code));
-            session()->flash('success', 'Kode OTP reset kata sandi telah dikirimkan ke email: ' . $email);
+            session()->flash('success', 'Kode OTP reset kata sandi telah dikirimkan ke email terhubung (' . $email . ').');
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Gagal mengirim email Reset OTP: ' . $e->getMessage());
-            session()->flash('info', 'Kode OTP reset dibuat! (Mode Pengujian: Kode OTP kamu adalah ' . $code . '). Masukkan 16-digit Sandi Aplikasi di .env agar terkirim ke email.');
+            session()->flash('info', 'Kode OTP reset dibuat! (Mode Pengujian: Kode OTP Anda adalah ' . $code . '). Masukkan 16-digit Sandi Aplikasi di .env agar terkirim ke email.');
         }
 
         return redirect()->route('password.reset');
@@ -78,7 +99,7 @@ class ForgotPasswordController extends Controller
 
         if (!$email) {
             return redirect()->route('password.request')
-                ->with('info', 'Silakan masukkan email kamu terlebih dahulu untuk lupa kata sandi.');
+                ->with('info', 'Silakan masukkan email atau nomor HP Anda terlebih dahulu untuk memulihkan kata sandi.');
         }
 
         return view('auth.reset-password', [
@@ -97,7 +118,7 @@ class ForgotPasswordController extends Controller
             return redirect()->route('password.request');
         }
 
-        // Ambil kode OTP (bisa dari input terpisah `otp_1`, `otp_2`, dst, atau string `code`)
+        // Ambil kode OTP
         $otpInput = $request->input('code');
         if (is_array($request->input('otp'))) {
             $otpInput = implode('', $request->input('otp'));
@@ -124,16 +145,17 @@ class ForgotPasswordController extends Controller
             'password_confirmation.required' => 'Konfirmasi kata sandi baru wajib diisi.',
         ]);
 
-        // Cek keabsahan kode OTP
+        // Cek keabsahan kode OTP (Sesuai Backlog)
         $otpRecord = OtpCode::where('email', $email)
             ->where('code', $otpInput)
+            ->where('is_used', false)
             ->where('expires_at', '>=', Carbon::now())
             ->latest()
             ->first();
 
         if (!$otpRecord) {
             return back()->withInput($request->only('email', 'code'))
-                ->withErrors(['code' => 'Kode OTP salah atau sudah kadaluarsa. Silakan minta kode baru.']);
+                ->withErrors(['code' => 'Kode OTP salah, telah digunakan, atau sudah kadaluarsa. Silakan minta kode baru.']);
         }
 
         // Update kata sandi user
@@ -143,7 +165,8 @@ class ForgotPasswordController extends Controller
             $user->save();
         }
 
-        // Hapus kode OTP yang telah digunakan
+        // Tandai OTP telah digunakan & bersihkan OTP lama untuk email ini (Invalidation token/OTP)
+        $otpRecord->update(['is_used' => true]);
         OtpCode::where('email', $email)->delete();
         $request->session()->forget('pending_reset_email');
 
@@ -172,15 +195,20 @@ class ForgotPasswordController extends Controller
             return back()->with('info', 'Tunggu ' . $remaining . ' detik sebelum meminta kode OTP reset baru.');
         }
 
-        // Hapus OTP reset lama
+        // Hapus OTP reset lama milik email ini
         OtpCode::where('email', $email)->delete();
+
+        $user = User::where('email', $email)->first();
 
         // Buat OTP reset baru
         $code = sprintf('%06d', mt_rand(100000, 999999));
         OtpCode::create([
-            'email'      => $email,
-            'code'       => $code,
-            'expires_at' => Carbon::now()->addMinutes(5),
+            'user_id'     => $user?->id,
+            'email'       => $email,
+            'code'        => $code,
+            'action_type' => 'password_reset',
+            'is_used'     => false,
+            'expires_at'  => Carbon::now()->addMinutes(5),
         ]);
 
         // Kirim email
@@ -189,7 +217,7 @@ class ForgotPasswordController extends Controller
             $msg = 'Kode OTP reset baru berhasil dikirim ke ' . $email;
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Gagal mengirim email Reset OTP: ' . $e->getMessage());
-            $msg = 'Mode Pengujian: Kode OTP reset baru kamu adalah ' . $code;
+            $msg = 'Mode Pengujian: Kode OTP reset baru Anda adalah ' . $code;
         }
 
         return back()->with('success', $msg);

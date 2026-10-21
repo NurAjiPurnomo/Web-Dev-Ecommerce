@@ -33,6 +33,42 @@
         @endif
     </div>
 
+    <!-- CARA PENGGUNAAN VOUCHER (3-STEP GUIDE) -->
+    <div class="bg-blue-50/80 border border-blue-200 rounded-xl p-5 sm:p-6 space-y-4">
+        <h3 class="text-sm sm:text-base font-extrabold text-slate-900 flex items-center gap-2">
+            <svg class="w-5 h-5 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Cara Menggunakan Voucher Diskon
+        </h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-700">
+            <div class="bg-white border border-blue-100 rounded-lg p-3.5 flex items-start gap-3 shadow-2xs">
+                <span class="w-6 h-6 rounded-full bg-blue-700 text-white font-bold flex items-center justify-center shrink-0 text-xs">1</span>
+                <div>
+                    <strong class="font-bold text-slate-900 block mb-0.5">Pilih & Klaim Voucher</strong>
+                    <p class="text-slate-500 leading-relaxed">Klik tombol "Klaim Voucher" pada voucher promo yang ingin Anda gunakan.</p>
+                </div>
+            </div>
+
+            <div class="bg-white border border-blue-100 rounded-lg p-3.5 flex items-start gap-3 shadow-2xs">
+                <span class="w-6 h-6 rounded-full bg-blue-700 text-white font-bold flex items-center justify-center shrink-0 text-xs">2</span>
+                <div>
+                    <strong class="font-bold text-slate-900 block mb-0.5">Pilih Produk Impian</strong>
+                    <p class="text-slate-500 leading-relaxed">Masukkan produk sesuai syarat promo ke keranjang belanja Anda.</p>
+                </div>
+            </div>
+
+            <div class="bg-white border border-blue-100 rounded-lg p-3.5 flex items-start gap-3 shadow-2xs">
+                <span class="w-6 h-6 rounded-full bg-blue-700 text-white font-bold flex items-center justify-center shrink-0 text-xs">3</span>
+                <div>
+                    <strong class="font-bold text-slate-900 block mb-0.5">Otomatis Terpotong</strong>
+                    <p class="text-slate-500 leading-relaxed">Gunakan atau tempelkan kode voucher di halaman Keranjang saat checkout.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- PUSAT VOUCHER INTERAKTIF -->
     <div class="space-y-4">
         <div class="flex items-center justify-between">
@@ -177,42 +213,6 @@
                     {{ $promoProducts->links('pagination::tailwind') }}
                 </div>
             @endif
-        </div>
-    </div>
-
-    <!-- CARA PENGGUNAAN VOUCHER (3-STEP GUIDE) -->
-    <div class="bg-blue-50/80 border border-blue-200 rounded-xl p-5 sm:p-6 space-y-4">
-        <h3 class="text-sm sm:text-base font-extrabold text-slate-900 flex items-center gap-2">
-            <svg class="w-5 h-5 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            Cara Menggunakan Voucher Diskon
-        </h3>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-700">
-            <div class="bg-white border border-blue-100 rounded-lg p-3.5 flex items-start gap-3 shadow-2xs">
-                <span class="w-6 h-6 rounded-full bg-blue-700 text-white font-bold flex items-center justify-center shrink-0 text-xs">1</span>
-                <div>
-                    <strong class="font-bold text-slate-900 block mb-0.5">Pilih & Klaim Voucher</strong>
-                    <p class="text-slate-500 leading-relaxed">Klik tombol "Klaim Voucher" pada voucher promo yang ingin Anda gunakan.</p>
-                </div>
-            </div>
-
-            <div class="bg-white border border-blue-100 rounded-lg p-3.5 flex items-start gap-3 shadow-2xs">
-                <span class="w-6 h-6 rounded-full bg-blue-700 text-white font-bold flex items-center justify-center shrink-0 text-xs">2</span>
-                <div>
-                    <strong class="font-bold text-slate-900 block mb-0.5">Pilih Produk Impian</strong>
-                    <p class="text-slate-500 leading-relaxed">Masukkan produk sesuai syarat promo ke keranjang belanja Anda.</p>
-                </div>
-            </div>
-
-            <div class="bg-white border border-blue-100 rounded-lg p-3.5 flex items-start gap-3 shadow-2xs">
-                <span class="w-6 h-6 rounded-full bg-blue-700 text-white font-bold flex items-center justify-center shrink-0 text-xs">3</span>
-                <div>
-                    <strong class="font-bold text-slate-900 block mb-0.5">Otomatis Terpotong</strong>
-                    <p class="text-slate-500 leading-relaxed">Gunakan atau tempelkan kode voucher di halaman Keranjang saat checkout.</p>
-                </div>
-            </div>
         </div>
     </div>
 

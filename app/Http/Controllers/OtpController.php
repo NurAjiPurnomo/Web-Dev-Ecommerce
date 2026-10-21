@@ -57,17 +57,21 @@ class OtpController extends Controller
 
         $otpRecord = OtpCode::where('email', $email)
             ->where('code', $otpInput)
+            ->where('is_used', false)
             ->where('expires_at', '>=', Carbon::now())
             ->latest()
             ->first();
 
         if (!$otpRecord) {
             return back()->withErrors([
-                'code' => 'Kode OTP salah atau sudah kadaluarsa. Silakan minta kode baru.',
+                'code' => 'Kode OTP salah, sudah digunakan, atau sudah kadaluarsa. Silakan minta kode baru.',
             ]);
         }
 
-        // Hapus kode OTP yang telah digunakan
+        // Tandai OTP telah terpakai (is_used = true)
+        $otpRecord->update(['is_used' => true]);
+
+        // Bersihkan OTP lama untuk email ini agar database tidak menumpuk
         OtpCode::where('email', $email)->delete();
 
         // Cari user dan verifikasi emailnya
@@ -110,15 +114,21 @@ class OtpController extends Controller
             return back()->with('info', 'Tunggu ' . $remaining . ' detik sebelum meminta kode OTP baru.');
         }
 
-        // Hapus OTP lama
+        // Hapus OTP lama milik email ini (Pembersihan Otomatis)
         OtpCode::where('email', $email)->delete();
 
-        // Buat OTP baru
+        // Cari relasi user_id jika akun sudah terdaftar
+        $user = User::where('email', $email)->first();
+
+        // Buat OTP baru (Sesuai Spesifikasi Backlog)
         $code = sprintf('%06d', mt_rand(100000, 999999));
         OtpCode::create([
-            'email'      => $email,
-            'code'       => $code,
-            'expires_at' => Carbon::now()->addMinutes(5),
+            'user_id'     => $user?->id,
+            'email'       => $email,
+            'code'        => $code,
+            'action_type' => 'registration_verification',
+            'is_used'     => false,
+            'expires_at'  => Carbon::now()->addMinutes(5),
         ]);
 
         // Kirim email
@@ -127,7 +137,7 @@ class OtpController extends Controller
             $msg = 'Kode OTP baru berhasil dikirim ke ' . $email;
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Gagal mengirim email OTP: ' . $e->getMessage());
-            $msg = 'SMTP Gmail belum terhubung (Sandi Aplikasi 16-digit belum diisi). Kode OTP Pengujian kamu adalah: ' . $code;
+            $msg = 'SMTP Gmail belum terhubung (Sandi Aplikasi 16-digit belum diisi). Kode OTP Pengujian Anda adalah: ' . $code;
         }
 
         return back()->with('success', $msg);
@@ -136,15 +146,21 @@ class OtpController extends Controller
     /**
      * Helper method static untuk mengirimkan OTP dari AuthController.
      */
-    public static function sendOtpForEmail(string $email): string
+    public static function sendOtpForEmail(string $email, string $actionType = 'registration_verification'): string
     {
+        // Bersihkan OTP lama sebelum membuat yang baru (Auto-Cleanup)
         OtpCode::where('email', $email)->delete();
+
+        $user = User::where('email', $email)->first();
 
         $code = sprintf('%06d', mt_rand(100000, 999999));
         OtpCode::create([
-            'email'      => $email,
-            'code'       => $code,
-            'expires_at' => Carbon::now()->addMinutes(5),
+            'user_id'     => $user?->id,
+            'email'       => $email,
+            'code'        => $code,
+            'action_type' => $actionType,
+            'is_used'     => false,
+            'expires_at'  => Carbon::now()->addMinutes(5),
         ]);
 
         try {
@@ -152,7 +168,7 @@ class OtpController extends Controller
             session()->flash('success', 'Akun berhasil dibuat! Kode OTP telah dikirimkan ke email ' . $email);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Gagal mengirim email OTP: ' . $e->getMessage());
-            session()->flash('info', 'Akun berhasil dibuat! (Mode Pengujian: Kode OTP kamu adalah ' . $code . '). Masukkan 16-digit Sandi Aplikasi di .env agar terkirim ke email.');
+            session()->flash('info', 'Akun berhasil dibuat! (Mode Pengujian: Kode OTP Anda adalah ' . $code . '). Masukkan 16-digit Sandi Aplikasi di .env agar terkirim ke email.');
         }
 
         return $code;

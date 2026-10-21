@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Product;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderReturn;
 use App\Models\Voucher;
 use App\Models\Affiliate;
 use App\Models\Announcement;
@@ -75,11 +76,23 @@ class AdminController extends Controller
      */
     public function dashboard(Request $request)
     {
+        $selectedPeriod = $request->query('period', 'all'); // 'all', 'today', '7days', '30days', 'this_month'
         $selectedMonth = $request->query('month', 'all'); // 'all', '1', '2', ..., '12'
         $selectedCategory = $request->query('category', 'all'); // 'all', 'Pakaian', 'Sepatu', ...
 
-        // Base Orders Query
+        // Base Orders Query (Non-cancelled)
         $orderQuery = Order::where('status', '!=', 'batal');
+
+        // Apply Period Preset Filter
+        if ($selectedPeriod === 'today') {
+            $orderQuery->whereDate('created_at', now()->today());
+        } elseif ($selectedPeriod === '7days') {
+            $orderQuery->where('created_at', '>=', now()->subDays(7));
+        } elseif ($selectedPeriod === '30days') {
+            $orderQuery->where('created_at', '>=', now()->subDays(30));
+        } elseif ($selectedPeriod === 'this_month') {
+            $orderQuery->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year);
+        }
 
         // Apply Month Filter
         if ($selectedMonth !== 'all') {
@@ -95,30 +108,131 @@ class AdminController extends Controller
 
         $filteredOrders = $orderQuery->get();
 
-        // Calculate Gross Revenue & Net Revenue (85% Net Profit Margin)
-        $grossRevenue = $filteredOrders->sum('total');
-        $netRevenue   = round($grossRevenue * 0.85);
-        $totalOrders  = $filteredOrders->count();
-        $avgOrderVal  = $totalOrders > 0 ? round($grossRevenue / $totalOrders) : 0;
+        // Calculate Gross Revenue & Subtotal Revenue from real orders
+        $grossRevenue    = $filteredOrders->sum('total');
+        $subtotalRevenue = $filteredOrders->sum('subtotal');
+        $shippingRevenue = $filteredOrders->sum('shipping_cost');
+        $totalOrders     = $filteredOrders->count();
+        $avgOrderVal     = $totalOrders > 0 ? round($grossRevenue / $totalOrders) : 0;
+
+        // Total Items Sold (pcs)
+        $itemsSold = OrderItem::whereHas('order', function ($q) use ($selectedMonth, $selectedPeriod) {
+            $q->where('status', '!=', 'batal');
+            if ($selectedPeriod === 'today') {
+                $q->whereDate('orders.created_at', now()->today());
+            } elseif ($selectedPeriod === '7days') {
+                $q->where('orders.created_at', '>=', now()->subDays(7));
+            } elseif ($selectedPeriod === '30days') {
+                $q->where('orders.created_at', '>=', now()->subDays(30));
+            } elseif ($selectedPeriod === 'this_month') {
+                $q->whereMonth('orders.created_at', now()->month)->whereYear('orders.created_at', now()->year);
+            }
+            if ($selectedMonth !== 'all') {
+                $q->whereMonth('orders.created_at', (int)$selectedMonth);
+            }
+        })->when($selectedCategory !== 'all', function ($q) use ($selectedCategory) {
+            $q->whereHas('product', function ($pq) use ($selectedCategory) {
+                $pq->where('category', $selectedCategory);
+            });
+        })->sum('quantity');
 
         $stats = [
-            'gross_revenue'   => $grossRevenue,
-            'net_revenue'     => $netRevenue,
-            'total_orders'    => $totalOrders,
-            'avg_order_val'   => $avgOrderVal,
-            'total_customers' => User::where('is_admin', false)->count(),
-            'total_products'  => Product::where('status', 'aktif')->count(),
+            'gross_revenue'    => $grossRevenue,
+            'subtotal_revenue' => $subtotalRevenue,
+            'shipping_revenue' => $shippingRevenue,
+            'total_orders'     => $totalOrders,
+            'items_sold'       => $itemsSold,
+            'avg_order_val'    => $avgOrderVal,
+            'total_customers'  => User::where('is_admin', false)->count(),
+            'total_products'   => Product::where('status', 'aktif')->count(),
         ];
 
-        // 1. Category Breakdown Analysis
-        $categoriesList = ['Pakaian', 'Sepatu', 'Aksesoris', 'Gadget', 'Rumah Tangga'];
+        // 1. Task Counters (Shopee / Tokopedia Seller Centre To-Do List)
+        // Hitung stok menipis secara presisi sampai ke tingkat varian & ukuran
+        $allActiveProducts = Product::where('status', 'aktif')->get();
+        $lowStockProductsList = [];
+
+        foreach ($allActiveProducts as $p) {
+            $hasLowVariant = false;
+            $lowVariants = [];
+
+            if (!empty($p->variants) && is_array($p->variants)) {
+                foreach ($p->variants as $var) {
+                    $vColor = $var['color'] ?? 'Standar';
+                    $vSizes = isset($var['sizes']) && is_array($var['sizes']) ? $var['sizes'] : null;
+
+                    if ($vSizes && isset($vSizes[0]) && is_array($vSizes[0])) {
+                        // Jika ukuran berupa object dengan stok tersendiri: [['name' => 'S', 'stock' => 2], ...]
+                        foreach ($vSizes as $sz) {
+                            $szStock = isset($sz['stock']) ? (int)$sz['stock'] : 0;
+                            if ($szStock <= 5) {
+                                $hasLowVariant = true;
+                                $lowVariants[] = [
+                                    'name'  => $vColor . ' (' . ($sz['name'] ?? 'All') . ')',
+                                    'stock' => $szStock,
+                                ];
+                            }
+                        }
+                    } else {
+                        // Stok tersimpan di level varian utama ($var['stock'])
+                        $vStock = isset($var['stock']) ? (int)$var['stock'] : (int)$p->stock;
+                        if ($vStock <= 5) {
+                            $hasLowVariant = true;
+                            $varName = trim($vColor . (!empty($var['size']) ? ' ' . $var['size'] : ''));
+                            $lowVariants[] = [
+                                'name'  => $varName ?: 'Standar',
+                                'stock' => $vStock,
+                            ];
+                        }
+                    }
+                }
+            } else {
+                if ($p->stock <= 5) {
+                    $hasLowVariant = true;
+                }
+            }
+
+            if ($hasLowVariant) {
+                $p->low_variants_list = $lowVariants;
+                $lowStockProductsList[] = $p;
+            }
+        }
+
+        $tasks = [
+            'to_ship'      => Order::whereIn('status', ['diproses', 'dikemas'])->count(),
+            'unpaid'       => Order::where('status', 'belum_dibayar')->count(),
+            'shipping'     => Order::where('status', 'dikirim')->count(),
+            'completed'    => Order::where('status', 'selesai')->count(),
+            'returns'      => OrderReturn::whereIn('status', ['pending', 'proses'])->count(),
+            'low_stock'    => count($lowStockProductsList),
+            'out_of_stock' => Product::where('status', 'aktif')->where('stock', '<=', 0)->count(),
+        ];
+
+        // 2. Category Breakdown Analysis (Dinamis dari kategori produk aktif)
+        $dbCategories = Product::where('status', 'aktif')
+            ->whereNotNull('category')
+            ->distinct()
+            ->pluck('category')
+            ->filter()
+            ->values()
+            ->toArray();
+        $categoriesList = !empty($dbCategories) ? $dbCategories : ['Pakaian', 'Sepatu', 'Aksesoris', 'Gadget', 'Rumah Tangga'];
         $categoryBreakdown = [];
 
         foreach ($categoriesList as $cat) {
-            $catItems = OrderItem::whereHas('order', function ($q) use ($selectedMonth) {
+            $catItems = OrderItem::whereHas('order', function ($q) use ($selectedMonth, $selectedPeriod) {
                 $q->where('status', '!=', 'batal');
+                if ($selectedPeriod === 'today') {
+                    $q->whereDate('orders.created_at', now()->today());
+                } elseif ($selectedPeriod === '7days') {
+                    $q->where('orders.created_at', '>=', now()->subDays(7));
+                } elseif ($selectedPeriod === '30days') {
+                    $q->where('orders.created_at', '>=', now()->subDays(30));
+                } elseif ($selectedPeriod === 'this_month') {
+                    $q->whereMonth('orders.created_at', now()->month)->whereYear('orders.created_at', now()->year);
+                }
                 if ($selectedMonth !== 'all') {
-                    $q->whereMonth('created_at', (int)$selectedMonth);
+                    $q->whereMonth('orders.created_at', (int)$selectedMonth);
                 }
             })->whereHas('product', function ($q) use ($cat) {
                 $q->where('category', $cat);
@@ -127,20 +241,19 @@ class AdminController extends Controller
             $catGross = $catItems->sum(function ($item) {
                 return $item->quantity * $item->price;
             });
-            $catNet   = round($catGross * 0.85);
             $catQty   = $catItems->sum('quantity');
 
             $categoryBreakdown[] = [
                 'category' => $cat,
                 'quantity' => $catQty,
                 'gross'    => $catGross,
-                'net'      => $catNet,
                 'pct'      => $grossRevenue > 0 ? round(($catGross / $grossRevenue) * 100, 1) : 0,
             ];
         }
 
-        // 2. Monthly Revenue Trend Breakdown (12 Months)
+        // 3. Monthly Revenue Trend Breakdown (Tahun Berjalan)
         $monthlyTrend = [];
+        $currentYear = (int)date('Y');
         $indonesianMonths = [
             1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
             5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
@@ -149,6 +262,7 @@ class AdminController extends Controller
 
         foreach ($indonesianMonths as $num => $name) {
             $mOrders = Order::where('status', '!=', 'batal')
+                ->whereYear('created_at', $currentYear)
                 ->whereMonth('created_at', $num)
                 ->when($selectedCategory !== 'all', function ($q) use ($selectedCategory) {
                     $q->whereHas('items.product', function ($pq) use ($selectedCategory) {
@@ -157,22 +271,79 @@ class AdminController extends Controller
                 })->get();
 
             $mGross = $mOrders->sum('total');
-            $mNet   = round($mGross * 0.85);
 
             $monthlyTrend[] = [
                 'month_num'  => $num,
                 'month_name' => $name,
                 'orders'     => $mOrders->count(),
                 'gross'      => $mGross,
-                'net'        => $mNet,
             ];
         }
 
-        $recentOrders = Order::with('user')->latest()->take(5)->get();
+        // 4. Top Selling Products (Sinkron dengan periode yang dipilih)
+        $topItemsQuery = OrderItem::whereHas('order', function ($q) use ($selectedMonth, $selectedPeriod) {
+            $q->where('status', '!=', 'batal');
+            if ($selectedPeriod === 'today') {
+                $q->whereDate('orders.created_at', now()->today());
+            } elseif ($selectedPeriod === '7days') {
+                $q->where('orders.created_at', '>=', now()->subDays(7));
+            } elseif ($selectedPeriod === '30days') {
+                $q->where('orders.created_at', '>=', now()->subDays(30));
+            } elseif ($selectedPeriod === 'this_month') {
+                $q->whereMonth('orders.created_at', now()->month)->whereYear('orders.created_at', now()->year);
+            }
+            if ($selectedMonth !== 'all') {
+                $q->whereMonth('orders.created_at', (int)$selectedMonth);
+            }
+        })
+        ->when($selectedCategory !== 'all', function ($q) use ($selectedCategory) {
+            $q->whereHas('product', function ($pq) use ($selectedCategory) {
+                $pq->where('category', $selectedCategory);
+            });
+        })
+        ->whereNotNull('product_id')
+        ->selectRaw('product_id, SUM(quantity) as period_sold, SUM(quantity * price) as period_revenue')
+        ->groupBy('product_id')
+        ->orderByDesc('period_sold')
+        ->take(5)
+        ->get();
+
+        $topProducts = [];
+        foreach ($topItemsQuery as $item) {
+            $product = Product::find($item->product_id);
+            if ($product) {
+                $product->period_sold = (int)$item->period_sold;
+                $product->period_revenue = (float)$item->period_revenue;
+                $topProducts[] = $product;
+            }
+        }
+
+        // Fallback jika periode 'all' dan riwayat order kosong tapi ada kolom sold di tabel products
+        if (empty($topProducts) && $selectedPeriod === 'all' && $selectedMonth === 'all') {
+            $topProducts = Product::where('status', 'aktif')
+                ->where('sold', '>', 0)
+                ->orderByDesc('sold')
+                ->take(5)
+                ->get();
+        }
+
+        // 5. Low Stock Alert Products (Stok <= 5 pcs baik produk utama maupun varian/ukuran)
+        $lowStockProducts = array_slice($lowStockProductsList, 0, 6);
+
+        // 6. Recent Orders
+        $recentOrders = Order::with('user')->latest()->take(6)->get();
+
+        // 7. Store Settings & Couriers
+        $storeSetting = StoreSetting::first();
 
         return view('admin.dashboard', compact(
             'stats',
+            'tasks',
+            'topProducts',
+            'lowStockProducts',
             'recentOrders',
+            'storeSetting',
+            'selectedPeriod',
             'selectedMonth',
             'selectedCategory',
             'categoryBreakdown',
@@ -186,22 +357,72 @@ class AdminController extends Controller
      */
     public function products(Request $request)
     {
-        $search = $request->query('search');
-        $category = $request->query('category');
+        $search   = $request->query('search');
+        $category = $request->query('category', 'all');
+        $status   = $request->query('status', 'all'); // 'all', 'active', 'low_stock', 'out_of_stock', 'inactive'
 
         $query = Product::query();
 
         if ($search) {
-            $query->where('name', 'like', "%{$search}%");
+            $cleanSearch = trim($search);
+            $cleanId = ltrim(preg_replace('/[^0-9]/', '', $cleanSearch), '0');
+            $query->where(function($q) use ($cleanSearch, $cleanId) {
+                $q->where('name', 'like', "%{$cleanSearch}%");
+                if (!empty($cleanId)) {
+                    $q->orWhere('id', (int)$cleanId);
+                }
+            });
         }
 
         if ($category && $category !== 'all') {
             $query->where('category', $category);
         }
 
-        $products = $query->latest()->get();
+        if ($status === 'active') {
+            $query->where('status', 'aktif')->where('stock', '>', 0);
+        } elseif ($status === 'low_stock') {
+            $query->where('status', 'aktif')->where('stock', '<=', 5)->where('stock', '>', 0);
+        } elseif ($status === 'out_of_stock') {
+            $query->where('status', 'aktif')->where('stock', '<=', 0);
+        } elseif ($status === 'inactive') {
+            $query->where('status', 'nonaktif');
+        }
 
-        return view('admin.products', compact('products'));
+        $products = $query->latest()->paginate(10)->withQueryString();
+
+        // Status Tab Counters (Shopee / Tokopedia Seller Centre)
+        $tabCounts = [
+            'all'          => Product::count(),
+            'active'       => Product::where('status', 'aktif')->where('stock', '>', 0)->count(),
+            'low_stock'    => Product::where('status', 'aktif')->where('stock', '<=', 5)->where('stock', '>', 0)->count(),
+            'out_of_stock' => Product::where('status', 'aktif')->where('stock', '<=', 0)->count(),
+            'inactive'     => Product::where('status', 'nonaktif')->count(),
+        ];
+
+        // Overall KPI Metrics
+        $totalProductsCount  = $tabCounts['all'];
+        $activeProductsCount = $tabCounts['active'];
+        $totalStockCount     = (int)Product::sum('stock');
+        $totalSoldCount     = (int)Product::sum('sold');
+
+        // Dynamic Categories
+        $categories = Product::distinct()->whereNotNull('category')->pluck('category')->filter()->values()->toArray();
+        if (empty($categories)) {
+            $categories = ['Pakaian', 'Sepatu', 'Aksesoris', 'Gadget', 'Rumah Tangga'];
+        }
+
+        return view('admin.products', compact(
+            'products',
+            'status',
+            'category',
+            'search',
+            'tabCounts',
+            'totalProductsCount',
+            'activeProductsCount',
+            'totalStockCount',
+            'totalSoldCount',
+            'categories'
+        ));
     }
 
     /**
@@ -305,7 +526,7 @@ class AdminController extends Controller
             }
 
             if (!empty($parsedVariants)) {
-                $validated['stock'] = $totalStock > 0 ? $totalStock : $validated['stock'];
+                $validated['stock'] = $totalStock;
                 $validated['variants'] = $parsedVariants;
                 $validated['colors']   = $allColors;
                 if (!empty($allSizes)) $validated['sizes'] = $allSizes;
@@ -348,6 +569,19 @@ class AdminController extends Controller
                 }
             }
         }
+
+        // Parse Specifications (Spesifikasi Produk)
+        $specs = [];
+        if (!empty($request->specs) && is_array($request->specs)) {
+            foreach ($request->specs as $k => $v) {
+                $cleanKey = trim($k);
+                $cleanVal = trim($v);
+                if (!empty($cleanKey) && !empty($cleanVal)) {
+                    $specs[$cleanKey] = $cleanVal;
+                }
+            }
+        }
+        $validated['specs'] = !empty($specs) ? $specs : null;
 
         $validated['status'] = 'aktif';
         $validated['sold']   = 0;
@@ -464,7 +698,7 @@ class AdminController extends Controller
             }
 
             if (!empty($parsedVariants)) {
-                $validated['stock'] = $totalStock > 0 ? $totalStock : $validated['stock'];
+                $validated['stock'] = $totalStock;
                 $validated['variants'] = $parsedVariants;
                 $validated['colors']   = $allColors;
                 if (!empty($allSizes)) $validated['sizes'] = $allSizes;
@@ -508,9 +742,38 @@ class AdminController extends Controller
             }
         }
 
+        // Parse Specifications (Spesifikasi Produk)
+        $specs = [];
+        if (!empty($request->specs) && is_array($request->specs)) {
+            foreach ($request->specs as $k => $v) {
+                $cleanKey = trim($k);
+                $cleanVal = trim($v);
+                if (!empty($cleanKey) && !empty($cleanVal)) {
+                    $specs[$cleanKey] = $cleanVal;
+                }
+            }
+        }
+        $validated['specs'] = !empty($specs) ? $specs : null;
+
         $product->update($validated);
 
         return redirect()->route('admin.products')->with('success', 'Data produk "' . $product->name . '" berhasil diperbarui!');
+    }
+
+    /**
+     * Toggle Product Status (Aktif / Nonaktifkan Arsip)
+     */
+    public function toggleProductStatus($id)
+    {
+        $product = Product::findOrFail($id);
+        $product->status = ($product->status === 'aktif') ? 'nonaktif' : 'aktif';
+        $product->save();
+
+        $pesan = $product->status === 'aktif'
+            ? 'Produk "' . $product->name . '" berhasil diaktifkan kembali ke etalase toko.'
+            : 'Produk "' . $product->name . '" berhasil dinonaktifkan (diarsipkan) dari etalase toko.';
+
+        return redirect()->back()->with('success', $pesan);
     }
 
     /**
@@ -542,20 +805,136 @@ class AdminController extends Controller
     public function users(Request $request)
     {
         $search = $request->query('search');
+        $status = $request->query('status', 'semua');
+        $sort   = $request->query('sort', 'latest');
 
-        $query = User::where('is_admin', false);
+        // Base Query: Non-admin users
+        $baseQuery = User::where('is_admin', false);
+
+        // KPI Counts
+        $kpi = [
+            'total'     => (clone $baseQuery)->count(),
+            'active'    => (clone $baseQuery)->where(function($q) {
+                               $q->where('status', 'active')->orWhereNull('status')->orWhere('status', '');
+                           })->count(),
+            'buyers'    => (clone $baseQuery)->has('orders')->count(),
+            'suspended' => (clone $baseQuery)->where('status', 'suspended')->count(),
+        ];
+
+        $query = (clone $baseQuery)->withCount('orders')
+            ->withSum(['orders as total_spent' => function($q) {
+                $q->whereIn('status', ['diproses', 'dikemas', 'dikirim', 'selesai']);
+            }], 'total')
+            ->with(['orders' => function($q) {
+                $q->latest()->limit(5)->with('items.product');
+            }]);
+
+        // 1. Search Filter (Nama, Email, Telepon, Kota, Alamat)
+        if ($search) {
+            $cleanSearch = trim($search);
+            $query->where(function($q) use ($cleanSearch) {
+                $q->where('name', 'like', "%{$cleanSearch}%")
+                  ->orWhere('email', 'like', "%{$cleanSearch}%")
+                  ->orWhere('phone', 'like', "%{$cleanSearch}%")
+                  ->orWhere('city', 'like', "%{$cleanSearch}%")
+                  ->orWhere('district', 'like', "%{$cleanSearch}%")
+                  ->orWhere('address', 'like', "%{$cleanSearch}%");
+            });
+        }
+
+        // 2. Status Tab Filter
+        if ($status === 'active') {
+            $query->where(function($q) {
+                $q->where('status', 'active')->orWhereNull('status')->orWhere('status', '');
+            });
+        } elseif ($status === 'suspended') {
+            $query->where('status', 'suspended');
+        } elseif ($status === 'buyer') {
+            $query->has('orders');
+        }
+
+        // 3. Sorting
+        if ($sort === 'name_asc') {
+            $query->orderBy('name', 'asc');
+        } elseif ($sort === 'most_orders') {
+            $query->orderByDesc('orders_count');
+        } elseif ($sort === 'highest_spend') {
+            $query->orderByDesc('total_spent');
+        } elseif ($sort === 'oldest') {
+            $query->oldest();
+        } else {
+            $query->latest();
+        }
+
+        $users = $query->paginate(15)->withQueryString();
+
+        return view('admin.users', compact('users', 'kpi', 'status', 'search', 'sort'));
+    }
+
+    /**
+     * Export Customers to CSV
+     */
+    public function exportUsers(Request $request)
+    {
+        $search = $request->query('search');
+        $status = $request->query('status', 'semua');
+
+        $query = User::where('is_admin', false)
+            ->withCount('orders')
+            ->withSum(['orders as total_spent' => function($q) {
+                $q->whereIn('status', ['diproses', 'dikemas', 'dikirim', 'selesai']);
+            }], 'total');
 
         if ($search) {
-            $query->where(function($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%");
+            $cleanSearch = trim($search);
+            $query->where(function($q) use ($cleanSearch) {
+                $q->where('name', 'like', "%{$cleanSearch}%")
+                  ->orWhere('email', 'like', "%{$cleanSearch}%")
+                  ->orWhere('phone', 'like', "%{$cleanSearch}%")
+                  ->orWhere('city', 'like', "%{$cleanSearch}%");
             });
+        }
+
+        if ($status === 'active') {
+            $query->where(function($q) {
+                $q->where('status', 'active')->orWhereNull('status')->orWhere('status', '');
+            });
+        } elseif ($status === 'suspended') {
+            $query->where('status', 'suspended');
+        } elseif ($status === 'buyer') {
+            $query->has('orders');
         }
 
         $users = $query->latest()->get();
 
-        return view('admin.users', compact('users'));
+        $filename = 'pelanggan_' . date('Ymd_His') . '.csv';
+        $headers = [
+            'Content-Type'        => 'text/csv; charset=utf-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        $callback = function() use ($users) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, ['ID', 'Nama Pelanggan', 'Email', 'No. Telepon / WA', 'Kota', 'Alamat Lengkap', 'Total Pesanan', 'Total Belanja (Rp)', 'Status Akun', 'Tanggal Daftar']);
+
+            foreach ($users as $u) {
+                fputcsv($file, [
+                    $u->id,
+                    $u->name,
+                    $u->email,
+                    $u->phone ?: '-',
+                    $u->city ?: '-',
+                    $u->address ?: ($u->address_detail ?: '-'),
+                    $u->orders_count ?? 0,
+                    $u->total_spent ?? 0,
+                    ($u->status === 'suspended') ? 'Suspended' : 'Aktif',
+                    $u->created_at ? $u->created_at->format('Y-m-d H:i:s') : '-',
+                ]);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 
     /**
@@ -575,23 +954,111 @@ class AdminController extends Controller
      */
     public function orders(Request $request)
     {
-        $status = $request->query('status', 'semua');
+        $status  = $request->query('status', 'semua');
+        $search  = $request->query('search');
+        $courier = $request->query('courier', 'all');
+        $period  = $request->query('period', 'all');
 
-        $query = Order::with(['user', 'items']);
+        $query = Order::with(['user', 'items.product', 'returns']);
 
+        // 1. Search Filter (No. Invoice, Nama Penerima, Telepon, No. Resi, User)
+        if ($search) {
+            $cleanSearch = trim($search);
+            $query->where(function($q) use ($cleanSearch) {
+                $q->where('invoice_number', 'like', "%{$cleanSearch}%")
+                  ->orWhere('recipient_name', 'like', "%{$cleanSearch}%")
+                  ->orWhere('recipient_phone', 'like', "%{$cleanSearch}%")
+                  ->orWhere('tracking_number', 'like', "%{$cleanSearch}%")
+                  ->orWhereHas('user', function($uq) use ($cleanSearch) {
+                      $uq->where('name', 'like', "%{$cleanSearch}%")
+                         ->orWhere('phone', 'like', "%{$cleanSearch}%")
+                         ->orWhere('email', 'like', "%{$cleanSearch}%");
+                  });
+            });
+        }
+
+        // 2. Courier Filter
+        if ($courier && $courier !== 'all') {
+            $query->where('courier', 'like', "%{$courier}%");
+        }
+
+        // 3. Time Period Filter
+        if ($period && $period !== 'all') {
+            if ($period === 'today') {
+                $query->whereDate('created_at', now()->today());
+            } elseif ($period === '7days') {
+                $query->where('created_at', '>=', now()->subDays(7));
+            } elseif ($period === '30days') {
+                $query->where('created_at', '>=', now()->subDays(30));
+            } elseif ($period === 'this_month') {
+                $query->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year);
+            }
+        }
+
+        // 4. Status Tab Filter
         if ($status !== 'semua') {
             if ($status === 'belum_bayar' || $status === 'belum_dibayar') {
                 $query->whereIn('status', ['belum_bayar', 'belum_dibayar']);
             } elseif ($status === 'dikemas' || $status === 'diproses') {
                 $query->whereIn('status', ['dikemas', 'diproses']);
+            } elseif ($status === 'dikirim') {
+                $query->where('status', 'dikirim');
+            } elseif ($status === 'selesai') {
+                $query->where('status', 'selesai');
+            } elseif ($status === 'pengajuan_batal') {
+                $query->where('status', 'pengajuan_batal');
+            } elseif ($status === 'batal') {
+                $query->where('status', 'batal');
             } else {
                 $query->where('status', $status);
             }
         }
 
-        $orders = $query->latest()->get();
+        $orders = $query->latest()->paginate(10)->withQueryString();
 
-        return view('admin.orders', compact('orders', 'status'));
+        // 5. Accurate Global Tab Counts (Independen dari filter pencarian/status saat ini)
+        $tabCounts = [
+            'semua'           => Order::count(),
+            'belum_bayar'     => Order::whereIn('status', ['belum_bayar', 'belum_dibayar'])->count(),
+            'dikemas'         => Order::whereIn('status', ['dikemas', 'diproses'])->count(),
+            'dikirim'         => Order::where('status', 'dikirim')->count(),
+            'selesai'         => Order::where('status', 'selesai')->count(),
+            'pengajuan_batal' => Order::where('status', 'pengajuan_batal')->count(),
+            'batal'           => Order::where('status', 'batal')->count(),
+        ];
+
+        // 6. KPI Summary Metrics
+        $totalOrdersCount      = $tabCounts['semua'];
+        $unpaidOrdersCount     = $tabCounts['belum_bayar'];
+        $processingOrdersCount = $tabCounts['dikemas'];
+        $shippingOrdersCount   = $tabCounts['dikirim'];
+        $completedOrdersCount  = $tabCounts['selesai'];
+        $returnsCount          = \App\Models\OrderReturn::where('status', 'pending')->count();
+
+        // 7. List of Available Couriers for Dropdown
+        $dbCouriers = Order::whereNotNull('courier')->distinct()->pluck('courier')->filter()->values()->toArray();
+        $courierList = !empty($dbCouriers) 
+            ? array_values(array_unique(array_merge($dbCouriers, ['J&T Express', 'JNE Express', 'SiCepat Express']))) 
+            : ['J&T Express', 'JNE Express', 'SiCepat Express', 'Anteraja', 'GoSend', 'GrabExpress'];
+
+        $storeSetting = \App\Models\StoreSetting::getSettings();
+
+        return view('admin.orders', compact(
+            'orders',
+            'status',
+            'search',
+            'courier',
+            'period',
+            'tabCounts',
+            'totalOrdersCount',
+            'unpaidOrdersCount',
+            'processingOrdersCount',
+            'shippingOrdersCount',
+            'completedOrdersCount',
+            'returnsCount',
+            'courierList',
+            'storeSetting'
+        ));
     }
 
     /**
@@ -649,7 +1116,7 @@ class AdminController extends Controller
                     $o->recipient_name ?: ($o->user->name ?? 'Pelanggan'),
                     $o->recipient_phone ?: ($o->user->phone ?? '-'),
                     $o->shipping_address ?: ($o->user->address ?? '-'),
-                    strtoupper($o->courier ?: 'J&T'),
+                    strtoupper($o->courier ?: '-'),
                     $o->tracking_number ?: '-',
                     strtoupper($o->status ?: 'BELUM DIBAYAR'),
                     $o->subtotal ?? 0,
@@ -676,17 +1143,84 @@ class AdminController extends Controller
         $validated = $request->validate([
             'status'          => 'required|string',
             'tracking_number' => 'nullable|string',
+            'waybill_number'  => 'nullable|string',
+            'courier'         => 'nullable|string',
+            'courier_code'    => 'nullable|string',
         ]);
 
-        // Auto-generate resi/AWB code if empty when status is processing or shipping
-        if (empty($validated['tracking_number']) && in_array($validated['status'], ['dikemas', 'diproses', 'dikirim'])) {
-            $validated['tracking_number'] = 'JT' . date('Ymd') . rand(1000, 9999);
+        if (!empty($validated['tracking_number'])) {
+            $validated['tracking_number'] = trim($validated['tracking_number']);
+            $validated['waybill_number']  = trim($validated['tracking_number']);
         }
 
-        $order->update($validated);
+        if (!empty($validated['courier'])) {
+            $courierName = trim($validated['courier']);
+            $validated['courier'] = $courierName;
+            $codeMap = [
+                'j&t express' => 'jnt', 'jne express' => 'jne', 'sicepat express' => 'sicepat',
+                'tiki' => 'tiki', 'pos indonesia' => 'pos', 'gosend' => 'gosend', 'grabexpress' => 'grabexpress'
+            ];
+            $validated['courier_code'] = $codeMap[strtolower($courierName)] ?? strtolower(explode(' ', $courierName)[0] ?? 'jne');
+        }
+
+        $oldStatus = $order->status;
+        $order->update(array_filter($validated, fn($val) => !is_null($val)));
 
         // Automatic System Broadcast Notification for status changes
-        if ($validated['status'] === 'dikemas' || $validated['status'] === 'diproses') {
+        if ($validated['status'] === 'batal') {
+            // Restore stock & decrement sold count if transitioning to batal
+            if ($oldStatus !== 'batal') {
+                foreach ($order->items as $item) {
+                    $product = \App\Models\Product::find($item->product_id);
+                    if ($product) {
+                        $product->stock += $item->quantity;
+                        $product->sold = max(0, $product->sold - $item->quantity);
+
+                        // Kembalikan juga stok spesifik varian (warna & ukuran) jika ada
+                        if (!empty($product->variants) && is_array($product->variants)) {
+                            $variants = $product->variants;
+                            $varUpdated = false;
+                            foreach ($variants as &$var) {
+                                $vColor = $var['color'] ?? '';
+                                $vSize  = $var['size'] ?? '';
+                                if ($vColor && stripos($item->product_name, $vColor) !== false) {
+                                    if (!$vSize || stripos($item->product_name, $vSize) !== false) {
+                                        $var['stock'] = (int)($var['stock'] ?? 0) + $item->quantity;
+                                        $varUpdated = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if ($varUpdated) {
+                                $product->variants = $variants;
+                            }
+                        }
+
+                        $product->save();
+                    }
+                }
+            }
+
+            Announcement::create([
+                'user_id' => $order->user_id,
+                'title'   => '❌ Pesanan #' . $order->invoice_number . ' Dibatalkan',
+                'content' => $oldStatus === 'pengajuan_batal'
+                    ? 'Pengajuan pembatalan untuk Pesanan #' . $order->invoice_number . ' telah DISETUJUI oleh Admin. Transaksi berhasil dibatalkan.'
+                    : 'Pesanan Anda dengan Invoice ' . $order->invoice_number . ' telah dibatalkan.',
+                'type'    => 'notifikasi',
+                'target'  => 'pelanggan',
+                'status'  => 'ditayangkan'
+            ]);
+        } elseif ($oldStatus === 'pengajuan_batal' && in_array($validated['status'], ['dikemas', 'diproses'])) {
+            Announcement::create([
+                'user_id' => $order->user_id,
+                'title'   => '⚠️ Pengajuan Pembatalan #' . $order->invoice_number . ' Ditolak',
+                'content' => 'Pengajuan pembatalan untuk Pesanan #' . $order->invoice_number . ' DITOLAK oleh Admin. Pesanan Anda akan tetap diproses dan dikirimkan.',
+                'type'    => 'notifikasi',
+                'target'  => 'pelanggan',
+                'status'  => 'ditayangkan'
+            ]);
+        } elseif ($validated['status'] === 'dikemas' || $validated['status'] === 'diproses') {
             Announcement::create([
                 'user_id' => $order->user_id,
                 'title'   => '📦 Pesanan #' . $order->invoice_number . ' Sedang Dikemas',
@@ -696,7 +1230,16 @@ class AdminController extends Controller
                 'status'  => 'ditayangkan'
             ]);
         } elseif ($validated['status'] === 'dikirim') {
-            $resiText = !empty($validated['tracking_number']) ? ' dengan No. Resi: ' . $validated['tracking_number'] : '';
+            if (empty($order->biteship_order_id)) {
+                try {
+                    $biteshipService = app(\App\Services\BiteshipService::class);
+                    $biteshipService->processOrderPickup($order);
+                    $order->refresh();
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error("Biteship pickup creation failed on admin status update: " . $e->getMessage());
+                }
+            }
+            $resiText = !empty($order->waybill_number ?: $order->tracking_number) ? ' dengan No. Resi: ' . ($order->waybill_number ?: $order->tracking_number) : '';
             Announcement::create([
                 'user_id' => $order->user_id,
                 'title'   => '🚚 Pesanan #' . $order->invoice_number . ' Dalam Pengiriman',
@@ -722,46 +1265,287 @@ class AdminController extends Controller
     /**
      * Management Return / Komplain Pelanggan (Bukti Video Unboxing & Foto Cacat)
      */
-    public function returns()
+    public function returns(Request $request)
     {
-        $returns = \App\Models\OrderReturn::with('order', 'user')->latest()->get();
-        return view('admin.returns', compact('returns'));
+        $status   = $request->query('status', 'all');
+        $search   = $request->query('search');
+        $solution = $request->query('solution', 'all');
+        $period   = $request->query('period', 'all');
+
+        $query = \App\Models\OrderReturn::with(['order.items.product', 'user'])->latest();
+
+        // 1. Search Filter (Invoice, Resi 1, Resi 2, No Rekening, Nama Rekening, Pembeli, Kontak)
+        if ($search) {
+            $cleanSearch = trim($search);
+            $query->where(function ($q) use ($cleanSearch) {
+                $q->where('return_tracking_number', 'like', "%{$cleanSearch}%")
+                  ->orWhere('replacement_tracking_number', 'like', "%{$cleanSearch}%")
+                  ->orWhere('bank_account_number', 'like', "%{$cleanSearch}%")
+                  ->orWhere('bank_account_name', 'like', "%{$cleanSearch}%")
+                  ->orWhereHas('order', function ($oq) use ($cleanSearch) {
+                      $oq->where('invoice_number', 'like', "%{$cleanSearch}%");
+                  })
+                  ->orWhereHas('user', function ($uq) use ($cleanSearch) {
+                      $uq->where('name', 'like', "%{$cleanSearch}%")
+                        ->orWhere('phone', 'like', "%{$cleanSearch}%")
+                        ->orWhere('email', 'like', "%{$cleanSearch}%");
+                  });
+            });
+        }
+
+        // 2. Status Filter
+        if ($status !== 'all') {
+            if ($status === 'process') {
+                $query->whereIn('status', ['approved', 'approved_pending_shipment']);
+            } else {
+                $query->where('status', $status);
+            }
+        }
+
+        // 3. Solution Filter
+        if ($solution !== 'all') {
+            $query->where('solution_type', $solution);
+        }
+
+        // 4. Period Filter
+        if ($period !== 'all') {
+            if ($period === 'today') {
+                $query->whereDate('created_at', now()->today());
+            } elseif ($period === '7days') {
+                $query->where('created_at', '>=', now()->subDays(7));
+            } elseif ($period === '30days') {
+                $query->where('created_at', '>=', now()->subDays(30));
+            } elseif ($period === 'this_month') {
+                $query->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year);
+            }
+        }
+
+        $returns = $query->paginate(10)->withQueryString();
+
+        // Calculate accurate global counts for tabs & KPI cards
+        $allCount       = \App\Models\OrderReturn::count();
+        $pendingCount   = \App\Models\OrderReturn::where('status', 'pending')->count();
+        $processCount   = \App\Models\OrderReturn::whereIn('status', ['approved', 'approved_pending_shipment'])->count();
+        $completedCount = \App\Models\OrderReturn::where('status', 'completed')->count();
+        $rejectedCount  = \App\Models\OrderReturn::where('status', 'rejected')->count();
+
+        $storeSetting = \App\Models\StoreSetting::getSettings();
+
+        return view('admin.returns', compact(
+            'returns',
+            'status',
+            'search',
+            'solution',
+            'period',
+            'allCount',
+            'pendingCount',
+            'processCount',
+            'completedCount',
+            'rejectedCount',
+            'storeSetting'
+        ));
     }
 
     /**
-     * Process Return Request (Approve / Reject)
+     * Export Laporan Retur & Komplain CSV Format
+     */
+    public function exportReturns(Request $request)
+    {
+        $status   = $request->query('status', 'all');
+        $solution = $request->query('solution', 'all');
+        $period   = $request->query('period', 'all');
+
+        $query = \App\Models\OrderReturn::with(['order', 'user'])->latest();
+
+        if ($status !== 'all') {
+            if ($status === 'process') {
+                $query->whereIn('status', ['approved', 'approved_pending_shipment']);
+            } else {
+                $query->where('status', $status);
+            }
+        }
+
+        if ($solution !== 'all') {
+            $query->where('solution_type', $solution);
+        }
+
+        if ($period !== 'all') {
+            if ($period === 'today') {
+                $query->whereDate('created_at', now()->today());
+            } elseif ($period === '7days') {
+                $query->where('created_at', '>=', now()->subDays(7));
+            } elseif ($period === '30days') {
+                $query->where('created_at', '>=', now()->subDays(30));
+            } elseif ($period === 'this_month') {
+                $query->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year);
+            }
+        }
+
+        $returns = $query->get();
+        $filename = 'laporan-retur-komplain-' . date('Y-m-d') . '.csv';
+
+        $headers = [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Pragma'              => 'no-cache',
+            'Cache-Control'       => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires'             => '0',
+        ];
+
+        $callback = function () use ($returns) {
+            $file = fopen('php://output', 'w');
+            fputs($file, "\xEF\xBB\xBF");
+
+            fputcsv($file, [
+                'ID Klaim',
+                'No. Invoice',
+                'Tanggal Pengajuan',
+                'Nama Pembeli',
+                'No. Telepon',
+                'Jenis Solusi',
+                'Alasan Retur',
+                'Status Klaim',
+                'Rekening Refund',
+                'Resi Pengembalian',
+                'Resi Pengganti Baru',
+                'Catatan Admin',
+            ]);
+
+            foreach ($returns as $r) {
+                fputcsv($file, [
+                    $r->id,
+                    $r->order->invoice_number ?? ('Order #' . $r->order_id),
+                    $r->created_at ? $r->created_at->format('Y-m-d H:i') : '',
+                    $r->user->name ?? 'Pelanggan',
+                    $r->user->phone ?? '-',
+                    $r->solution_type === 'exchange' ? 'TUKAR BARANG' : 'REFUND DANA',
+                    str_replace('_', ' ', strtoupper($r->reason ?? '-')),
+                    strtoupper($r->status ?? '-'),
+                    $r->bank_account_number ? ($r->bank_name . ' - ' . $r->bank_account_number . ' a.n ' . $r->bank_account_name) : '-',
+                    $r->return_tracking_number ?: '-',
+                    $r->replacement_tracking_number ?: '-',
+                    $r->admin_notes ?: '-',
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Process Return Request (Approve / Reject / Generate Resi 2 Replacement)
      */
     public function processReturn(Request $request, $id)
     {
         $request->validate([
-            'status' => 'required|string|in:approved,rejected,completed',
-            'admin_notes' => 'nullable|string|max:1000',
+            'status'                      => 'required|string|in:approved,rejected,completed,generate_resi2',
+            'admin_notes'                 => 'nullable|string|max:1000',
+            'replacement_tracking_number' => 'nullable|string|max:100',
         ]);
 
-        $orderReturn = \App\Models\OrderReturn::with('order')->findOrFail($id);
+        $orderReturn = \App\Models\OrderReturn::with('order.items')->findOrFail($id);
+
+        if ($request->status === 'generate_resi2') {
+            $resi2 = trim($request->replacement_tracking_number ?: '');
+            if (empty($resi2)) {
+                $resi2 = 'EXC-' . strtoupper(substr(md5(time() . $orderReturn->id), 0, 10));
+            }
+            $orderReturn->replacement_tracking_number = $resi2;
+            $orderReturn->status = 'completed';
+            $orderReturn->admin_notes = trim($request->admin_notes ?: 'Produk pengganti baru telah dikirimkan ke pembeli.');
+            $orderReturn->save();
+
+            if ($orderReturn->order) {
+                $orderReturn->order->status = 'retur_disetujui';
+                $orderReturn->order->save();
+            }
+
+            if ($orderReturn->user_id) {
+                \App\Models\Announcement::create([
+                    'user_id' => $orderReturn->user_id,
+                    'title'   => '🚚 Produk Pengganti Baru Pesanan #' . ($orderReturn->order->invoice_number ?? $id) . ' Dikirim',
+                    'content' => 'Produk pengganti baru Anda telah diserahkan ke ekspedisi dengan Nomor Resi Baru (Resi 2): ' . $resi2 . '. Silakan lacak pengantaran di web.',
+                    'type'    => 'notifikasi',
+                    'target'  => 'pelanggan',
+                    'status'  => 'ditayangkan'
+                ]);
+            }
+
+            return redirect()->route('admin.returns')->with('success', 'Produk pengganti dengan Resi (' . $resi2 . ') berhasil diproses!');
+        }
+
         $orderReturn->status = $request->status;
-        $orderReturn->admin_notes = trim($request->admin_notes);
+        $orderReturn->admin_notes = trim($request->admin_notes ?: '');
         $orderReturn->save();
 
-        // Update main order status if approved or completed
-        if ($request->status === 'approved' || $request->status === 'completed') {
-            $orderReturn->order->update(['status' => 'batal']);
+        if ($request->status === 'approved') {
+            try {
+                $biteshipService = app(\App\Services\BiteshipService::class);
+                $biteshipService->createReturnOrder($orderReturn);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::info("Biteship return pickup info: " . $e->getMessage());
+            }
+            $orderReturn->refresh();
+
+            if ($orderReturn->order) {
+                $orderReturn->order->status = 'retur_proses';
+                $orderReturn->order->save();
+            }
+        } elseif ($request->status === 'completed') {
+            if ($orderReturn->order) {
+                $orderReturn->order->status = 'retur_disetujui';
+                $orderReturn->order->save();
+
+                // Restore stock on completed refund, but preserve sold count to retain sales history
+                foreach ($orderReturn->order->items as $item) {
+                    $product = \App\Models\Product::find($item->product_id);
+                    if ($product) {
+                        $product->stock += $item->quantity;
+                        $product->save();
+                    }
+                }
+            }
+        } elseif ($request->status === 'rejected') {
+            if ($orderReturn->order) {
+                $orderReturn->order->status = 'retur_ditolak';
+                $orderReturn->order->save();
+            }
         }
 
         // Send System Notification to User
         if ($orderReturn->user_id) {
-            $statusText = $request->status === 'approved' ? 'DISETUJUI' : ($request->status === 'rejected' ? 'DITOLAK' : 'SELESAI');
+            $statusText = $request->status === 'approved' ? 'DISETUJUI (SILAKAN KIRIM BARANG)' : ($request->status === 'rejected' ? 'DITOLAK' : 'SELESAI');
+            
+            if ($request->status === 'approved') {
+                if (!empty($orderReturn->return_tracking_number)) {
+                    $contentMsg = "Pengajuan retur Anda telah DISETUJUI. Nomor Resi Pengembalian Otomatis (Biteship): {$orderReturn->return_tracking_number}. Silakan bawa paket retur ke counter kurir terdekat dan tunjukkan nomor resi ini (Cashless / Drop-off bebas biaya tunai).";
+                } else {
+                    $contentMsg = 'Pengajuan retur Anda telah DISETUJUI oleh admin. Silakan kirimkan paket fisik barang ke alamat gudang toko kami dan input Nomor Resi pengembalian pada halaman pesanan Anda.';
+                }
+            } elseif ($request->status === 'rejected') {
+                $contentMsg = 'Pengajuan retur barang Anda DITOLAK oleh admin. Catatan: ' . ($request->admin_notes ?: 'Bukti tidak memenuhi syarat garansi toko.');
+            } else {
+                $contentMsg = 'Pengajuan retur & pengembalian dana transaksi Anda telah SELESAI diproses.';
+            }
+
             \App\Models\Announcement::create([
                 'user_id' => $orderReturn->user_id,
-                'title'   => '📦 Pengajuan Retur #' . $orderReturn->order->invoice_number . ' ' . $statusText,
-                'content' => 'Pengajuan retur barang Anda telah ' . strtolower($statusText) . ' oleh admin. Catatan: ' . ($request->admin_notes ?: '-'),
+                'title'   => 'Pengajuan Retur #' . ($orderReturn->order->invoice_number ?? $orderReturn->order_id) . ' ' . $statusText,
+                'content' => $contentMsg,
                 'type'    => 'notifikasi',
                 'target'  => 'pelanggan',
                 'status'  => 'ditayangkan'
             ]);
         }
 
-        return redirect()->route('admin.returns')->with('success', 'Pengajuan retur berhasil diperbarui!');
+        $successMsg = 'Pengajuan retur berhasil diperbarui menjadi status ' . strtoupper($request->status) . '!';
+        if ($request->status === 'approved' && !empty($orderReturn->return_tracking_number)) {
+            $successMsg .= ' Resi retur Biteship (' . $orderReturn->return_tracking_number . ') berhasil diterbitkan otomatis untuk pembeli!';
+        }
+
+        return redirect()->route('admin.returns')->with('success', $successMsg);
     }
 
     /**
@@ -892,14 +1676,16 @@ class AdminController extends Controller
         $query = ProductReview::with(['user', 'product']);
 
         if ($search) {
-            $query->where(function($q) use ($search) {
-                $q->where('comment', 'like', "%{$search}%")
-                  ->orWhere('order_id', 'like', "%{$search}%")
-                  ->orWhereHas('user', function($uq) use ($search) {
-                      $uq->where('name', 'like', "%{$search}%");
+            $cleanSearch = trim($search);
+            $query->where(function($q) use ($cleanSearch) {
+                $q->where('comment', 'like', "%{$cleanSearch}%")
+                  ->orWhere('order_id', 'like', "%{$cleanSearch}%")
+                  ->orWhere('variant', 'like', "%{$cleanSearch}%")
+                  ->orWhereHas('user', function($uq) use ($cleanSearch) {
+                      $uq->where('name', 'like', "%{$cleanSearch}%");
                   })
-                  ->orWhereHas('product', function($pq) use ($search) {
-                      $pq->where('name', 'like', "%{$search}%");
+                  ->orWhereHas('product', function($pq) use ($cleanSearch) {
+                      $pq->where('name', 'like', "%{$cleanSearch}%");
                   });
             });
         }
@@ -911,19 +1697,40 @@ class AdminController extends Controller
         }
 
         if ($rating && $rating !== 'all') {
-            $query->where('rating', (int)$rating);
+            if ($rating === 'low') {
+                $query->whereIn('rating', [1, 2]);
+            } elseif ($rating === 'with_media') {
+                $query->whereNotNull('image')->where('image', '!=', '');
+            } elseif (in_array((int)$rating, [1, 2, 3, 4, 5])) {
+                $query->where('rating', (int)$rating);
+            }
         }
 
-        $reviews = $query->latest()->get();
+        $reviews = $query->latest()->paginate(15)->withQueryString();
+
+        $totalReviews = ProductReview::count();
+        $avgRating = $totalReviews > 0 ? round(ProductReview::avg('rating'), 1) : 0.0;
 
         $stats = [
-            'total_reviews' => ProductReview::count(),
-            'average_rating' => ProductReview::count() > 0 ? round(ProductReview::avg('rating'), 1) : 5.0,
-            'five_star' => ProductReview::where('rating', 5)->count(),
-            'low_rating' => ProductReview::whereIn('rating', [1, 2])->count(),
+            'total_reviews'  => $totalReviews,
+            'average_rating' => $avgRating,
+            'five_star'      => ProductReview::where('rating', 5)->count(),
+            'four_star'      => ProductReview::where('rating', 4)->count(),
+            'three_star'     => ProductReview::where('rating', 3)->count(),
+            'low_rating'     => ProductReview::whereIn('rating', [1, 2])->count(),
+            'with_media'     => ProductReview::whereNotNull('image')->where('image', '!=', '')->count(),
         ];
 
-        return view('admin.reviews', compact('reviews', 'stats'));
+        // Dynamic categories from existing catalog
+        $categories = Product::whereNotNull('category')
+            ->where('category', '!=', '')
+            ->distinct()
+            ->pluck('category')
+            ->sort()
+            ->values()
+            ->toArray();
+
+        return view('admin.reviews', compact('reviews', 'stats', 'categories', 'search', 'category', 'rating'));
     }
 
     /**
@@ -1035,29 +1842,36 @@ class AdminController extends Controller
                     $sub->whereNotNull('discount')->where('discount', '!=', '');
                 });
             })->latest()->get();
+        $allActiveProducts = Product::where('status', 'aktif')->orderBy('name', 'asc')->get();
         $announcements = Announcement::where('type', '!=', 'notifikasi')->latest()->get();
         $settings = \App\Models\StoreSetting::getSettings();
 
-        return view('admin.promos', compact('banners', 'vouchers', 'promoProducts', 'announcements', 'settings'));
+        return view('admin.promos', compact('banners', 'vouchers', 'promoProducts', 'allActiveProducts', 'announcements', 'settings'));
     }
 
     /**
-     * Update Pengaturan Flash Sale (Timer & Status)
+     * Update Pengaturan Flash Sale (Timer, Status & Pilihan Produk Manual)
      */
     public function updateFlashSale(Request $request)
     {
         $validated = $request->validate([
-            'flash_sale_is_active' => 'required|boolean',
-            'flash_sale_end_time'   => 'nullable|date',
+            'flash_sale_is_active'   => 'required|boolean',
+            'flash_sale_end_time'     => 'nullable|date',
+            'flash_sale_product_ids' => 'nullable|array',
         ]);
+
+        $productIds = !empty($request->flash_sale_product_ids)
+            ? array_values(array_unique(array_filter(array_map('intval', $request->flash_sale_product_ids))))
+            : [];
 
         $settings = \App\Models\StoreSetting::getSettings();
         $settings->update([
-            'flash_sale_is_active' => (bool) $request->flash_sale_is_active,
-            'flash_sale_end_time'   => $request->flash_sale_end_time ? $request->flash_sale_end_time : null,
+            'flash_sale_is_active'   => (bool) $request->flash_sale_is_active,
+            'flash_sale_end_time'     => $request->flash_sale_end_time ? $request->flash_sale_end_time : null,
+            'flash_sale_product_ids' => $productIds,
         ]);
 
-        return redirect()->route('admin.promos')->with('success', 'Pengaturan Flash Sale (Waktu & Status) berhasil diperbarui!');
+        return redirect()->route('admin.promos')->with('success', 'Pengaturan Flash Sale (Produk Terpilih, Waktu & Status) berhasil diperbarui!');
     }
 
     /**
@@ -1281,7 +2095,12 @@ class AdminController extends Controller
         $order = Order::findOrFail($id);
         $result = $biteshipService->processOrderPickup($order);
 
-        return redirect()->route('admin.orders')->with('success', 'Pesanan berhasil dikirim ke Biteship! No. Resi (AWB): ' . $order->waybill_number);
+        if (!empty($result['status'])) {
+            $resi = $order->fresh()->waybill_number ?: $order->tracking_number;
+            return redirect()->route('admin.orders')->with('success', 'Paket berhasil diserahkan ke kurir ' . strtoupper($order->courier ?: 'Ekspedisi') . '! Resi resmi (' . $resi . ') telah terbit otomatis.');
+        }
+
+        return redirect()->route('admin.orders')->with('error', 'Gagal serahkan ke kurir: ' . ($result['message'] ?? 'Periksa koneksi Biteship.'));
     }
 
     /**

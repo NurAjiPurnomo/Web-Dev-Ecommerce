@@ -1,4 +1,4 @@
-<footer class="bg-blue-50 border-t border-slate-200 text-slate-700 pt-12 pb-8 mt-16">
+<footer class="bg-blue-50 border-t border-slate-200 text-slate-700 pt-12 pb-8 mt-8 sm:mt-10">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-10">
             
@@ -17,10 +17,23 @@
                 <p class="text-xs text-slate-600 leading-relaxed">
                     Toko online resmi yang menyediakan produk fashion, gadget, aksesoris, dan peralatan rumah tangga berkualitas premium dengan harga terbaik. Belanja aman, mudah, dan terpercaya.
                 </p>
+                @php
+                    $footerStore = \App\Models\StoreSetting::first();
+                    $storePhone = $footerStore->sender_phone ?? '(021) 1234-5678';
+                    $storeAddressParts = array_filter([
+                        $footerStore->address_detail ?? null,
+                        $footerStore->village ?? null,
+                        $footerStore->district ? 'Kec. ' . $footerStore->district : null,
+                        $footerStore->city ?? null,
+                        $footerStore->province ?? null,
+                        $footerStore->postal_code ?? null,
+                    ]);
+                    $storeAddress = !empty($storeAddressParts) ? implode(', ', $storeAddressParts) : 'Indonesia';
+                @endphp
                 <div class="text-xs text-slate-500 mt-4 space-y-1">
                     <p><strong>Email:</strong> support@tokoonline.com</p>
-                    <p><strong>Telepon:</strong> (021) 1234-5678</p>
-                    <p><strong>Alamat:</strong> Jl. Jend. Sudirman No.Kav 21, RT.10/RW.1, Kuningan, Karet, Kecamatan Setiabudi, Kota Jakarta Selatan, Daerah Khusus Ibukota Jakarta 12920</p>
+                    <p><strong>Telepon:</strong> {{ $storePhone }}</p>
+                    <p><strong>Alamat:</strong> {{ $storeAddress }}</p>
                 </div>
             </div>
 
@@ -32,7 +45,7 @@
                 <ul class="space-y-3 text-xs">
                     <li><a href="{{ route('catalog') }}" class="text-slate-600 hover:text-blue-700 transition-colors">Katalog Produk</a></li>
                     <li><a href="{{ route('promo') }}" class="text-slate-600 hover:text-blue-700 transition-colors">Promo Spesial</a></li>
-                    <li><a href="{{ route('articles.index') }}" class="text-slate-600 hover:text-blue-700 transition-colors">Berita & Informasi</a></li>
+                    <li><a href="{{ route('articles.index') }}" class="text-slate-600 hover:text-blue-700 transition-colors">Kabar & Promo Toko</a></li>
                     <li><a href="{{ route('orders') }}" class="text-slate-600 hover:text-blue-700 transition-colors">Lacak Pesanan</a></li>
                 </ul>
             </div>
@@ -69,38 +82,6 @@
                     <a href="#" class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-blue-50 hover:text-blue-700 transition-all shadow-sm">
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/></svg>
                     </a>
-                </div>
-                
-                <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3 block">
-                    Pembayaran & Logistik
-                </h3>
-                <div class="grid grid-cols-4 gap-2 mb-2">
-                    <div class="bg-white border border-slate-200 rounded-lg p-1.5 flex items-center justify-center shadow-2xs" title="BCA">
-                        <span class="font-black italic text-[13px] tracking-tighter" style="color: #003399;">BCA</span>
-                    </div>
-                    <div class="bg-white border border-slate-200 rounded-lg p-1.5 flex items-center justify-center shadow-2xs" title="VISA">
-                        <span class="font-black italic text-[14px] tracking-tighter" style="color: #1a1f71;">VISA</span>
-                    </div>
-                    <div class="bg-white border border-slate-200 rounded-lg p-1.5 flex items-center justify-center shadow-2xs" title="MANDIRI">
-                        <span class="font-black text-[12px] tracking-tight" style="color: #0f4c81;">mandiri</span>
-                    </div>
-                    <div class="bg-white border border-slate-200 rounded-lg p-1.5 flex items-center justify-center shadow-2xs" title="QRIS">
-                        <span class="font-extrabold italic text-[12px]"><span style="color: #ed1c24;">Q</span><span style="color: #003399;">RIS</span></span>
-                    </div>
-                </div>
-                <div class="grid grid-cols-4 gap-2">
-                    <div class="bg-white border border-slate-200 rounded-lg p-1 flex items-center justify-center shadow-2xs" title="JNE">
-                        <span class="font-black italic text-[13px] tracking-tighter" style="color: #c90000;">JNE</span>
-                    </div>
-                    <div class="bg-white border border-slate-200 rounded-lg p-1 flex items-center justify-center shadow-2xs" title="J&T">
-                        <span class="font-black text-[12px] tracking-tighter" style="color: #e50012;">J&T</span>
-                    </div>
-                    <div class="bg-white border border-slate-200 rounded-lg p-1 flex items-center justify-center shadow-2xs" title="SiCepat">
-                        <span class="font-bold text-[11px] tracking-tight" style="color: #d11218;">SiCepat</span>
-                    </div>
-                    <div class="bg-white border border-slate-200 rounded-lg p-1 flex items-center justify-center shadow-2xs" title="GoSend">
-                        <span class="font-bold text-[11px] tracking-tight" style="color: #00a550;">GoSend</span>
-                    </div>
                 </div>
             </div>
 

@@ -21,21 +21,52 @@ class BiteshipWebhookController extends Controller
         $status = strtolower($request->input('status', ''));
         $note = $request->input('note') ?: ($request->input('description') ?: 'Pembaruan status dari kurir');
 
-        // Cari pesanan berdasarkan biteship_order_id atau waybill_number
+        // Cari pesanan forward atau pengajuan retur berdasarkan biteship_order_id atau waybill_number
         $order = null;
+        $orderReturn = null;
         if ($biteshipOrderId) {
             $order = Order::where('biteship_order_id', $biteshipOrderId)->first();
+            if (!$order) {
+                $orderReturn = \App\Models\OrderReturn::where('biteship_order_id', $biteshipOrderId)->first();
+            }
         }
-        if (!$order && $waybillNumber) {
+        if (!$order && !$orderReturn && $waybillNumber) {
             $order = Order::where('waybill_number', $waybillNumber)->first();
+            if (!$order) {
+                $orderReturn = \App\Models\OrderReturn::where('return_tracking_number', $waybillNumber)->first();
+            }
+        }
+
+        // Tangani webhook khusus paket retur
+        if ($orderReturn) {
+            Log::info("Biteship Webhook for Return #{$orderReturn->id}: {$status} - {$note}");
+            if (in_array($status, ['delivered', 'completed', 'done', 'selesai'])) {
+                if ($orderReturn->order && $orderReturn->order->user_id) {
+                    Announcement::create([
+                        'user_id' => $orderReturn->order->user_id,
+                        'title'   => '📦 Paket Retur #' . ($orderReturn->order->invoice_number ?? $orderReturn->order_id) . ' Telah Tiba di Gudang Toko',
+                        'content' => 'Paket retur fisik Anda telah sukses diterima di lokasi gudang toko penjual. Tim toko sedang memeriksa kelengkapan barang sebelum menyelesaikan pengembalian dana / penggantian barang.',
+                        'type'    => 'notifikasi',
+                        'target'  => 'pelanggan',
+                        'status'  => 'ditayangkan'
+                    ]);
+                }
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Biteship Return Webhook processed successfully.'
+            ]);
         }
 
         if ($order) {
             // 1. STATUS SELESAI / TERKIRIM (DELIVERED)
-            if (in_array($status, ['delivered', 'completed', 'done'])) {
-                $order->update([
-                    'status' => 'selesai',
-                ]);
+            if (in_array($status, ['delivered', 'completed', 'done', 'selesai'])) {
+                if ($order->status !== 'selesai') {
+                    $order->update([
+                        'status' => 'dikirim',
+                    ]);
+                }
 
                 // Notifikasi Pelanggan
                 if ($order->user_id) {
@@ -51,8 +82,8 @@ class BiteshipWebhookController extends Controller
 
                 Log::info("Biteship Webhook: Order #{$order->invoice_number} marked as SELESAI (Delivered).");
             } 
-            // 2. STATUS DALAM PENGIRIMAN / TRANSIT
-            elseif (in_array($status, ['dropping_off', 'in_transit', 'picked_up', 'allocated', 'picking_up'])) {
+            // 2. STATUS DALAM PENGIRIMAN / TRANSIT / ON HOLD
+            elseif (in_array($status, ['dropping_off', 'in_transit', 'picked_up', 'allocated', 'picking_up', 'confirmed', 'on_hold', 'ditahan'])) {
                 if ($order->status !== 'dikirim') {
                     $order->update([
                         'status' => 'dikirim',
@@ -60,8 +91,8 @@ class BiteshipWebhookController extends Controller
                     Log::info("Biteship Webhook: Order #{$order->invoice_number} updated to DIKIRIM ({$status}).");
                 }
             } 
-            // 3. STATUS KENDALA / DITOLAK / GAGAL COD (REJECTED & UNDELIVERED)
-            elseif (in_array($status, ['rejected', 'undelivered', 'courier_not_found_address', 'failed', 'cancelled'])) {
+            // 3. STATUS KENDALA / DITOLAK / PAKET HILANG / PAKET RUSAK / HANCURKAN PAKET
+            elseif (in_array($status, ['rejected', 'undelivered', 'courier_not_found_address', 'failed', 'cancelled', 'lost', 'paket_hilang', 'damaged', 'paket_rusak', 'disposed', 'hancurkan_paket'])) {
                 $order->update([
                     'status' => 'batal',
                 ]);
@@ -70,27 +101,27 @@ class BiteshipWebhookController extends Controller
                 if ($order->user_id) {
                     Announcement::create([
                         'user_id' => $order->user_id,
-                        'title'   => '⚠️ Kendala Pengiriman / Gagal Terkirim #' . $order->invoice_number,
-                        'content' => 'Pengiriman paket Anda mengalami kendala (' . $note . '). Pesanan dibatalkan/dikembalikan ke penjual.',
+                        'title'   => '⚠️ Kendala Pengiriman / Paket Dibatalkan #' . $order->invoice_number,
+                        'content' => 'Pengiriman paket Anda mengalami kendala status (' . str_replace('_', ' ', $status) . ': ' . $note . ').',
                         'type'    => 'notifikasi',
                         'target'  => 'pelanggan',
                         'status'  => 'ditayangkan'
                     ]);
                 }
 
-                Log::warning("Biteship Webhook: Order #{$order->invoice_number} GAGAL/DITOLAK: {$status} - {$note}");
+                Log::warning("Biteship Webhook: Order #{$order->invoice_number} KENDALA: {$status} - {$note}");
             }
-            // 4. STATUS DIKEMBALIKAN KE PENJUAL (RETURN TO SHIPPER / RETURNING / RETURNED)
-            elseif (in_array($status, ['returning', 'return_in_transit', 'returned'])) {
+            // 4. STATUS RETUR / DIKEMBALIKAN KE PENJUAL (RETURN PROCESS / RETURNING / RETURNED)
+            elseif (in_array($status, ['returning', 'return_in_transit', 'returned', 'return_process', 'return process'])) {
                 $order->update([
-                    'status' => 'batal',
+                    'status' => 'retur',
                 ]);
 
                 if ($order->user_id) {
                     Announcement::create([
                         'user_id' => $order->user_id,
-                        'title'   => '🔄 Paket Dikembalikan ke Toko Penjual #' . $order->invoice_number,
-                        'content' => 'Paket pesanan Anda sedang/telah dikembalikan ke lokasi toko pengirim. Alasan: ' . $note,
+                        'title'   => '🔄 Paket Dalam Proses Retur ke Toko Penjual #' . $order->invoice_number,
+                        'content' => 'Paket pesanan Anda sedang dikembalikan ke lokasi toko pengirim. Alasan: ' . $note,
                         'type'    => 'notifikasi',
                         'target'  => 'pelanggan',
                         'status'  => 'ditayangkan'

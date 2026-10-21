@@ -14,7 +14,7 @@
     </button>
 </div>
 
-@if ($errors->any())
+@if(isset($errors) && $errors->any())
 <div class="mb-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
     <ul class="list-disc pl-5">
         @foreach ($errors->all() as $error)
@@ -348,7 +348,7 @@
                 // Watch for template changes for auto-fill on new pages
                 this.$watch('pageData.template', (val) => {
                     if (this.isNewPage && this.blocks.length === 0) { // Only auto-fill if it's a new page and empty
-                        this.applyTemplateDummy(val);
+                        this.applyTemplateDefaults(val);
                     }
                 });
             },
@@ -383,10 +383,10 @@
                 document.getElementById('bannerImage').value = '';
             },
             
-            applyTemplateDummy(template) {
+            applyTemplateDefaults(template) {
                 if (template === 'tentang_kami') {
                     if(tinymce.get('pageContent')) {
-                        tinymce.get('pageContent').setContent('<h2>Sejarah Perusahaan Kami</h2><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p><p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>');
+                        tinymce.get('pageContent').setContent('<h2>Sejarah & Komitmen Kami</h2><p>Toko Online didirikan dengan komitmen untuk menghadirkan pengalaman berbelanja daring terbaik bagi seluruh masyarakat Indonesia. Kami menyediakan aneka produk original, berkualitas tinggi, serta layanan pengiriman cepat dan aman hingga ke depan pintu rumah Anda.</p><p>Dengan dukungan sistem logistik terintegrasi dan layanan pelanggan terpercaya, kami bertekad menjadi destinasi belanja online pilihan utama bagi keluarga Indonesia.</p>');
                     }
                     this.blocks = [{
                         id: 'block_' + Date.now(),

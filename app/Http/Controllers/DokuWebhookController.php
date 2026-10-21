@@ -18,8 +18,8 @@ class DokuWebhookController extends Controller
         Log::info('DOKU Webhook Received: ', $request->all());
 
         // DOKU Jokul mengirim Signature melalui Headers
-        $clientId = config('services.doku.client_id') ?: env('DOKU_CLIENT_ID', 'DOKU-DUMMY-CLIENT-ID');
-        $secretKey = config('services.doku.secret_key') ?: env('DOKU_SECRET_KEY', 'DOKU-DUMMY-SECRET-KEY');
+        $clientId = config('services.doku.client_id') ?: env('DOKU_CLIENT_ID');
+        $secretKey = config('services.doku.secret_key') ?: env('DOKU_SECRET_KEY');
 
         $dokuSignature = $request->header('Signature');
         $dokuRequestId = $request->header('Request-Id');
@@ -70,13 +70,6 @@ class DokuWebhookController extends Controller
                             'status' => 'diproses'
                         ]);
                         Log::info("DOKU Webhook: Order {$invoiceNumber} marked as PAID.");
-                    }
-
-                    // Auto-Trigger Biteship Order API: Generasi Resi AWB & Permintaan Pickup Kurir
-                    try {
-                        app(\App\Services\BiteshipService::class)->processOrderPickup($order);
-                    } catch (\Exception $e) {
-                        Log::error("DOKU Webhook Biteship Auto-Pickup Error: " . $e->getMessage());
                     }
                     
                     // Kirim Email Pembayaran Sukses (jika belum dikirim)

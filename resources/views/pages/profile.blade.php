@@ -1,19 +1,169 @@
 @extends('layouts.app')
 
 @section('content')
-<div x-data="{ activeTab: 'biodata' }" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+<!-- Cropper.js CSS & JS CDN -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+<script>
+function avatarCropHandler() {
+    return {
+        avatarPreview: '',
+        croppedBase64: '',
+        showCropModal: false,
+        saving: false,
+        cropperInstance: null,
+
+        onFileChange(e) {
+            const files = e.target.files;
+            if (files && files.length > 0) {
+                const file = files[0];
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    this.showCropModal = true;
+                    this.$nextTick(() => {
+                        const image = this.$refs.cropImage;
+                        image.src = event.target.result;
+                        if (this.cropperInstance) {
+                            this.cropperInstance.destroy();
+                        }
+                        this.cropperInstance = new Cropper(image, {
+                            aspectRatio: 1,
+                            viewMode: 1,
+                            dragMode: 'move',
+                            autoCropArea: 0.9,
+                            restore: false,
+                            guides: true,
+                            center: true,
+                            highlight: false,
+                            cropBoxMovable: true,
+                            cropBoxResizable: true,
+                            toggleDragModeOnDblclick: false,
+                        });
+                    });
+                };
+                reader.readAsDataURL(file);
+            }
+        },
+
+        zoomIn() { if (this.cropperInstance) this.cropperInstance.zoom(0.1); },
+        zoomOut() { if (this.cropperInstance) this.cropperInstance.zoom(-0.1); },
+        rotateLeft() { if (this.cropperInstance) this.cropperInstance.rotate(-90); },
+
+        closeCropModal() {
+            if (this.saving) return;
+            this.showCropModal = false;
+            if (this.cropperInstance) {
+                this.cropperInstance.destroy();
+                this.cropperInstance = null;
+            }
+            if (this.$refs.fileInput) {
+                this.$refs.fileInput.value = '';
+            }
+        },
+
+        async saveCrop() {
+            if (this.cropperInstance && !this.saving) {
+                this.saving = true;
+                const canvas = this.cropperInstance.getCroppedCanvas({
+                    width: 400,
+                    height: 400,
+                });
+                const base64 = canvas.toDataURL('image/jpeg', 0.9);
+                this.avatarPreview = base64;
+                this.croppedBase64 = base64;
+
+                const hiddenAvatarInput = document.getElementById('mainFormAvatarBase64');
+                if (hiddenAvatarInput) hiddenAvatarInput.value = base64;
+
+                // Send AJAX upload request so avatar persists in DB immediately
+                try {
+                    let form = document.getElementById('mainProfileForm');
+                    let formData = form ? new FormData(form) : new FormData();
+                    formData.set('_token', '{{ csrf_token() }}');
+                    formData.set('avatar_base64', base64);
+
+                    let res = await fetch('{{ route("profile.update") }}', {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        },
+                        body: formData
+                    });
+                    let data = await res.json();
+
+                    if (data.success || res.ok) {
+                        const newAvatarUrl = data.avatar_url || base64;
+                        this.avatarPreview = newAvatarUrl;
+                        // Update all user avatar images live on current page
+                        document.querySelectorAll('.user-avatar-img').forEach(img => {
+                            img.src = newAvatarUrl;
+                        });
+
+                        alert('✓ Foto profil berhasil disimpan!');
+                    } else {
+                        alert('Gagal menyimpan foto profil: ' + (data.message || 'Terjadi kesalahan.'));
+                    }
+                } catch(err) {
+                    console.error("Save avatar error", err);
+                    alert('Gagal mengirim foto profil. Silakan coba lagi.');
+                } finally {
+                    this.saving = false;
+                    this.closeCropModal();
+                }
+            }
+        }
+    };
+}
+</script>
+
+<div 
+    x-data="{ 
+        activeTab: '{{ session('active_tab', '') }}' || (window.location.hash ? window.location.hash.replace('#', '') : '') || (localStorage.getItem('profile_active_tab') || 'biodata'),
+        init() {
+            const validTabs = ['biodata', 'alamat', 'vouchers', 'keamanan'];
+            if (!validTabs.includes(this.activeTab)) {
+                this.activeTab = 'biodata';
+            }
+            if (window.location.hash) {
+                const hashTab = window.location.hash.replace('#', '');
+                if (validTabs.includes(hashTab)) {
+                    this.activeTab = hashTab;
+                }
+            }
+            this.$watch('activeTab', value => {
+                if (validTabs.includes(value)) {
+                    localStorage.setItem('profile_active_tab', value);
+                    if (history.pushState) {
+                        history.pushState(null, null, '#' + value);
+                    } else {
+                        location.hash = '#' + value;
+                    }
+                }
+            });
+        }
+    }" 
+    class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10"
+>
 
     <!-- Page Header & Breadcrumb -->
-    <div class="mb-6 space-y-1">
-        <nav class="flex text-xs text-slate-500 gap-2 items-center">
-            <a href="{{ route('home') }}" class="hover:text-blue-700">Beranda</a>
-            <span>/</span>
-            <span class="text-slate-900 font-bold">Profil Saya</span>
+    <div class="mb-8 pb-5 border-b border-slate-200">
+        <!-- Breadcrumb -->
+        <nav class="text-xs text-slate-500 flex items-center gap-1.5 mb-2">
+            <a href="{{ route('home') }}" class="hover:text-blue-700 transition-colors">Beranda</a>
+            <span class="text-slate-400">/</span>
+            <span class="text-slate-900 font-medium">Pengaturan Akun &amp; Profil</span>
         </nav>
-        <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-            Pengaturan Akun &amp; Biodata
+
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Pengaturan Akun &amp; Profil
         </h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+            Kelola informasi biodata, alamat pengiriman, voucher belanja, dan keamanan akun Anda.
+        </p>
     </div>
+
 
     <!-- Flash Alert Messages -->
     @if(session('success'))
@@ -45,62 +195,264 @@
         <div class="lg:col-span-4 space-y-6">
             
             <!-- User Avatar & Card Header -->
-            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs text-center space-y-3">
-                <div class="relative w-20 h-20 rounded-full bg-blue-700 text-white font-extrabold text-3xl flex items-center justify-center mx-auto shadow-md border-2 border-white">
-                    {{ strtoupper(substr($user->name ?? 'U', 0, 1)) }}
-                    <div class="absolute bottom-0 right-0 w-6 h-6 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center text-white" title="Email Terverifikasi">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+            <div class="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-2xs text-center space-y-4" x-data="avatarCropHandler()">
+                
+                <div class="relative w-24 h-24 rounded-full mx-auto ring-4 ring-blue-50 shadow-sm group">
+                    <template x-if="avatarPreview">
+                        <img :src="avatarPreview" alt="Foto Profil" class="user-avatar-img w-24 h-24 rounded-full object-cover shadow-sm border-2 border-white">
+                    </template>
+                    <template x-if="!avatarPreview">
+                        <div>
+                            @if($user->avatar)
+                                <img src="{{ str_starts_with($user->avatar, 'http') ? $user->avatar : asset('storage/' . $user->avatar) }}" alt="{{ $user->name }}" class="user-avatar-img w-24 h-24 rounded-full object-cover shadow-sm border-2 border-white">
+                            @else
+                                <div class="w-24 h-24 rounded-full bg-blue-700 text-white font-extrabold text-3xl flex items-center justify-center shadow-sm border-2 border-white">
+                                    {{ strtoupper(substr($user->name ?? 'U', 0, 1)) }}
+                                </div>
+                            @endif
+                        </div>
+                    </template>
+
+                    <!-- Camera Upload Floating Badge Button -->
+                    <button 
+                        type="button" 
+                        @click="$refs.fileInput.click()" 
+                        class="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-blue-700 hover:bg-blue-800 text-white flex items-center justify-center shadow-md border-2 border-white transition-all cursor-pointer hover:scale-105"
+                        title="Ubah Foto Profil"
+                    >
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
                         </svg>
-                    </div>
+                    </button>
+
+                    <input 
+                        type="file" 
+                        x-ref="fileInput" 
+                        @change="onFileChange($event)" 
+                        accept="image/png,image/jpeg,image/webp,image/jpg" 
+                        class="hidden"
+                    >
                 </div>
 
                 <div>
-                    <h2 class="font-extrabold text-slate-900 text-base sm:text-lg">{{ $user->name }}</h2>
-                    <p class="text-xs text-slate-500">{{ $user->email }}</p>
-                    <span class="inline-block bg-blue-50 text-blue-700 text-[10px] font-bold px-2.5 py-0.5 rounded-full mt-1 border border-blue-200">
-                        Member Toko Online
-                    </span>
+                    <h2 class="font-extrabold text-slate-900 text-base sm:text-lg leading-tight">{{ $user->name }}</h2>
+                    <p class="text-xs text-slate-500 mt-1 truncate max-w-[240px] mx-auto">{{ $user->email }}</p>
                 </div>
+
+                <div class="pt-1">
+                    <button 
+                        type="button" 
+                        @click="$refs.fileInput.click()" 
+                        class="text-xs text-slate-700 hover:text-blue-700 font-bold inline-flex items-center gap-1.5 cursor-pointer bg-slate-50 hover:bg-slate-100 px-3.5 py-1.5 rounded-xl border border-slate-200 transition-colors shadow-2xs"
+                    >
+                        <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <span>Ubah Foto Profil</span>
+                    </button>
+                </div>
+
+                <!-- MODAL CROP FOTO PROFIL (CROPPER.JS) - CLEAN LIGHT THEME -->
+                <div 
+                    x-show="showCropModal" 
+                    x-cloak
+                    x-transition:enter="transition ease-out duration-200"
+                    x-transition:enter-start="opacity-0"
+                    x-transition:enter-end="opacity-100"
+                    x-transition:leave="transition ease-in duration-150"
+                    x-transition:leave-start="opacity-100"
+                    x-transition:leave-end="opacity-0"
+                    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+                    style="display: none;"
+                >
+                    <div @click.away="closeCropModal()" class="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200 text-left space-y-0">
+                        
+                        <!-- Modal Header -->
+                        <div class="px-6 py-4 bg-white border-b border-slate-100 flex items-center justify-between">
+                            <h3 class="font-extrabold text-slate-900 text-base flex items-center gap-2 tracking-tight">
+                                <svg class="w-5 h-5 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L5 5m0 0l2.879 2.879M5 5L19 19"/>
+                                </svg>
+                                <span>Potong &amp; Atur Foto Profil</span>
+                            </h3>
+                            <button 
+                                type="button" 
+                                @click="closeCropModal()" 
+                                class="text-slate-400 hover:text-slate-600 font-bold p-1 rounded-lg transition-colors cursor-pointer text-xl leading-none"
+                            >
+                                &times;
+                            </button>
+                        </div>
+
+                        <!-- Modal Body -->
+                        <div class="p-6 space-y-4">
+                            <p class="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                                Geser dan atur bingkai kotak untuk memotong foto profil Anda secara simetris (1:1):
+                            </p>
+                            
+                            <div class="max-h-72 overflow-hidden bg-slate-100 border border-slate-200/80 rounded-xl flex items-center justify-center p-3">
+                                <img x-ref="cropImage" src="" alt="Crop Image" class="max-w-full max-h-64 block rounded-lg">
+                            </div>
+
+                            <!-- Modal Controls & Actions -->
+                            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                                <div class="flex items-center gap-1.5 w-full sm:w-auto justify-center">
+                                    <button 
+                                        type="button" 
+                                        @click="zoomIn()" 
+                                        class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-bold text-slate-700 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
+                                        title="Perbesar"
+                                    >
+                                        <svg class="w-3.5 h-3.5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"/>
+                                        </svg>
+                                        <span>Perbesar</span>
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        @click="zoomOut()" 
+                                        class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-bold text-slate-700 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
+                                        title="Perkecil"
+                                    >
+                                        <svg class="w-3.5 h-3.5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7"/>
+                                        </svg>
+                                        <span>Perkecil</span>
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        @click="rotateLeft()" 
+                                        class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-bold text-slate-700 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
+                                        title="Putar Foto"
+                                    >
+                                        <svg class="w-3.5 h-3.5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                        </svg>
+                                        <span>Putar</span>
+                                    </button>
+                                </div>
+
+                                <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                                    <button 
+                                        type="button" 
+                                        @click="closeCropModal()" 
+                                        :disabled="saving"
+                                        class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+                                    >
+                                        Batal
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        @click="saveCrop()" 
+                                        :disabled="saving"
+                                        class="px-5 py-2 bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-2xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                                    >
+                                        <svg x-show="saving" class="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <span>Gunakan &amp; Simpan Foto</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <!-- Navigation Tabs Sidebar -->
-            <div class="bg-white border border-slate-200 rounded-2xl p-2 shadow-xs space-y-1">
+            <div class="bg-white border border-slate-200/90 rounded-3xl p-3 shadow-2xs space-y-1.5">
                 <button 
                     type="button" 
                     @click="activeTab = 'biodata'"
-                    :class="activeTab === 'biodata' ? 'bg-blue-50 text-blue-700 font-bold border-l-4 border-blue-700' : 'text-slate-700 hover:bg-slate-50 font-medium'"
-                    class="w-full text-left px-4 py-3 rounded-xl text-xs sm:text-sm transition-all flex items-center gap-3 cursor-pointer"
+                    :class="activeTab === 'biodata' ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200/80 shadow-2xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 border border-transparent font-medium'"
+                    class="w-full text-left px-4 py-3 rounded-2xl text-xs sm:text-sm transition-all flex items-center justify-between cursor-pointer group"
                 >
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors"
+                             :class="activeTab === 'biodata' ? 'bg-blue-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200/70 group-hover:text-slate-700'">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                            </svg>
+                        </div>
+                        <span class="truncate">Biodata Diri</span>
+                    </div>
+                    <svg class="w-4 h-4 shrink-0 transition-transform group-hover:translate-x-0.5" :class="activeTab === 'biodata' ? 'text-blue-700' : 'text-slate-300 group-hover:text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
                     </svg>
-                    <span>Biodata Diri</span>
                 </button>
 
                 <button 
                     type="button" 
                     @click="activeTab = 'alamat'"
-                    :class="activeTab === 'alamat' ? 'bg-blue-50 text-blue-700 font-bold border-l-4 border-blue-700' : 'text-slate-700 hover:bg-slate-50 font-medium'"
-                    class="w-full text-left px-4 py-3 rounded-xl text-xs sm:text-sm transition-all flex items-center gap-3 cursor-pointer"
+                    :class="activeTab === 'alamat' ? 'bg-blue-50 text-blue-700 font-bold border-blue-200/80 shadow-2xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 border border-transparent font-medium'"
+                    class="w-full text-left px-4 py-3 rounded-2xl text-xs sm:text-sm transition-all flex items-center justify-between cursor-pointer group"
                 >
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors"
+                             :class="activeTab === 'alamat' ? 'bg-blue-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200/70 group-hover:text-slate-700'">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                        </div>
+                        <span class="truncate">Alamat Pengiriman Utama</span>
+                    </div>
+                    <svg class="w-4 h-4 shrink-0 transition-transform group-hover:translate-x-0.5" :class="activeTab === 'alamat' ? 'text-blue-700' : 'text-slate-300 group-hover:text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
                     </svg>
-                    <span>Alamat Pengiriman Utama</span>
+                </button>
+
+                <button 
+                    type="button" 
+                    @click="activeTab = 'vouchers'"
+                    :class="activeTab === 'vouchers' ? 'bg-blue-50 text-blue-700 font-bold border-blue-200/80 shadow-2xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 border border-transparent font-medium'"
+                    class="w-full text-left px-4 py-3 rounded-2xl text-xs sm:text-sm transition-all flex items-center justify-between cursor-pointer group"
+                >
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors"
+                             :class="activeTab === 'vouchers' ? 'bg-blue-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200/70 group-hover:text-slate-700'">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                            </svg>
+                        </div>
+                        <span class="truncate">Voucher Saya</span>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        @php
+                            $activeVCount = $usableVouchersCount ?? (isset($claimedVouchers) ? $claimedVouchers->filter(fn($v) => !($v->pivot->is_used ?? false) && (!($v->expires_at && $v->expires_at->isPast())) && (($v->status ?? 'aktif') === 'aktif'))->count() : 0);
+                        @endphp
+                        @if($activeVCount > 0)
+                            <span class="bg-blue-100 text-blue-800 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border border-blue-200/80">
+                                {{ $activeVCount }}
+                            </span>
+                        @endif
+                        <svg class="w-4 h-4 shrink-0 transition-transform group-hover:translate-x-0.5" :class="activeTab === 'vouchers' ? 'text-blue-700' : 'text-slate-300 group-hover:text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </div>
                 </button>
 
                 <button 
                     type="button" 
                     @click="activeTab = 'keamanan'"
-                    :class="activeTab === 'keamanan' ? 'bg-blue-50 text-blue-700 font-bold border-l-4 border-blue-700' : 'text-slate-700 hover:bg-slate-50 font-medium'"
-                    class="w-full text-left px-4 py-3 rounded-xl text-xs sm:text-sm transition-all flex items-center gap-3 cursor-pointer"
+                    :class="activeTab === 'keamanan' ? 'bg-blue-50 text-blue-700 font-bold border-blue-200/80 shadow-2xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 border border-transparent font-medium'"
+                    class="w-full text-left px-4 py-3 rounded-2xl text-xs sm:text-sm transition-all flex items-center justify-between cursor-pointer group"
                 >
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors"
+                             :class="activeTab === 'keamanan' ? 'bg-blue-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200/70 group-hover:text-slate-700'">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                            </svg>
+                        </div>
+                        <span class="truncate">Keamanan &amp; Kata Sandi</span>
+                    </div>
+                    <svg class="w-4 h-4 shrink-0 transition-transform group-hover:translate-x-0.5" :class="activeTab === 'keamanan' ? 'text-blue-700' : 'text-slate-300 group-hover:text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
                     </svg>
-                    <span>Keamanan &amp; Kata Sandi</span>
                 </button>
             </div>
 
@@ -109,156 +461,178 @@
         <!-- RIGHT CONTENT AREA (~70% / 8 cols) -->
         <div class="lg:col-span-8">
 
-            <form action="{{ route('profile.update') }}" method="POST" class="space-y-6">
+            <form id="mainProfileForm" action="{{ route('profile.update') }}" method="POST" x-show="activeTab === 'biodata' || activeTab === 'alamat'">
                 @csrf
 
+                <!-- Hidden Input for Active Tab & Avatar Base64 Image -->
+                <input type="hidden" name="active_tab" :value="activeTab" hidden>
+                <input type="hidden" name="avatar_base64" id="mainFormAvatarBase64" hidden>
+
                 <!-- TAB 1: BIODATA DIRI -->
-                <div x-show="activeTab === 'biodata'" class="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xs space-y-6">
-                    <div class="border-b border-slate-100 pb-3">
-                        <h2 class="text-base sm:text-lg font-bold text-slate-900">Ubah Biodata Diri</h2>
-                        <p class="text-xs text-slate-500">Kelola informasi profil akun Toko Online Anda</p>
+                <div x-show="activeTab === 'biodata'" class="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-2xs space-y-6">
+                    <div class="border-b border-slate-100 pb-4">
+                        <h2 class="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">Biodata Diri</h2>
+                        <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Kelola informasi profil akun Anda untuk verifikasi &amp; kemudahan transaksi</p>
                     </div>
 
-                    <div class="space-y-4">
+                    <div class="space-y-5">
 
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">
-                            Nama Lengkap <span class="text-red-500">*</span>
-                        </label>
-                        <input 
-                            type="text" 
-                            name="name" 
-                            value="{{ old('name', $user->name) }}" 
-                            required 
-                            class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none"
-                        >
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Nama Lengkap -->
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">
-                                Alamat Email (Terverifikasi)
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Nama Lengkap <span class="text-red-500">*</span>
                             </label>
-                            <input 
-                                type="email" 
-                                value="{{ $user->email }}" 
-                                disabled 
-                                class="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-500 cursor-not-allowed"
-                            >
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
+                                </div>
+                                <input 
+                                    type="text" 
+                                    name="name" 
+                                    value="{{ old('name', $user->name) }}" 
+                                    required 
+                                    placeholder="Masukkan nama lengkap Anda..."
+                                    class="w-full bg-slate-50/70 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-700 focus:ring-4 focus:ring-blue-100/60 rounded-2xl pl-10 pr-4 py-3 text-xs sm:text-sm font-semibold text-slate-900 transition-all placeholder:text-slate-400 placeholder:font-normal"
+                                >
+                            </div>
                         </div>
 
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">
-                                Nomor WhatsApp / HP <span class="text-red-500">*</span>
-                            </label>
-                            <input 
-                                type="text" 
-                                name="phone" 
-                                value="{{ old('phone', $user->phone) }}" 
-                                required 
-                                placeholder="081234567890"
-                                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none"
-                            >
+                        <!-- Email & No HP / WhatsApp -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                    Alamat Email <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                        </svg>
+                                    </div>
+                                    <input 
+                                        type="email" 
+                                        name="email"
+                                        value="{{ old('email', $user->email) }}" 
+                                        required 
+                                        placeholder="email@domain.com"
+                                        class="w-full bg-slate-50/70 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-700 focus:ring-4 focus:ring-blue-100/60 rounded-2xl pl-10 pr-4 py-3 text-xs sm:text-sm font-semibold text-slate-900 transition-all placeholder:text-slate-400 placeholder:font-normal"
+                                    >
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                    Nomor WhatsApp / HP <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                                        </svg>
+                                    </div>
+                                    <input 
+                                        type="text" 
+                                        name="phone" 
+                                        value="{{ old('phone', $user->phone) }}" 
+                                        required 
+                                        placeholder="081234567890"
+                                        class="w-full bg-slate-50/70 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-700 focus:ring-4 focus:ring-blue-100/60 rounded-2xl pl-10 pr-4 py-3 text-xs sm:text-sm font-semibold text-slate-900 transition-all placeholder:text-slate-400 placeholder:font-normal"
+                                    >
+                                </div>
+                            </div>
                         </div>
+
+                        <!-- Jenis Kelamin & Tanggal Lahir -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1.5">Jenis Kelamin</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                                        </svg>
+                                    </div>
+                                    <select 
+                                        name="gender" 
+                                        class="w-full bg-slate-50/70 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-700 focus:ring-4 focus:ring-blue-100/60 rounded-2xl pl-10 pr-10 py-3 text-xs sm:text-sm font-semibold text-slate-900 transition-all cursor-pointer appearance-none"
+                                    >
+                                        <option value="">-- Pilih Jenis Kelamin --</option>
+                                        <option value="Laki-laki" {{ old('gender', $user->gender) == 'Laki-laki' ? 'selected' : '' }}>Laki-laki</option>
+                                        <option value="Perempuan" {{ old('gender', $user->gender) == 'Perempuan' ? 'selected' : '' }}>Perempuan</option>
+                                    </select>
+                                    <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1.5">Tanggal Lahir</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        </svg>
+                                    </div>
+                                    <input 
+                                        type="date" 
+                                        name="birth_date" 
+                                        value="{{ old('birth_date', $user->birth_date) }}" 
+                                        class="w-full bg-slate-50/70 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-700 focus:ring-4 focus:ring-blue-100/60 rounded-2xl pl-10 pr-4 py-3 text-xs sm:text-sm font-semibold text-slate-900 transition-all"
+                                    >
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Informasi & Privasi Akun Note (Eliminates dead empty space) -->
+                        <div class="rounded-2xl p-4 bg-blue-50/60 border border-blue-200/70 flex items-start gap-3.5 shadow-2xs mt-2">
+                            <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 mt-0.5">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                </svg>
+                            </div>
+                            <div class="space-y-1 text-xs text-slate-600">
+                                <h4 class="font-bold text-slate-900 text-xs sm:text-sm">Keamanan &amp; Kerahasiaan Data Pribadi</h4>
+                                <p class="leading-relaxed text-slate-500">
+                                    Alamat email dan nomor WhatsApp Anda digunakan untuk notifikasi status pesanan, resi pengiriman real-time, dan verifikasi akun. Data Anda terlindungi dengan standar enkripsi terpercaya.
+                                </p>
+                            </div>
+                        </div>
+
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Jenis Kelamin</label>
-                            <select 
-                                name="gender" 
-                                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none cursor-pointer"
-                            >
-                                <option value="">-- Pilih Jenis Kelamin --</option>
-                                <option value="Laki-laki" {{ old('gender', $user->gender) == 'Laki-laki' ? 'selected' : '' }}>Laki-laki</option>
-                                <option value="Perempuan" {{ old('gender', $user->gender) == 'Perempuan' ? 'selected' : '' }}>Perempuan</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Tanggal Lahir</label>
-                            <input 
-                                type="date" 
-                                name="birth_date" 
-                                value="{{ old('birth_date', $user->birth_date) }}" 
-                                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none"
-                            >
-                        </div>
-                    </div>
-
-                    </div>
-
-                    <div class="pt-2">
+                    <div class="pt-2 flex items-center justify-between flex-wrap gap-3">
                         <button 
                             type="submit" 
-                            class="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs sm:text-sm px-6 py-3 rounded-xl transition-colors shadow-2xs cursor-pointer"
+                            class="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs sm:text-sm px-7 py-3 rounded-2xl transition-all shadow-sm shadow-blue-700/25 active:scale-[0.99] flex items-center gap-2 cursor-pointer"
                         >
-                            Simpan Perubahan Biodata
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <span>Simpan Perubahan Biodata</span>
                         </button>
+                        <span class="text-[11px] text-slate-400">Terakhir diperbarui secara berkala</span>
                     </div>
                 </div>
 
-                <!-- TAB 2: ALAMAT TUJUAN PENGIRIMAN (RUMAH ANDA) -->
-                <div x-show="activeTab === 'alamat'" class="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xs space-y-6">
-                    <div class="border-b border-slate-100 pb-3">
-                        <h2 class="text-base sm:text-lg font-bold text-slate-900">Alamat Tujuan Pengiriman (Rumah Anda)</h2>
-                        <p class="text-xs text-slate-500">Alamat ini akan otomatis terpasang saat Anda melakukan pembelian / checkout</p>
+                <!-- TAB 2: ALAMAT TUJUAN PENGIRIMAN UTAMA -->
+                <div x-show="activeTab === 'alamat'" class="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-2xs space-y-6">
+                    <div class="border-b border-slate-100 pb-4">
+                        <h2 class="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">Alamat Pengiriman Utama</h2>
+                        <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Kelola informasi alamat tujuan lengkap untuk kemudahan checkout otomatis</p>
                     </div>
 
-                    <div class="space-y-4">
-
-                    <!-- Address Type / Label Preset Badges -->
-                    <div class="bg-blue-50/70 border border-blue-200/70 p-3 rounded-xl flex items-center justify-between gap-2">
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs font-bold text-blue-900 uppercase tracking-wider">Tipe / Label Alamat:</span>
-                            <span class="text-[11px] text-slate-500 hidden sm:inline">(Pilih kategori lokasi tujuan)</span>
-                        </div>
-                        <div class="flex items-center gap-1.5" x-data="{ activeLabel: 'Rumah' }">
-                            <button 
-                                type="button" 
-                                @click="activeLabel = 'Rumah'; const textarea = document.getElementById('user_address_field'); if (textarea && !textarea.value.includes('[Rumah]')) { textarea.value = '[Rumah] ' + textarea.value.replace(/^\[(Rumah|Kantor|Lainnya)\]\s*/, ''); }"
-                                class="px-2.5 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1 bg-blue-700 text-white shadow-2xs"
-                            >
-                                🏠 <span>Rumah</span>
-                            </button>
-                            <button 
-                                type="button" 
-                                @click="activeLabel = 'Kantor'; const textarea = document.getElementById('user_address_field'); if (textarea) { textarea.value = '[Kantor] ' + textarea.value.replace(/^\[(Rumah|Kantor|Lainnya)\]\s*/, ''); }"
-                                class="px-2.5 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1 bg-white border border-slate-300 text-slate-700 hover:bg-slate-100"
-                            >
-                                🏢 <span>Kantor</span>
-                            </button>
-                            <button 
-                                type="button" 
-                                @click="activeLabel = 'Lainnya'; const textarea = document.getElementById('user_address_field'); if (textarea) { textarea.value = '[Lainnya] ' + textarea.value.replace(/^\[(Rumah|Kantor|Lainnya)\]\s*/, ''); }"
-                                class="px-2.5 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1 bg-white border border-slate-300 text-slate-700 hover:bg-slate-100"
-                            >
-                                🏡 <span>Lainnya</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">
-                            Detail Alamat Pengiriman (Nama Jalan, No. Rumah, RT/RW, Patokan / PT) <span class="text-red-500">*</span>
-                        </label>
-                        <textarea 
-                            id="user_address_field"
-                            name="address" 
-                            rows="2" 
-                            required
-                            placeholder="Contoh: [Rumah] Jl. Ahmad Yani No. 12, RT 03/RW 05, PT Bumitekno Indonesia"
-                            class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none"
-                        >{{ old('address', $user->address && $user->address !== 'denpasar' ? $user->address : '') }}</textarea>
-
-                        <p class="text-[11px] text-slate-500 mt-1">
-                            Tuliskan detail <strong>Nomor Rumah, RT/RW, Nama Jalan, atau Nama PT/Gedung</strong> Anda secara spesifik di sini.
-                        </p>
-                    </div>
-
-                    <!-- BITESHIP LIVE GPS & AREA AUTOCOMPLETE SEARCH -->
                     <div 
-                        x-data="{
+                        class="space-y-5" 
+                        x-data="{ 
+                            activeLabel: '{{ old('address_label', $user->address_label ?: 'Rumah') }}',
+                            recipientName: '{{ old('recipient_name', $user->recipient_name ?: $user->name) }}',
+                            recipientPhone: '{{ old('recipient_phone', $user->recipient_phone ?: $user->phone) }}',
+                            addressDetail: `{{ old('address', $user->address && $user->address !== 'denpasar' ? $user->address : '') }}`,
                             searchQuery: '{{ old('city', $user->city) ? (($user->district ? $user->district . ', ' : '') . $user->city . ', ' . ($user->province ?? '') . ($user->postal_code ? '. ' . $user->postal_code : '')) : '' }}',
                             selectedArea: {
                                 id: '{{ old('biteship_area_id', $user->biteship_area_id ?: $user->city_id) }}',
@@ -274,6 +648,25 @@
                             showMapModal: false,
                             mapInstance: null,
                             markerInstance: null,
+                            mapSearchQuery: '',
+                            mapSearchResults: [],
+                            isSearchingMap: false,
+                            isGeocoding: false,
+                            isLocatingGPS: false,
+                            gpsAccuracyNote: '',
+                            detectedBiteshipArea: null,
+                            detectedAddress: {
+                                display_name: '',
+                                road: '',
+                                village: '',
+                                district: '',
+                                city: '',
+                                province: '',
+                                postal_code: '',
+                                lat: null,
+                                lng: null,
+                                formatted_summary: ''
+                            },
 
                             async searchArea() {
                                 if (this.searchQuery.length < 3) {
@@ -312,10 +705,10 @@
                                                 type: 'osm',
                                                 id: 'osm_' + item.place_id,
                                                 name: item.display_name,
-                                                subtext: '📍 Hasil Peta (Kecamatan/Jalan/PT/Gedung)',
+                                                subtext: 'Hasil Pencarian Peta (Kecamatan/Jalan/Gedung)',
                                                 lat: item.lat,
                                                 lon: item.lon,
-                                                badge: '🗺️ Peta Map GPS',
+                                                badge: 'Titik Peta',
                                                 badgeClass: 'bg-emerald-100 text-emerald-800'
                                             });
                                         });
@@ -332,6 +725,7 @@
 
                             selectArea(item) {
                                 if (item.type === 'osm') {
+                                    this.addressDetail = item.name;
                                     const fullAddressTextarea = document.querySelector('textarea[name=address]');
                                     if (fullAddressTextarea) {
                                         fullAddressTextarea.value = item.name;
@@ -360,25 +754,39 @@
 
                             openMapPicker() {
                                 this.showMapModal = true;
+                                this.mapSearchResults = [];
                                 this.$nextTick(() => {
                                     if (!this.mapInstance) {
                                         this.initMap();
                                     } else {
-                                        setTimeout(() => { this.mapInstance.invalidateSize(); }, 300);
+                                        setTimeout(() => { 
+                                            this.mapInstance.invalidateSize(); 
+                                        }, 250);
                                     }
                                 });
                             },
 
                             initMap() {
-                                const defaultLat = -6.2088;
-                                const defaultLng = 106.8456;
-                                this.mapInstance = L.map('leafletMapContainer').setView([defaultLat, defaultLng], 13);
+                                // Default coordinate Jawa Tengah / Tegal
+                                let defaultLat = -6.8694;
+                                let defaultLng = 109.1402;
+
+                                this.mapInstance = L.map('leafletMapContainer', {
+                                    zoomControl: true
+                                }).setView([defaultLat, defaultLng], 14);
 
                                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                                    attribution: '© OpenStreetMap contributors'
+                                    attribution: '© OpenStreetMap contributors',
+                                    maxZoom: 19
                                 }).addTo(this.mapInstance);
 
-                                this.markerInstance = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(this.mapInstance);
+                                this.markerInstance = L.marker([defaultLat, defaultLng], { 
+                                    draggable: true 
+                                }).addTo(this.mapInstance);
+
+                                this.markerInstance.on('dragstart', () => {
+                                    this.isGeocoding = true;
+                                });
 
                                 this.markerInstance.on('dragend', (event) => {
                                     const position = event.target.getLatLng();
@@ -390,261 +798,1068 @@
                                     this.reverseGeocode(e.latlng.lat, e.latlng.lng);
                                 });
 
-                                this.detectGPSForMap();
+                                // Jika user sudah punya kota/kecamatan, cari dan arahkan peta ke lokasi tersebut
+                                if (this.selectedArea.district || this.selectedArea.city) {
+                                    const initialQuery = (this.selectedArea.district ? this.selectedArea.district + ' ' : '') + (this.selectedArea.city || '');
+                                    this.searchLocationInMap(initialQuery, true);
+                                } else {
+                                    this.detectGPSForMap();
+                                }
                             },
 
                             detectGPSForMap() {
-                                if (navigator.geolocation) {
-                                    navigator.geolocation.getCurrentPosition((pos) => {
+                                if (!navigator.geolocation) {
+                                    this.gpsAccuracyNote = 'Browser Anda tidak mendukung deteksi lokasi otomatis.';
+                                    return;
+                                }
+                                this.isLocatingGPS = true;
+                                this.gpsAccuracyNote = 'Mendeteksi titik koordinat GPS akurat...';
+
+                                navigator.geolocation.getCurrentPosition(
+                                    (pos) => {
+                                        this.isLocatingGPS = false;
                                         const lat = pos.coords.latitude;
                                         const lng = pos.coords.longitude;
+                                        const acc = pos.coords.accuracy || 0;
+
+                                        if (acc > 3000) {
+                                            this.gpsAccuracyNote = 'Titik terdeteksi via jaringan internet (toleransi ±' + Math.round(acc/1000) + ' km). Gunakan kotak cari alamat jika lokasi kurang presisi.';
+                                        } else {
+                                            this.gpsAccuracyNote = 'GPS akurat berhasil terdeteksi (akurasi ±' + Math.round(acc) + ' meter)';
+                                        }
+
                                         if (this.mapInstance && this.markerInstance) {
-                                            this.mapInstance.setView([lat, lng], 15);
+                                            this.mapInstance.flyTo([lat, lng], 17);
                                             this.markerInstance.setLatLng([lat, lng]);
                                             this.reverseGeocode(lat, lng);
                                         }
-                                    });
+                                    },
+                                    (err) => {
+                                        this.isLocatingGPS = false;
+                                        let msg = 'Tidak dapat mengakses lokasi perangkat.';
+                                        if (err.code === 1) msg = 'Izin lokasi belum diberikan. Silakan cari nama jalan di kotak pencarian.';
+                                        else if (err.code === 2) msg = 'Sinyal lokasi tidak tersedia.';
+                                        else if (err.code === 3) msg = 'Waktu pencarian lokasi GPS habis.';
+                                        this.gpsAccuracyNote = msg;
+                                    },
+                                    {
+                                        enableHighAccuracy: true,
+                                        timeout: 10000,
+                                        maximumAge: 0
+                                    }
+                                );
+                            },
+
+                            async searchLocationInMap(queryOverride = null, isInitial = false) {
+                                const q = queryOverride || this.mapSearchQuery;
+                                if (!q || q.trim().length < 3) return;
+
+                                this.isSearchingMap = true;
+                                try {
+                                    const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(q) + '&countrycodes=id&limit=5&addressdetails=1');
+                                    const list = await res.json();
+                                    if (Array.isArray(list) && list.length > 0) {
+                                        if (isInitial) {
+                                            const item = list[0];
+                                            const lat = parseFloat(item.lat);
+                                            const lon = parseFloat(item.lon);
+                                            if (this.mapInstance && this.markerInstance) {
+                                                this.mapInstance.setView([lat, lon], 16);
+                                                this.markerInstance.setLatLng([lat, lon]);
+                                                this.reverseGeocode(lat, lon);
+                                            }
+                                        } else {
+                                            this.mapSearchResults = list;
+                                        }
+                                    } else {
+                                        this.mapSearchResults = [];
+                                    }
+                                } catch (e) {
+                                    console.error('Error search in map:', e);
+                                } finally {
+                                    this.isSearchingMap = false;
+                                }
+                            },
+
+                            selectMapSearchResult(item) {
+                                const lat = parseFloat(item.lat);
+                                const lon = parseFloat(item.lon);
+                                this.mapSearchResults = [];
+                                this.mapSearchQuery = item.display_name.split(',')[0];
+                                if (this.mapInstance && this.markerInstance) {
+                                    this.mapInstance.flyTo([lat, lon], 17);
+                                    this.markerInstance.setLatLng([lat, lon]);
+                                    this.reverseGeocode(lat, lon);
                                 }
                             },
 
                             async reverseGeocode(lat, lng) {
+                                this.isGeocoding = true;
                                 try {
-                                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                                    // Tier 1: Detail mikro (Jalan, Bangunan, Desa)
+                                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
                                     const data = await res.json();
                                     if (data && data.address) {
                                         const addr = data.address;
-                                        const street = addr.road || addr.building || addr.amenity || '';
-                                        const suburb = addr.suburb || addr.village || addr.neighbourhood || '';
-                                        const city = addr.city || addr.town || addr.city_district || addr.county || '';
-                                        const postcode = addr.postcode || '';
+                                        let road = addr.road || addr.pedestrian || addr.street || addr.residential || addr.building || addr.amenity || addr.neighbourhood || addr.suburb || addr.hamlet || '';
+                                        let village = addr.village || addr.suburb || addr.neighbourhood || addr.hamlet || '';
+                                        let district = addr.subdistrict || addr.city_district || addr.district || addr.municipality || '';
+                                        let city = addr.city || addr.town || addr.county || '';
+                                        let province = addr.state || addr.province || addr.region || '';
+                                        let postcode = addr.postcode || '';
 
-                                        if (city || suburb) {
-                                            this.searchQuery = suburb ? (suburb + ', ' + city) : city;
-                                            this.searchArea();
+                                        // Tier 2: Jika Kecamatan atau Kode Pos belum terdeteksi dari node desa mikro,
+                                        // lakukan resolusi tingkat wilayah kecamatan (Zoom 12)
+                                        if (!district || !postcode) {
+                                            try {
+                                                const resZ12 = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=12&addressdetails=1`);
+                                                const dataZ12 = await resZ12.json();
+                                                if (dataZ12 && dataZ12.address) {
+                                                    const zAddr = dataZ12.address;
+                                                    if (!district) {
+                                                        district = zAddr.town || zAddr.subdistrict || zAddr.district || zAddr.city_district || zAddr.municipality || '';
+                                                    }
+                                                    if (!postcode && zAddr.postcode) {
+                                                        postcode = zAddr.postcode;
+                                                    }
+                                                }
+                                            } catch (errZ12) {
+                                                console.warn('Resolusi zoom12 kecamatan error:', errZ12);
+                                            }
                                         }
 
-                                        const fullAddressTextarea = document.querySelector('textarea[name=address]');
-                                        if (fullAddressTextarea && data.display_name) {
-                                            fullAddressTextarea.value = data.display_name;
+                                        // Fallback cerdas untuk nama jalan di pedesaan/pemukiman tanpa plang jalan OSM
+                                        if (!road) {
+                                            road = village ? ('Area Lingkungan Desa ' + village) : 'Jalan Lingkungan / Pemukiman';
                                         }
 
-                                        if (postcode) {
-                                            this.selectedArea.postal_code = postcode;
-                                            const postalInput = document.querySelector('input[name=postal_code]');
-                                            if (postalInput) postalInput.value = postcode;
+                                        this.detectedAddress = {
+                                            display_name: data.display_name || '',
+                                            road: road,
+                                            village: village,
+                                            district: district,
+                                            city: city,
+                                            province: province,
+                                            postal_code: postcode,
+                                            lat: Number(lat).toFixed(6),
+                                            lng: Number(lng).toFixed(6),
+                                            formatted_summary: [road, village, district, city, province].filter(Boolean).join(', ')
+                                        };
+
+                                        // Pre-match Biteship area secara realtime
+                                        const bQuery = (district ? district + ' ' : '') + city;
+                                        if (bQuery.trim().length >= 3) {
+                                            fetch('/shipping/biteship/areas?query=' + encodeURIComponent(bQuery))
+                                                .then(r => r.json())
+                                                .then(bRes => {
+                                                    if (bRes.status === 'success' && bRes.data && bRes.data.length > 0) {
+                                                        this.detectedBiteshipArea = bRes.data[0];
+                                                        if (!this.detectedAddress.district && this.detectedBiteshipArea.administrative_division_level_3_name) {
+                                                            this.detectedAddress.district = this.detectedBiteshipArea.administrative_division_level_3_name;
+                                                        }
+                                                        if (!this.detectedAddress.postal_code && this.detectedBiteshipArea.postal_code) {
+                                                            this.detectedAddress.postal_code = this.detectedBiteshipArea.postal_code;
+                                                        }
+                                                    }
+                                                }).catch(() => {});
                                         }
                                     }
                                 } catch (e) {
                                     console.error('Reverse geocode error:', e);
+                                } finally {
+                                    this.isGeocoding = false;
                                 }
+                            },
+
+                            applyMapLocation() {
+                                if (!this.detectedAddress.lat) {
+                                    this.showMapModal = false;
+                                    return;
+                                }
+
+                                // 1. Susun nama jalan / patokan detail untuk textarea alamat
+                                let detailText = '';
+                                if (this.detectedAddress.road) {
+                                    detailText = this.detectedAddress.road;
+                                    if (this.detectedAddress.village && this.detectedAddress.village !== this.detectedAddress.road) {
+                                        detailText += ', ' + this.detectedAddress.village;
+                                    }
+                                } else if (this.detectedAddress.display_name) {
+                                    detailText = this.detectedAddress.display_name;
+                                }
+
+                                if (detailText) {
+                                    if (!this.addressDetail || this.addressDetail.trim() === '') {
+                                        this.addressDetail = detailText;
+                                    } else {
+                                        if (!this.addressDetail.toLowerCase().includes(this.detectedAddress.road.toLowerCase())) {
+                                            this.addressDetail = detailText + ' - ' + this.addressDetail;
+                                        }
+                                    }
+                                    const fullAddressTextarea = document.querySelector('textarea[name=address]');
+                                    if (fullAddressTextarea) fullAddressTextarea.value = this.addressDetail;
+                                }
+
+                                // 2. Isi detail wilayah
+                                if (this.detectedAddress.district) this.selectedArea.district = this.detectedAddress.district;
+                                if (this.detectedAddress.village) this.selectedArea.village = this.detectedAddress.village;
+                                if (this.detectedAddress.city) this.selectedArea.city = this.detectedAddress.city;
+                                if (this.detectedAddress.province) this.selectedArea.province = this.detectedAddress.province;
+                                if (this.detectedAddress.postal_code) {
+                                    this.selectedArea.postal_code = this.detectedAddress.postal_code;
+                                    const postalInput = document.querySelector('input[name=postal_code]');
+                                    if (postalInput) postalInput.value = this.detectedAddress.postal_code;
+                                }
+
+                                // 3. Tentukan Biteship area & format searchQuery
+                                if (this.detectedBiteshipArea) {
+                                    this.selectedArea.id = this.detectedBiteshipArea.id;
+                                    this.searchQuery = this.detectedBiteshipArea.name;
+                                } else {
+                                    const parts = [
+                                        this.detectedAddress.district ? 'Kec. ' + this.detectedAddress.district : '',
+                                        this.detectedAddress.city,
+                                        this.detectedAddress.province
+                                    ].filter(Boolean);
+                                    this.searchQuery = parts.join(', ') + (this.detectedAddress.postal_code ? ' (' + this.detectedAddress.postal_code + ')' : '');
+                                }
+
+                                this.showMapModal = false;
                             }
                         }"
-                        class="space-y-4"
                     >
-                        <!-- Leaflet CSS and Script Include -->
-                        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-                        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-                        <!-- Search Box for Biteship Area -->
-                        <div class="relative">
-                            <div class="flex items-center justify-between mb-1">
-                                <label class="block text-xs font-bold text-slate-700">
-                                    Cari Kecamatan, Kelurahan, Desa & Kode Pos (Biteship GPS Live Search) <span class="text-red-500">*</span>
+                        <!-- 1. Input Nama Penerima & Nomor HP Penerima -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                    Nama Penerima Paket <span class="text-red-500">*</span>
                                 </label>
-                                <div class="flex items-center gap-3">
-                                    <button 
-                                        type="button" 
-                                        @click="openMapPicker()" 
-                                        class="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 cursor-pointer bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200"
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                        </svg>
+                                    </div>
+                                    <input 
+                                        type="text" 
+                                        name="recipient_name" 
+                                        x-model="recipientName"
+                                        required 
+                                        placeholder="Contoh: Budi Santoso"
+                                        class="w-full bg-slate-50/70 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-700 focus:ring-4 focus:ring-blue-100/60 rounded-2xl pl-10 pr-4 py-3 text-xs sm:text-sm font-semibold text-slate-900 transition-all placeholder:text-slate-400 placeholder:font-normal"
                                     >
-                                        <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
-                                        </svg>
-                                        <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
-                                        </svg>
-                                        <span>Pilih Pinpoint Peta Interaktif</span>
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <div class="relative">
-                                <input 
-                                    type="text" 
-                                    x-model="searchQuery" 
-                                    @input.debounce.300ms="searchArea()" 
-                                    @focus="if(suggestions.length > 0) showDropdown = true" 
-                                    placeholder="Ketik nama Kecamatan, Kelurahan, Kota, atau Kode Pos (misal: Slawi, Tegal, Denpasar, 56211)..." 
-                                    class="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-8 py-2.5 text-xs sm:text-sm font-medium text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none"
-                                >
-                                <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                                </svg>
-                                <div x-show="loading" class="absolute right-3 top-3">
-                                    <div class="w-4 h-4 border-2 border-blue-700 border-t-transparent rounded-full animate-spin"></div>
                                 </div>
                             </div>
 
-                            <!-- Helpful Note -->
-                            <p class="text-[11px] text-slate-500 mt-1">
-                                <strong>Tips:</strong> Biteship API membutuhkan pencarian nama <strong>Kecamatan, Kelurahan, Kota, atau Kode Pos</strong> (bukan nama PT/Toko). Jika ingin menandai lokasi bangunan/PT spesifik, gunakan tombol <strong>Pilih Pinpoint Peta Interaktif</strong>.
-                            </p>
-
-                            <!-- Hidden Inputs Submitted to Server -->
-                            <input type="hidden" name="biteship_area_id" :value="selectedArea.id">
-                            <input type="hidden" name="city_id" :value="selectedArea.id">
-                            <input type="hidden" name="district" :value="selectedArea.district">
-                            <input type="hidden" name="village" :value="selectedArea.village">
-                            <input type="hidden" name="city" :value="selectedArea.city">
-                            <input type="hidden" name="province" :value="selectedArea.province">
-
-                            <!-- Live Autocomplete Suggestions Dropdown -->
-                            <div 
-                                x-show="showDropdown && suggestions.length > 0" 
-                                @click.away="showDropdown = false" 
-                                class="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto divide-y divide-slate-100 text-xs"
-                            >
-                                <template x-for="item in suggestions" :key="item.id">
-                                    <button 
-                                        type="button" 
-                                        @click="selectArea(item)" 
-                                        class="w-full text-left p-3 hover:bg-blue-50 transition-colors flex items-center justify-between cursor-pointer gap-2"
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                    Nomor HP Penerima Paket <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                                        </svg>
+                                    </div>
+                                    <input 
+                                        type="text" 
+                                        name="recipient_phone" 
+                                        x-model="recipientPhone"
+                                        required 
+                                        placeholder="081234567890"
+                                        class="w-full bg-slate-50/70 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-700 focus:ring-4 focus:ring-blue-100/60 rounded-2xl pl-10 pr-4 py-3 text-xs sm:text-sm font-semibold text-slate-900 transition-all placeholder:text-slate-400 placeholder:font-normal"
                                     >
-                                        <div class="min-w-0 flex-1">
-                                            <div class="font-bold text-slate-900 leading-snug truncate" x-text="item.name"></div>
-                                            <div class="text-[11px] text-slate-500 truncate" x-text="item.subtext"></div>
-                                        </div>
-                                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0" :class="item.badgeClass || 'bg-blue-100 text-blue-800'" x-text="item.badge"></span>
-                                    </button>
-                                </template>
+                                </div>
                             </div>
                         </div>
 
+                        <!-- 2. Label Alamat (Rumah, Kantor, Apartemen, Lainnya) -->
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Kode Pos</label>
-                            <input 
-                                type="text" 
-                                name="postal_code" 
-                                x-model="selectedArea.postal_code"
-                                placeholder="12345"
-                                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none"
-                            >
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Label Alamat Pengiriman <span class="text-red-500">*</span>
+                            </label>
+                            <input type="hidden" name="address_label" :value="activeLabel">
+                            <div class="flex flex-wrap items-center gap-2.5">
+                                <button 
+                                    type="button" 
+                                    @click="activeLabel = 'Rumah'"
+                                    :class="activeLabel === 'Rumah' 
+                                        ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/25 border-blue-600' 
+                                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900'"
+                                    class="px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-2 shadow-2xs"
+                                >
+                                    <svg class="w-4 h-4 shrink-0 transition-colors" :class="activeLabel === 'Rumah' ? 'text-white' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                                    </svg>
+                                    <span>Rumah</span>
+                                </button>
+                                <button 
+                                    type="button" 
+                                    @click="activeLabel = 'Kantor'"
+                                    :class="activeLabel === 'Kantor' 
+                                        ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/25 border-blue-600' 
+                                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900'"
+                                    class="px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-2 shadow-2xs"
+                                >
+                                    <svg class="w-4 h-4 shrink-0 transition-colors" :class="activeLabel === 'Kantor' ? 'text-white' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                    </svg>
+                                    <span>Kantor</span>
+                                </button>
+                                <button 
+                                    type="button" 
+                                    @click="activeLabel = 'Apartemen'"
+                                    :class="activeLabel === 'Apartemen' 
+                                        ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/25 border-blue-600' 
+                                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900'"
+                                    class="px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-2 shadow-2xs"
+                                >
+                                    <svg class="w-4 h-4 shrink-0 transition-colors" :class="activeLabel === 'Apartemen' ? 'text-white' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v.01M12 14v.01M16 14v.01M8 10v.01M12 10v.01M16 10v.01M8 6v.01M12 6v.01M16 6v.01M12 18v.01M8 18v.01M16 18v.01M3 21h18M5 21V5a2 2 0 012-2h10a2 2 0 012 2v16"/>
+                                    </svg>
+                                    <span>Apartemen</span>
+                                </button>
+                                <button 
+                                    type="button" 
+                                    @click="activeLabel = 'Lainnya'"
+                                    :class="activeLabel === 'Lainnya' 
+                                        ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/25 border-blue-600' 
+                                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900'"
+                                    class="px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-2 shadow-2xs"
+                                >
+                                    <svg class="w-4 h-4 shrink-0 transition-colors" :class="activeLabel === 'Lainnya' ? 'text-white' : 'text-slate-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                                    </svg>
+                                    <span>Lainnya</span>
+                                </button>
+                            </div>
                         </div>
 
-                        <!-- MODAL PETA INTERAKTIF (LEAFLET MAP PICKER) -->
-                        <div 
-                            x-show="showMapModal" 
-                            x-transition
-                            class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs"
-                            style="display: none;"
-                        >
-                            <div @click.away="showMapModal = false" class="bg-white rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl border border-slate-200">
-                                <div class="p-4 bg-slate-900 text-white flex items-center justify-between">
-                                    <div>
-                                        <h3 class="font-bold text-sm flex items-center gap-1.5">
-                                            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                            <span>Pilih Pinpoint Lokasi Rumah/PT di Peta</span>
-                                        </h3>
-                                        <p class="text-[11px] text-slate-300">Geser atau klik pin merah pada titik lokasi pengiriman Anda</p>
-                                    </div>
-                                    <button type="button" @click="showMapModal = false" class="text-slate-400 hover:text-white font-bold text-lg">&times;</button>
-                                </div>
-                                <div class="p-4 space-y-3">
-                                    <div id="leafletMapContainer" class="w-full h-80 rounded-xl border border-slate-300 z-10"></div>
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-xs text-slate-600 font-semibold">Geser marker ke alamat rumah/kantor Anda untuk auto-detect.</span>
-                                        <button 
-                                            type="button" 
-                                            @click="showMapModal = false" 
-                                            class="bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-blue-800 cursor-pointer"
+                        <!-- 3. Alamat Lengkap & Patokan Rumah/Gedung -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Alamat Lengkap &amp; Patokan Rumah / Gedung <span class="text-red-500">*</span>
+                            </label>
+                            <textarea 
+                                id="user_address_field"
+                                name="address" 
+                                x-model="addressDetail"
+                                rows="3" 
+                                required
+                                placeholder="Contoh: Jl. Ahmad Yani No. 12, RT 03/RW 05, Blok C2 (Patokan: Pagar warna hitam di samping Mesjid Al-Ikhlas)"
+                                class="w-full bg-slate-50/70 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-700 focus:ring-4 focus:ring-blue-100/60 rounded-2xl p-4 text-xs sm:text-sm font-semibold text-slate-900 transition-all placeholder:text-slate-400 placeholder:font-normal leading-relaxed"
+                            ></textarea>
+
+                            <p class="text-xs text-slate-500 mt-1.5 flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span>Tuliskan detail <strong>Nomor Rumah, RT/RW, Nama Jalan, serta Patokan Lokasi/Gedung</strong> secara spesifik agar kurir mudah menemukan alamat Anda.</span>
+                            </p>
+                        </div>
+
+                        <!-- 4. Wilayah & Kode Pos -->
+                        <div class="space-y-4">
+                            <!-- Leaflet CSS and Script Include -->
+                            <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+                            <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+                            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+                                <!-- Search Box for Area (8 cols) -->
+                                <div class="md:col-span-8 relative">
+                                    <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                        Kecamatan, Kota/Kabupaten &amp; Provinsi <span class="text-red-500">*</span>
+                                    </label>
+                                    
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                            </svg>
+                                        </div>
+                                        <input 
+                                            type="text" 
+                                            x-model="searchQuery" 
+                                            @input.debounce.300ms="searchArea()" 
+                                            @focus="if(suggestions.length > 0) showDropdown = true" 
+                                            placeholder="Ketik nama Kecamatan, Kelurahan, Kota, atau Kode Pos..." 
+                                            class="w-full bg-slate-50/70 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-700 focus:ring-4 focus:ring-blue-100/60 rounded-2xl pl-10 pr-9 py-3 text-xs sm:text-sm font-semibold text-slate-900 transition-all placeholder:text-slate-400 placeholder:font-normal leading-normal"
                                         >
-                                            Gunakan Lokasi Ini
-                                        </button>
+                                        <div x-show="loading" class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
+                                            <div class="w-4 h-4 border-2 border-blue-700 border-t-transparent rounded-full animate-spin"></div>
+                                        </div>
                                     </div>
+
+                                    <!-- Hidden Inputs Submitted to Server -->
+                                    <input type="hidden" name="biteship_area_id" :value="selectedArea.id">
+                                    <input type="hidden" name="city_id" :value="selectedArea.id">
+                                    <input type="hidden" name="district" :value="selectedArea.district">
+                                    <input type="hidden" name="village" :value="selectedArea.village">
+                                    <input type="hidden" name="city" :value="selectedArea.city">
+                                    <input type="hidden" name="province" :value="selectedArea.province">
+
+                                    <!-- Live Autocomplete Suggestions Dropdown -->
+                                    <div 
+                                        x-show="showDropdown && suggestions.length > 0" 
+                                        @click.away="showDropdown = false" 
+                                        class="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-60 overflow-y-auto divide-y divide-slate-100 text-xs"
+                                    >
+                                        <template x-for="item in suggestions" :key="item.id">
+                                            <button 
+                                                type="button" 
+                                                @click="selectArea(item)" 
+                                                class="w-full text-left p-3 hover:bg-blue-50 transition-colors flex items-center justify-between cursor-pointer gap-2"
+                                            >
+                                                <div class="min-w-0 flex-1">
+                                                    <div class="font-bold text-slate-900 leading-snug truncate" x-text="item.name"></div>
+                                                    <div class="text-[11px] text-slate-500 truncate" x-text="item.subtext"></div>
+                                                </div>
+                                                <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full shrink-0" :class="item.badgeClass || 'bg-blue-100 text-blue-800'" x-text="item.badge"></span>
+                                            </button>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                <!-- Kode Pos (4 cols) -->
+                                <div class="md:col-span-4">
+                                    <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                        Kode Pos <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/>
+                                            </svg>
+                                        </div>
+                                        <input 
+                                            type="text" 
+                                            name="postal_code" 
+                                            x-model="selectedArea.postal_code"
+                                            placeholder="56196"
+                                            class="w-full bg-slate-50/70 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-700 focus:ring-4 focus:ring-blue-100/60 rounded-2xl pl-10 pr-4 py-3 text-xs sm:text-sm font-semibold text-slate-900 transition-all placeholder:text-slate-400 placeholder:font-normal leading-normal"
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Pinpoint Titik Alamat di Peta (Tokopedia/Shopee Style) -->
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-slate-50/80 hover:bg-slate-100/80 border border-slate-200/90 rounded-2xl transition-all">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div class="text-xs font-bold text-slate-900">Pinpoint Titik Alamat di Peta</div>
+                                        <div class="text-[11px] text-slate-500">Tandai posisi rumah/kantor di peta agar kurir pengantar tidak tersasar</div>
+                                    </div>
+                                </div>
+                                <button 
+                                    type="button" 
+                                    @click="openMapPicker()" 
+                                    class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-bold text-blue-700 bg-white hover:bg-blue-50 hover:border-blue-300 border border-slate-200 rounded-xl transition-all cursor-pointer shadow-2xs shrink-0 self-start sm:self-auto"
+                                >
+                                    <span>Pilih Titik di Peta</span>
+                                    <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <!-- MODAL PETA INTERAKTIF PINPOINT REAL-TIME (LEAFLET MAP PICKER) -->
+                            <div 
+                                x-show="showMapModal" 
+                                x-transition
+                                class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs"
+                                style="display: none;"
+                            >
+                                <div @click.away="showMapModal = false" class="bg-white rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+                                    <!-- Modal Header -->
+                                    <div class="p-4 bg-slate-900 text-white flex items-center justify-between">
+                                        <div class="flex items-center gap-2.5">
+                                            <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                            </div>
+                                            <div>
+                                                <h3 class="font-bold text-sm">Pinpoint Lokasi Pengiriman Real-Time</h3>
+                                                <p class="text-[11px] text-slate-300">Cari nama jalan atau geser pin tepat di titik rumah/kantor Anda</p>
+                                            </div>
+                                        </div>
+                                        <button type="button" @click="showMapModal = false" class="text-slate-400 hover:text-white font-bold text-lg p-1">&times;</button>
+                                    </div>
+
+                                    <div class="p-4 space-y-3">
+                                        <!-- 1. Search Box di Dalam Peta -->
+                                        <div class="relative">
+                                            <div class="flex items-center gap-2">
+                                                <div class="relative flex-1">
+                                                    <input 
+                                                        type="text" 
+                                                        x-model="mapSearchQuery" 
+                                                        @keydown.enter.prevent="searchLocationInMap()"
+                                                        placeholder="Ketik nama jalan, perumahan, kelurahan, atau kecamatan Anda..."
+                                                        class="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-4 py-2 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-colors"
+                                                    >
+                                                    <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                                    </svg>
+                                                </div>
+                                                <button 
+                                                    type="button" 
+                                                    @click="searchLocationInMap()"
+                                                    class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer shrink-0 shadow-xs"
+                                                >
+                                                    <span x-show="!isSearchingMap">Cari</span>
+                                                    <span x-show="isSearchingMap" class="animate-pulse">Mencari...</span>
+                                                </button>
+                                                <button 
+                                                    type="button" 
+                                                    @click="detectGPSForMap()" 
+                                                    class="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 rounded-xl text-xs font-semibold transition-colors cursor-pointer shrink-0 flex items-center gap-1 shadow-xs"
+                                                    title="Deteksi Ulang Lokasi GPS Akurat"
+                                                >
+                                                    <svg class="w-3.5 h-3.5" :class="isLocatingGPS ? 'animate-spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/><circle cx="12" cy="12" r="3"/></svg>
+                                                    <span>GPS Akurat</span>
+                                                </button>
+                                            </div>
+
+                                            <!-- Suggestions Dropdown di Peta -->
+                                            <div 
+                                                x-show="mapSearchResults.length > 0" 
+                                                class="absolute z-30 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto divide-y divide-slate-100 text-xs"
+                                            >
+                                                <template x-for="item in mapSearchResults" :key="item.place_id">
+                                                    <button 
+                                                        type="button" 
+                                                        @click="selectMapSearchResult(item)" 
+                                                        class="w-full text-left p-2.5 hover:bg-blue-50 transition-colors flex items-center gap-2 cursor-pointer"
+                                                    >
+                                                        <svg class="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                                                        <span class="truncate font-medium text-slate-800" x-text="item.display_name"></span>
+                                                    </button>
+                                                </template>
+                                            </div>
+                                        </div>
+
+                                        <!-- 2. Notifikasi Akurasi GPS (Jika dari IP jaringan) -->
+                                        <template x-if="gpsAccuracyNote">
+                                            <div class="px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-800 flex items-center justify-between gap-2">
+                                                <span x-text="gpsAccuracyNote"></span>
+                                                <button type="button" @click="gpsAccuracyNote = ''" class="text-amber-600 font-bold hover:text-amber-900">&times;</button>
+                                            </div>
+                                        </template>
+
+                                        <!-- 3. Leaflet Map Container -->
+                                        <div id="leafletMapContainer" class="w-full h-64 sm:h-72 rounded-xl border border-slate-300 z-10 shadow-inner"></div>
+
+                                        <!-- 4. Live Detailed Address Card (Real-Time Card) -->
+                                        <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                                                    <span class="w-2 h-2 rounded-full" :class="isGeocoding ? 'bg-amber-500 animate-ping' : 'bg-emerald-500'"></span>
+                                                    <span x-text="isGeocoding ? 'Mendeteksi Alamat Secara Real-Time...' : 'Detail Alamat Terdeteksi:'"></span>
+                                                </div>
+                                                <span class="text-[10px] font-mono text-slate-500" x-show="detectedAddress.lat" x-text="'Lat: ' + detectedAddress.lat + ', Lng: ' + detectedAddress.lng"></span>
+                                            </div>
+
+                                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                                                <div class="bg-white p-2 rounded-lg border border-slate-200 focus-within:border-blue-600 transition-colors">
+                                                    <div class="flex items-center justify-between mb-0.5">
+                                                        <span class="text-slate-400 block text-[10px] uppercase font-semibold">Jalan / Tempat:</span>
+                                                        <span class="text-[9px] text-blue-600 font-medium">Bisa diedit</span>
+                                                    </div>
+                                                    <input 
+                                                        type="text" 
+                                                        x-model="detectedAddress.road" 
+                                                        placeholder="Nama jalan / RT RW..."
+                                                        class="w-full text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded px-1.5 py-1 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-600 transition-colors"
+                                                    >
+                                                </div>
+                                                <div class="bg-white p-2 rounded-lg border border-slate-200 focus-within:border-blue-600 transition-colors">
+                                                    <div class="flex items-center justify-between mb-0.5">
+                                                        <span class="text-slate-400 block text-[10px] uppercase font-semibold">Kelurahan / Desa:</span>
+                                                    </div>
+                                                    <input 
+                                                        type="text" 
+                                                        x-model="detectedAddress.village" 
+                                                        placeholder="Nama desa..."
+                                                        class="w-full text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded px-1.5 py-1 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-600 transition-colors"
+                                                    >
+                                                </div>
+                                                <div class="bg-white p-2 rounded-lg border border-slate-200 focus-within:border-blue-600 transition-colors">
+                                                    <div class="flex items-center justify-between mb-0.5">
+                                                        <span class="text-slate-400 block text-[10px] uppercase font-semibold">Kecamatan:</span>
+                                                        <span class="text-[9px] text-blue-600 font-medium">Bisa diedit</span>
+                                                    </div>
+                                                    <input 
+                                                        type="text" 
+                                                        x-model="detectedAddress.district" 
+                                                        placeholder="Nama kecamatan..."
+                                                        class="w-full text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded px-1.5 py-1 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-600 transition-colors"
+                                                    >
+                                                </div>
+                                                <div class="bg-white p-2 rounded-lg border border-slate-200 focus-within:border-blue-600 transition-colors">
+                                                    <div class="flex items-center justify-between mb-0.5">
+                                                        <span class="text-slate-400 block text-[10px] uppercase font-semibold">Kota / Kab:</span>
+                                                    </div>
+                                                    <input 
+                                                        type="text" 
+                                                        x-model="detectedAddress.city" 
+                                                        placeholder="Nama kota..."
+                                                        class="w-full text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded px-1.5 py-1 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-600 transition-colors"
+                                                    >
+                                                </div>
+                                            </div>
+
+                                            <div class="text-[11px] text-slate-600 bg-white p-2 rounded-lg border border-slate-200 leading-snug">
+                                                <span class="text-slate-400 font-semibold block text-[10px] uppercase">Alamat Lengkap Sistem:</span>
+                                                <span x-text="detectedAddress.display_name || 'Geser atau klik pin pada titik rumah/kantor Anda di peta untuk mendeteksi alamat.'"></span>
+                                            </div>
+                                        </div>
+
+                                        <!-- 5. Modal Footer Action Buttons -->
+                                        <div class="flex items-center justify-between pt-1">
+                                            <span class="text-[11px] text-slate-400 hidden sm:inline">Geser pin untuk menyesuaikan titik presisi.</span>
+                                            <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                                                <button 
+                                                    type="button" 
+                                                    @click="showMapModal = false" 
+                                                    class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+                                                >
+                                                    Batal
+                                                </button>
+                                                <button 
+                                                    type="button" 
+                                                    @click="applyMapLocation()" 
+                                                    class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer shadow-xs flex items-center gap-1.5"
+                                                >
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                                    <span>Gunakan Lokasi Ini</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- 5. Alihkan "Jadikan Alamat Utama/Default" Toggle Switch -->
+                        <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        name="is_primary_address" 
+                                        value="1" 
+                                        {{ old('is_primary_address', $user->is_primary_address ?? true) ? 'checked' : '' }}
+                                        class="sr-only peer"
+                                    >
+                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                                <div>
+                                    <span class="text-xs font-extrabold text-slate-900 block">Jadikan Alamat Utama / Default</span>
+                                    <span class="text-[11px] text-slate-500">Alamat ini akan otomatis terpilih secara bawaan saat checkout.</span>
                                 </div>
                             </div>
                         </div>
 
                         <!-- LIVE FULL ADDRESS PREVIEW BOX -->
-                        <div class="p-4 bg-blue-50/80 border border-blue-200 rounded-2xl space-y-1.5 mt-4">
-                            <div class="flex items-center gap-2">
-                                <span class="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
-                                <span class="text-xs font-extrabold text-blue-950 uppercase tracking-wider">Pratinjau Label Alamat Pengiriman Kurir</span>
+                        <div class="p-5 bg-gradient-to-br from-blue-50/80 via-indigo-50/40 to-slate-50 border border-blue-200/90 rounded-3xl space-y-3 mt-4 shadow-2xs">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse"></div>
+                                    <span class="text-xs font-extrabold text-blue-950 uppercase tracking-wider flex items-center gap-1.5">
+                                        <svg class="w-4 h-4 text-blue-700 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                        </svg>
+                                        <span>Pratinjau Label Resi Pengiriman</span>
+                                    </span>
+                                </div>
+                                <span class="bg-blue-700 text-white text-[11px] font-extrabold px-3 py-1 rounded-full shadow-2xs tracking-wide" x-text="activeLabel"></span>
                             </div>
-                            <p class="text-xs text-blue-900 font-semibold leading-relaxed flex items-center gap-1.5">
-                                <svg class="w-3.5 h-3.5 text-blue-700 shrink-0 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                <span x-text="searchQuery ? searchQuery : 'Tentukan wilayah pengiriman Anda di atas...'"></span>
-                            </p>
+                            
+                            <div class="bg-white border border-blue-100/80 rounded-2xl p-4 space-y-2 text-xs text-slate-800 shadow-2xs">
+                                <div class="flex items-center justify-between font-extrabold border-b border-slate-100 pb-2.5 flex-wrap gap-2">
+                                    <span class="text-slate-900 flex items-center gap-2 text-sm">
+                                        <svg class="w-4 h-4 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                        </svg>
+                                        <span x-text="recipientName || 'Nama Penerima Paket'"></span>
+                                    </span>
+                                    <span class="text-blue-700 font-mono text-xs font-bold bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-100" x-text="recipientPhone || 'No. HP Penerima'"></span>
+                                </div>
+                                <div class="text-slate-700 leading-relaxed pt-0.5 space-y-1.5">
+                                    <span class="font-semibold block text-slate-900 text-xs sm:text-sm" x-text="addressDetail || 'Detail Alamat Lengkap & Patokan Rumah/Gedung...'"></span>
+                                    <span class="text-slate-500 text-xs font-medium flex items-center gap-1.5 pt-1">
+                                        <svg class="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        </svg>
+                                        <span x-text="searchQuery || 'Wilayah Kecamatan, Kota/Kabupaten, Provinsi & Kode Pos'"></span>
+                                    </span>
+                                </div>
+                            </div>
                         </div>
 
                     </div>
 
-                    <div class="pt-2">
+                    <div class="pt-2 flex items-center justify-between flex-wrap gap-3">
                         <button 
                             type="submit" 
-                            class="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs sm:text-sm px-6 py-3 rounded-xl transition-colors shadow-2xs cursor-pointer"
+                            class="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs sm:text-sm px-7 py-3 rounded-2xl transition-all shadow-sm shadow-blue-700/25 active:scale-[0.99] flex items-center gap-2 cursor-pointer"
                         >
-                            Simpan Alamat Tujuan Pengiriman
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <span>Simpan Alamat Utama Pengiriman</span>
                         </button>
+                        <span class="text-[11px] text-slate-400">Otomatis sinkron saat checkout pesanan</span>
                     </div>
                 </div>
             </form>
 
-            <!-- TAB 3: KEAMANAN & KATA SANDI -->
-            <div x-show="activeTab === 'keamanan'" class="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xs space-y-6">
-                <div class="border-b border-slate-100 pb-3">
-                    <h2 class="text-base sm:text-lg font-bold text-slate-900">Keamanan &amp; Ubah Kata Sandi</h2>
-                    <p class="text-xs text-slate-500">Perbarui kata sandi akun Anda secara berkala untuk menjaga keamanan</p>
+            <!-- TAB 3: VOUCHER SAYA -->
+            <div x-show="activeTab === 'vouchers'" class="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-2xs space-y-6" x-data="{ vFilter: 'semua', copiedCode: '' }">
+                <div class="border-b border-slate-100 pb-4">
+                    <h2 class="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">Voucher &amp; Kupon Promo Saya</h2>
+                    <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Daftar voucher promo yang sudah Anda klaim dan siap digunakan untuk hemat berbelanja</p>
                 </div>
 
-                <form action="{{ route('profile.password') }}" method="POST" class="space-y-4">
-                    @csrf
+                <!-- Filter Sub-Tabs (Semua / Siap Dipakai / Terpakai / Expired) -->
+                <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+                    <button 
+                        type="button" 
+                        @click="vFilter = 'semua'" 
+                        :class="vFilter === 'semua' ? 'bg-blue-700 text-white font-bold' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium'" 
+                        class="px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+                    >
+                        <span>Semua Voucher</span>
+                    </button>
+                    <button 
+                        type="button" 
+                        @click="vFilter = 'siap'" 
+                        :class="vFilter === 'siap' ? 'bg-emerald-600 text-white font-bold' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium'" 
+                        class="px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+                    >
+                        <span>Siap Dipakai</span>
+                    </button>
+                    <button 
+                        type="button" 
+                        @click="vFilter = 'terpakai'" 
+                        :class="vFilter === 'terpakai' ? 'bg-slate-800 text-white font-bold' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium'" 
+                        class="px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+                    >
+                        <span>Sudah Digunakan</span>
+                    </button>
+                    <button 
+                        type="button" 
+                        @click="vFilter = 'expired'" 
+                        :class="vFilter === 'expired' ? 'bg-red-600 text-white font-bold' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium'" 
+                        class="px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+                    >
+                        <span>Kedaluwarsa</span>
+                    </button>
+                </div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">
-                            Kata Sandi Saat Ini <span class="text-red-500">*</span>
-                        </label>
-                        <input 
-                            type="password" 
-                            name="current_password" 
-                            required 
-                            class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none"
-                        >
+                <!-- Voucher Cards List -->
+                @if(isset($claimedVouchers) && $claimedVouchers->count() > 0)
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        @foreach($claimedVouchers as $v)
+                            @php
+                                $isUsed = (bool) $v->pivot->is_used;
+                                $isExpired = $v->expires_at && $v->expires_at->isPast();
+                                $isInactive = $v->status !== 'aktif';
+                                
+                                if ($isUsed) {
+                                    $vStatusKey = 'terpakai';
+                                    $statusBadgeText = 'Sudah Digunakan';
+                                    $statusBadgeClass = 'bg-slate-100 text-slate-600 border-slate-200';
+                                } elseif ($isExpired || $isInactive) {
+                                    $vStatusKey = 'expired';
+                                    $statusBadgeText = 'Kedaluwarsa';
+                                    $statusBadgeClass = 'bg-red-50 text-red-700 border-red-200';
+                                } else {
+                                    $vStatusKey = 'siap';
+                                    $statusBadgeText = 'Siap Dipakai';
+                                    $statusBadgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200 font-bold';
+                                }
+                            @endphp
+
+                            <div 
+                                x-show="vFilter === 'semua' || vFilter === '{{ $vStatusKey }}'"
+                                class="rounded-3xl border transition-all flex flex-col justify-between overflow-hidden shadow-2xs relative group {{ $vStatusKey === 'siap' ? 'bg-white border-blue-200/90 hover:border-blue-400 hover:shadow-md' : 'bg-slate-50/70 border-slate-200/90 opacity-80' }}"
+                            >
+                                <!-- Top Accent Bar -->
+                                <div class="h-1.5 w-full {{ $vStatusKey === 'siap' ? 'bg-gradient-to-r from-blue-600 to-indigo-600' : ($vStatusKey === 'terpakai' ? 'bg-slate-300' : 'bg-red-400') }}"></div>
+
+                                <div class="p-5 space-y-3.5">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0 {{ $vStatusKey === 'siap' ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-500' }}">
+                                                {{ $v->type === 'gratis_ongkir' ? '🚚' : ($v->type === 'cashback' ? '💰' : '🏷️') }}
+                                            </div>
+                                            <div>
+                                                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                                                    {{ $v->type === 'gratis_ongkir' ? 'Gratis Ongkir' : ($v->type === 'cashback' ? 'Cashback Belanja' : 'Diskon Potongan') }}
+                                                </span>
+                                                <h3 class="font-extrabold text-slate-900 text-lg leading-tight">
+                                                    {{ $v->formatted_discount }}
+                                                </h3>
+                                            </div>
+                                        </div>
+                                        <span class="text-[11px] px-2.5 py-0.5 rounded-full border {{ $statusBadgeClass }} shrink-0">
+                                            {{ $statusBadgeText }}
+                                        </span>
+                                    </div>
+
+                                    <!-- Dashed Perforated Divider -->
+                                    <div class="border-t border-dashed border-slate-200 pt-3 space-y-1.5 text-xs text-slate-600">
+                                        <div class="flex items-center justify-between font-medium">
+                                            <span class="text-slate-500">Minimal Belanja:</span>
+                                            <strong class="text-slate-900">{{ $v->formatted_min_spend }}</strong>
+                                        </div>
+
+                                        @if($v->max_discount && $v->type === 'diskon_persen')
+                                            <div class="flex items-center justify-between font-medium text-[11px] text-slate-500">
+                                                <span>Maksimal Potongan:</span>
+                                                <span class="text-slate-800 font-semibold">Rp {{ number_format($v->max_discount, 0, ',', '.') }}</span>
+                                            </div>
+                                        @endif
+
+                                        <div class="flex items-center justify-between font-medium text-[11px] text-slate-500">
+                                            <span>Masa Berlaku:</span>
+                                            <span class="{{ $isExpired ? 'text-red-600 font-bold' : 'text-slate-700 font-semibold' }}">
+                                                {{ $v->expires_at ? $v->expires_at->format('d M Y') : 'Tanpa Batas Waktu' }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Voucher Code & Action Footer -->
+                                <div class="px-5 py-3 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between gap-2">
+                                    <div class="bg-white border border-slate-200 rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-2xs">
+                                        <span class="font-mono font-extrabold text-xs text-blue-900 tracking-wider">{{ $v->code }}</span>
+                                        <button 
+                                            type="button" 
+                                            @click="navigator.clipboard.writeText('{{ $v->code }}'); copiedCode = '{{ $v->code }}'; setTimeout(() => copiedCode = '', 2000)" 
+                                            class="text-[11px] font-bold text-blue-700 hover:text-blue-900 cursor-pointer flex items-center gap-1 transition-colors"
+                                            title="Salin Kode Voucher"
+                                        >
+                                            <span x-text="copiedCode === '{{ $v->code }}' ? '✓ Disalin' : 'Salin'"></span>
+                                        </button>
+                                    </div>
+
+                                    @if($vStatusKey === 'siap')
+                                        <a 
+                                            href="{{ route('checkout') }}" 
+                                            class="bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl transition-all shadow-sm shadow-blue-700/20 active:scale-95 flex items-center gap-1"
+                                        >
+                                            <span>Gunakan</span>
+                                            <span>&rarr;</span>
+                                        </a>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <!-- Empty Voucher State -->
+                    <div class="text-center py-12 px-4 bg-slate-50/80 rounded-3xl border border-dashed border-slate-300 space-y-4">
+                        <div class="w-16 h-16 bg-blue-100 text-blue-700 rounded-3xl flex items-center justify-center text-3xl mx-auto shadow-2xs">
+                            🎟️
+                        </div>
+                        <div class="space-y-1">
+                            <h3 class="font-extrabold text-slate-900 text-base">Belum Ada Voucher Terklaim</h3>
+                            <p class="text-xs sm:text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
+                                Anda belum mengklaim voucher diskon atau gratis ongkir. Kunjungi halaman promo dan klaim voucher spesial hari ini!
+                            </p>
+                        </div>
+                        <div class="pt-1">
+                            <a href="{{ route('promo') }}" class="inline-flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs sm:text-sm px-6 py-3 rounded-2xl transition-all shadow-sm shadow-blue-700/25 cursor-pointer">
+                                <span>Lihat Promo &amp; Klaim Voucher</span>
+                                <span>&rarr;</span>
+                            </a>
+                        </div>
+                    </div>
+                @endif
+            </div>
+
+            <!-- TAB 4: KEAMANAN & KATA SANDI -->
+            <div x-show="activeTab === 'keamanan'" class="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-2xs space-y-6" x-data="{ showCurrent: false, showNew: false, showConfirm: false }">
+                <div class="border-b border-slate-100 pb-4">
+                    <h2 class="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">Keamanan &amp; Kata Sandi</h2>
+                    <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Perbarui kata sandi akun Anda secara berkala untuk menjaga keamanan data dan transaksi</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                    
+                    <!-- Left Column: Form Fields (7 cols) -->
+                    <div class="lg:col-span-7">
+                        <form action="{{ route('profile.password') }}" method="POST" class="space-y-5">
+                            @csrf
+                            <input type="hidden" name="active_tab" value="keamanan">
+
+                            <!-- Kata Sandi Saat Ini -->
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                    Kata Sandi Saat Ini <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                        </svg>
+                                    </div>
+                                    <input 
+                                        :type="showCurrent ? 'text' : 'password'" 
+                                        name="current_password" 
+                                        required 
+                                        placeholder="Masukkan kata sandi lama Anda..."
+                                        class="w-full bg-slate-50/70 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-700 focus:ring-4 focus:ring-blue-100/60 rounded-2xl pl-10 pr-11 py-3 text-xs sm:text-sm font-semibold text-slate-900 transition-all placeholder:text-slate-400 placeholder:font-normal"
+                                    >
+                                    <button 
+                                        type="button" 
+                                        @click="showCurrent = !showCurrent" 
+                                        class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                                        tabindex="-1"
+                                    >
+                                        <svg x-show="!showCurrent" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                        </svg>
+                                        <svg x-show="showCurrent" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display: none;">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Kata Sandi Baru -->
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                    Kata Sandi Baru (Min. 6 Karakter) <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                        </svg>
+                                    </div>
+                                    <input 
+                                        :type="showNew ? 'text' : 'password'" 
+                                        name="password" 
+                                        required 
+                                        placeholder="Ketik kata sandi baru yang kuat..."
+                                        class="w-full bg-slate-50/70 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-700 focus:ring-4 focus:ring-blue-100/60 rounded-2xl pl-10 pr-11 py-3 text-xs sm:text-sm font-semibold text-slate-900 transition-all placeholder:text-slate-400 placeholder:font-normal"
+                                    >
+                                    <button 
+                                        type="button" 
+                                        @click="showNew = !showNew" 
+                                        class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                                        tabindex="-1"
+                                    >
+                                        <svg x-show="!showNew" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                        </svg>
+                                        <svg x-show="showNew" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display: none;">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Konfirmasi Kata Sandi Baru -->
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                    Konfirmasi Kata Sandi Baru <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                        </svg>
+                                    </div>
+                                    <input 
+                                        :type="showConfirm ? 'text' : 'password'" 
+                                        name="password_confirmation" 
+                                        required 
+                                        placeholder="Ketik ulang kata sandi baru..."
+                                        class="w-full bg-slate-50/70 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-700 focus:ring-4 focus:ring-blue-100/60 rounded-2xl pl-10 pr-11 py-3 text-xs sm:text-sm font-semibold text-slate-900 transition-all placeholder:text-slate-400 placeholder:font-normal"
+                                    >
+                                    <button 
+                                        type="button" 
+                                        @click="showConfirm = !showConfirm" 
+                                        class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                                        tabindex="-1"
+                                    >
+                                        <svg x-show="!showConfirm" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                        </svg>
+                                        <svg x-show="showConfirm" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display: none;">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="pt-2">
+                                <button 
+                                    type="submit" 
+                                    class="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs sm:text-sm px-7 py-3 rounded-2xl transition-all shadow-sm shadow-blue-700/25 active:scale-[0.99] flex items-center gap-2 cursor-pointer"
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                    <span>Perbarui Kata Sandi</span>
+                                </button>
+                            </div>
+                        </form>
                     </div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">
-                            Kata Sandi Baru (Min. 6 Karakter) <span class="text-red-500">*</span>
-                        </label>
-                        <input 
-                            type="password" 
-                            name="password" 
-                            required 
-                            class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none"
-                        >
+                    <!-- Right Column: Tips Keamanan Akun (5 cols) -->
+                    <div class="lg:col-span-5 space-y-4">
+                        <div class="rounded-3xl p-5 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 border border-slate-200/90 space-y-4 shadow-2xs">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                    </svg>
+                                </div>
+                                <h3 class="font-extrabold text-slate-900 text-sm">Panduan Kata Sandi Aman</h3>
+                            </div>
+
+                            <ul class="space-y-2.5 text-xs text-slate-600">
+                                <li class="flex items-start gap-2">
+                                    <span class="text-blue-600 font-bold shrink-0">✓</span>
+                                    <span>Gunakan minimal <strong>6 karakter</strong> (disarankan 8+ karakter).</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <span class="text-blue-600 font-bold shrink-0">✓</span>
+                                    <span>Kombinasikan huruf kapital, huruf kecil, dan angka.</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <span class="text-blue-600 font-bold shrink-0">✓</span>
+                                    <span>Hindari tanggal lahir, nama pribadi, atau nomor telepon.</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <span class="text-blue-600 font-bold shrink-0">✓</span>
+                                    <span>Ganti kata sandi secara berkala setiap beberapa bulan.</span>
+                                </li>
+                            </ul>
+
+                            <div class="pt-3 border-t border-slate-200/80 text-[11px] text-slate-500 leading-relaxed flex items-start gap-2">
+                                <span class="text-amber-500 text-sm shrink-0">⚠️</span>
+                                <span>Toko Online tidak pernah meminta kata sandi atau kode OTP Anda untuk alasan apa pun.</span>
+                            </div>
+                        </div>
                     </div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">
-                            Konfirmasi Kata Sandi Baru <span class="text-red-500">*</span>
-                        </label>
-                        <input 
-                            type="password" 
-                            name="password_confirmation" 
-                            required 
-                            class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none"
-                        >
-                    </div>
-
-                    <div class="pt-2">
-                        <button 
-                            type="submit" 
-                            class="bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs sm:text-sm px-6 py-3 rounded-xl transition-colors shadow-2xs cursor-pointer"
-                        >
-                            Perbarui Kata Sandi
-                        </button>
-                    </div>
-                </form>
+                </div>
             </div>
 
         </div>

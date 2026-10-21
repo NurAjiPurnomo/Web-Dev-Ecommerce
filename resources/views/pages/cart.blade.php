@@ -15,8 +15,8 @@
                 <span class="text-sm font-medium text-gray-500" x-text="items.length + ' Produk dalam Keranjang'"></span>
             </div>
 
-            <!-- Select All Box -->
-            <div x-show="items.length > 0" class="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between shadow-sm">
+            <!-- Select All Box & Global Actions -->
+            <div x-show="items.length > 0" class="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between shadow-sm flex-wrap gap-2">
                 <label class="flex items-center gap-3 cursor-pointer select-none">
                     <input 
                         type="checkbox" 
@@ -28,14 +28,24 @@
                         Pilih Semua (<span x-text="selectedCount"></span>)
                     </span>
                 </label>
-                <button 
-                    type="button" 
-                    @click="removeSelectedItems()" 
-                    x-show="selectedCount > 0"
-                    class="text-xs sm:text-sm font-medium text-red-500 hover:text-red-700 transition-colors cursor-pointer"
-                >
-                    Hapus Produk Terpilih
-                </button>
+                <div class="flex items-center gap-3">
+                    <button 
+                        type="button" 
+                        @click="removeSelectedItems()" 
+                        x-show="selectedCount > 0"
+                        class="text-xs sm:text-sm font-medium text-red-500 hover:text-red-700 transition-colors cursor-pointer"
+                    >
+                        Hapus Terpilih
+                    </button>
+                    <span x-show="selectedCount > 0" class="text-slate-300">|</span>
+                    <button 
+                        type="button" 
+                        @click="clearCart()" 
+                        class="text-xs sm:text-sm font-medium text-slate-500 hover:text-red-600 transition-colors cursor-pointer"
+                    >
+                        Kosongkan Keranjang
+                    </button>
+                </div>
             </div>
 
             <!-- Empty Cart State -->
@@ -140,8 +150,8 @@
         </div>
 
         <!-- RIGHT COLUMN: Ringkasan Belanja (~35% / 4 cols) -->
-        <div class="lg:col-span-4">
-            <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm sticky top-20 space-y-5">
+        <div class="lg:col-span-4 lg:sticky lg:top-20">
+            <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-5">
                 
                 <div class="flex items-center justify-between pb-3 border-b border-slate-100">
                     <h2 class="text-base sm:text-lg font-extrabold text-slate-900">Ringkasan Belanja</h2>
@@ -179,15 +189,20 @@
                     <span class="text-xl sm:text-2xl font-black text-blue-700" x-text="formatRupiah(subtotal)"></span>
                 </div>
 
-                <!-- Tombol Lanjut ke Ringkasan Checkout & Pembayaran -->
+                <!-- Tombol Checkout -->
                 <button 
                     type="button" 
                     @click="proceedToCheckout()"
                     :disabled="selectedCount === 0"
-                    :class="selectedCount === 0 ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-blue-700 hover:bg-blue-800 text-white shadow-md hover:shadow-lg cursor-pointer'"
-                    class="w-full font-extrabold py-3.5 px-4 rounded-xl transition-all text-center block text-sm sm:text-base tracking-tight"
+                    :class="selectedCount === 0 
+                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' 
+                        : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-600/30 hover:shadow-md cursor-pointer active:scale-[0.99]'"
+                    class="w-full font-bold py-3.5 px-4 rounded-xl transition-all text-center flex items-center justify-center gap-2 text-sm sm:text-base tracking-tight"
                 >
-                    Lanjut ke Checkout &amp; Pembayaran
+                    <span>Checkout</span>
+                    <svg class="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                    </svg>
                 </button>
 
                 <!-- Jaminan Keamanan -->
@@ -209,9 +224,9 @@
 
 @php
     $u = session('user') ?? auth()->user();
-    $uName = $u ? (is_array($u) ? ($u['name'] ?? 'Budi Santoso') : ($u->name ?? 'Budi Santoso')) : 'Budi Santoso';
-    $uAddress = $u ? (is_array($u) ? ($u['address'] ?? '') : ($u->address ?? '')) : 'Jl. Jendral Sudirman No. 45, Kebayoran Baru, Jakarta Selatan, 12190';
-    $uCityId = $u ? (is_array($u) ? ($u['city_id'] ?? '153') : ($u->city_id ?? '153')) : '153';
+    $uName = $u ? (is_array($u) ? ($u['name'] ?? 'Pelanggan') : ($u->name ?? 'Pelanggan')) : 'Pelanggan';
+    $uAddress = $u ? (is_array($u) ? ($u['address'] ?? '') : ($u->address ?? '')) : '';
+    $uCityId = $u ? (is_array($u) ? ($u['city_id'] ?? '') : ($u->city_id ?? '')) : '';
 @endphp
 
 <script>
@@ -237,7 +252,9 @@ function cartApp() {
         ],
 
         init() {
-            this.fetchShippingRates();
+            setTimeout(() => {
+                this.fetchShippingRates();
+            }, 50);
         },
 
         get totalWeight() {
@@ -428,6 +445,27 @@ function cartApp() {
             }));
         },
 
+        clearCart() {
+            window.dispatchEvent(new CustomEvent('open-confirm', {
+                detail: {
+                    message: 'Apakah Anda yakin ingin mengosongkan seluruh isi keranjang belanja?',
+                    action: () => {
+                        this.items = [];
+                        fetch("{{ route('cart.clear') }}", {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            }
+                        }).then(res => res.json()).then(data => {
+                            window.location.reload();
+                        }).catch(err => console.error(err));
+                    }
+                }
+            }));
+        },
+
         removeItem(index) {
             const item = this.items[index];
             if (!item) return;
@@ -476,6 +514,12 @@ function cartApp() {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 },
                 body: JSON.stringify({ cart_key: cartKey, product_id: cartKey, id: cartKey, qty: qty })
+            }).then(res => res.json()).then(data => {
+                if (data.cartCount !== undefined) {
+                    window.dispatchEvent(new CustomEvent('cart-count-updated', {
+                        detail: { count: data.cartCount, cart: data.cart }
+                    }));
+                }
             }).catch(err => console.error(err));
         },
 

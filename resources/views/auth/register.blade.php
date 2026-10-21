@@ -6,11 +6,16 @@
 
         <!-- Brand Header -->
         <div class="text-center space-y-1.5">
-            <a href="{{ route('home') }}" class="inline-flex items-center gap-2 mb-2">
-                <div class="w-9 h-9 rounded-lg bg-blue-700 text-white font-extrabold text-xl flex items-center justify-center shadow-2xs">
-                    T
+            <a href="{{ route('home') }}" class="inline-flex items-center gap-2.5 mb-2 group">
+                <div class="w-9 h-9 rounded-xl bg-blue-700 text-white flex items-center justify-center shadow-sm group-hover:bg-blue-800 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                    </svg>
                 </div>
-                <span class="text-xl font-black text-slate-900 tracking-tight">Toko<span class="text-blue-700">Online</span></span>
+                <div class="flex flex-col text-left">
+                    <span class="text-xl font-bold text-slate-900 leading-none tracking-tight">Toko<span class="text-blue-700">Online</span></span>
+                    <span class="text-[10px] text-slate-400 font-medium leading-tight">Official Store</span>
+                </div>
             </a>
             <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
                 Daftar Akun Baru
@@ -314,7 +319,7 @@
                 var typoMap = {'comn':'com','coom':'com','ocm':'com','con':'com','comm':'com','cmo':'com','xom':'com','dom':'com','vom':'com','cam':'com','cpm':'com','col':'com','nett':'net','ney':'net','nte':'net','orgg':'org','prg':'org','ogr':'org','iid':'id','di':'id'};
 
                 if (typoMap[tld]) {
-                    return tip(this, '⚠️ Sepertinya ada typo — maksud kamu .' + typoMap[tld] + '? (bukan .' + tld + ')', false);
+                    return tip(this, '⚠️ Kemungkinan terdapat kesalahan penulisan — apakah maksud Anda .' + typoMap[tld] + '? (bukan .' + tld + ')', false);
                 }
                 if (knownTlds.indexOf(tld) === -1 && tld.length > 5) {
                     return tip(this, '⚠️ Ekstensi ".' + tld + '" tidak dikenal. Periksa kembali.', false);

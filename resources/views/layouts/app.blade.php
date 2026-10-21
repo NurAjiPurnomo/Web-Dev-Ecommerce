@@ -6,6 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Toko Online - Belanja Online Produk Berkualitas & Terpercaya</title>
     
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <!-- SEO Meta Tags -->
     <meta name="description" content="Toko Online - Platform e-commerce terpercaya untuk kebutuhan fashion, gadget, aksesoris, dan peralatan rumah tangga dengan penawaran terbaik dan garansi resmi.">
     <meta name="keywords" content="toko online, e-commerce, promo, belanja online, fashion, gadget">
@@ -79,9 +80,6 @@
         </div>
     @endif
 
-    <!-- Global Floating Toast Notification (3-Second Pop-up) -->
-    @include('components.toast-notification')
-
     <!-- Main Content Yield -->
     <main class="flex-grow">
         @yield('content')
@@ -116,6 +114,92 @@
             </div>
         </div>
     </div>
+
+    <!-- GLOBAL FLY TO TARGET ANIMATION SCRIPT (FLY TO CART / FLY TO WISHLIST) -->
+    <script>
+        window.flyToElement = function(startEl, targetType = 'cart', imgSrc = null) {
+            const targetId = targetType === 'wishlist' ? 'nav-wishlist-icon' : 'nav-cart-icon';
+            let targetEl = document.getElementById(targetId);
+            
+            // Fallbacks
+            if (!targetEl) {
+                targetEl = document.querySelector(targetType === 'wishlist' ? 'a[href*="wishlist"]' : 'a[href*="cart"]');
+            }
+            if (!startEl) {
+                startEl = document.activeElement;
+            }
+            if (!targetEl || !startEl) return;
+
+            const startRect = startEl.getBoundingClientRect();
+            const targetRect = targetEl.getBoundingClientRect();
+
+            // Create flyer element with explicit inline styles for 100% reliability
+            const flyer = document.createElement('div');
+            flyer.style.position = 'fixed';
+            flyer.style.zIndex = '999999';
+            flyer.style.pointerEvents = 'none';
+            flyer.style.borderRadius = '50%';
+            flyer.style.overflow = 'hidden';
+            flyer.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.35), 0 8px 10px -6px rgba(0, 0, 0, 0.2)';
+            flyer.style.border = targetType === 'wishlist' ? '3px solid #ef4444' : '3px solid #1d4ed8';
+            flyer.style.backgroundColor = '#ffffff';
+
+            const flyerSize = 56;
+            const startX = startRect.left + (startRect.width / 2) - (flyerSize / 2);
+            const startY = startRect.top + (startRect.height / 2) - (flyerSize / 2);
+
+            flyer.style.left = startX + 'px';
+            flyer.style.top = startY + 'px';
+            flyer.style.width = flyerSize + 'px';
+            flyer.style.height = flyerSize + 'px';
+            flyer.style.transition = 'left 0.75s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.75s cubic-bezier(0.1, 0.9, 0.2, 1), transform 0.75s ease-in-out, opacity 0.75s ease';
+            flyer.style.transform = 'scale(1) rotate(0deg)';
+            flyer.style.opacity = '1';
+
+            if (imgSrc) {
+                const img = document.createElement('img');
+                img.src = imgSrc;
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                flyer.appendChild(img);
+            } else {
+                const iconContainer = document.createElement('div');
+                iconContainer.style.width = '100%';
+                iconContainer.style.height = '100%';
+                iconContainer.style.display = 'flex';
+                iconContainer.style.alignItems = 'center';
+                iconContainer.style.justifyContent = 'center';
+                iconContainer.style.color = targetType === 'wishlist' ? '#ef4444' : '#1d4ed8';
+                iconContainer.innerHTML = targetType === 'wishlist'
+                    ? '<svg style="width:28px;height:28px;fill:currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>'
+                    : '<svg style="width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/></svg>';
+                flyer.appendChild(iconContainer);
+            }
+
+            document.body.appendChild(flyer);
+
+            const targetX = targetRect.left + (targetRect.width / 2) - 12;
+            const targetY = targetRect.top + (targetRect.height / 2) - 12;
+
+            setTimeout(() => {
+                flyer.style.left = targetX + 'px';
+                flyer.style.top = targetY + 'px';
+                flyer.style.width = '24px';
+                flyer.style.height = '24px';
+                flyer.style.opacity = '0.3';
+                flyer.style.transform = 'scale(0.3) rotate(360deg)';
+            }, 30);
+
+            setTimeout(() => {
+                flyer.remove();
+                targetEl.classList.add('scale-150', 'transition-transform', 'duration-300');
+                setTimeout(() => {
+                    targetEl.classList.remove('scale-150');
+                }, 300);
+            }, 770);
+        };
+    </script>
 
     @stack('scripts')
 </body>

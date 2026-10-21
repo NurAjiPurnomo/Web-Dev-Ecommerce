@@ -5,179 +5,294 @@
 @section('content')
 <div x-data="productManager()" class="space-y-6">
 
-    <!-- Header & Action Button -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200 pb-5">
+    <!-- Header Section -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Katalog Produk</h1>
-            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Kelola data produk, harga, varian, dan persediaan stok.</p>
+            <h1 class="text-xl sm:text-2xl font-semibold text-slate-900">Katalog Produk</h1>
+            <p class="text-sm text-slate-500 mt-0.5">Kelola daftar produk, stok gudang, variasi harga, dan status penjualan.</p>
         </div>
-        <button 
-            type="button" 
-            @click="showAddModal = true"
-            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-lg transition-all shadow-2xs flex items-center justify-center gap-2 cursor-pointer shrink-0"
-        >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            <span>Tambah Produk</span>
-        </button>
+        <div>
+            <button 
+                type="button" 
+                @click="showAddModal = true"
+                class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors cursor-pointer"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                <span>Tambah Produk</span>
+            </button>
+        </div>
     </div>
 
-    <!-- 4 QUICK KPI SUMMARY CARDS FOR PRODUCTS -->
+    <!-- Ringkasan Produk (KPI Cards) -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        @php
-            $totalProductsCount = count($products);
-            $totalStockCount = $products->sum('stock');
-            $totalSoldCount = $products->sum('sold');
-            $activeProductsCount = $products->where('status', 'aktif')->where('stock', '>', 0)->count();
-        @endphp
-
-        <!-- SKU TOTAL -->
-        <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs space-y-1">
+        <!-- Total Produk -->
+        <div class="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-xs">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-500">Total SKU</span>
+                <span class="text-xs font-medium text-slate-500">Total Produk</span>
                 <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                 </div>
             </div>
-            <h3 class="text-xl font-bold text-slate-900">{{ number_format($totalProductsCount, 0, ',', '.') }} Produk</h3>
-            <p class="text-[11px] text-slate-500">Item terdaftar</p>
+            <div class="text-xl sm:text-2xl font-semibold text-slate-900 mt-2">{{ number_format($totalProductsCount, 0, ',', '.') }}</div>
+            <p class="text-xs text-slate-500 mt-0.5">Item terdaftar di katalog</p>
         </div>
 
-        <!-- STOK AKTIF -->
-        <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs space-y-1">
+        <!-- Produk Aktif -->
+        <div class="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-xs">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-500">Produk Aktif</span>
+                <span class="text-xs font-medium text-slate-500">Produk Aktif</span>
                 <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </div>
             </div>
-            <h3 class="text-xl font-bold text-slate-900">{{ number_format($activeProductsCount, 0, ',', '.') }} SKU</h3>
-            <p class="text-[11px] text-slate-500">Siap dijual</p>
+            <div class="text-xl sm:text-2xl font-semibold text-slate-900 mt-2">{{ number_format($activeProductsCount, 0, ',', '.') }}</div>
+            <p class="text-xs text-emerald-600 font-medium mt-0.5">Siap dijual ke pembeli</p>
         </div>
 
-        <!-- TOTAL STOK FISIK -->
-        <div class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-1.5">
+        <!-- Total Stok Fisik -->
+        <div class="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-xs">
             <div class="flex items-center justify-between">
-                <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Total Stok Fisik</span>
-                <div class="w-8 h-8 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center">
+                <span class="text-xs font-medium text-slate-500">Total Stok Fisik</span>
+                <div class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v1a2 2 0 01-2 2M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
                 </div>
             </div>
-            <h3 class="text-xl sm:text-2xl font-bold text-slate-900">{{ number_format($totalStockCount, 0, ',', '.') }} pcs</h3>
-            <p class="text-[11px] text-purple-700 font-bold">Stok di Gudang</p>
+            <div class="text-xl sm:text-2xl font-semibold text-slate-900 mt-2">{{ number_format($totalStockCount, 0, ',', '.') }} <span class="text-xs font-normal text-slate-500">pcs</span></div>
+            <p class="text-xs text-slate-500 mt-0.5">Persediaan di gudang</p>
         </div>
 
-        <!-- TOTAL TERJUAL -->
-        <div class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-1.5">
+        <!-- Total Terjual -->
+        <div class="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-xs">
             <div class="flex items-center justify-between">
-                <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Total Terjual</span>
-                <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
+                <span class="text-xs font-medium text-slate-500">Total Terjual</span>
+                <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
                 </div>
             </div>
-            <h3 class="text-xl sm:text-2xl font-bold text-slate-900">{{ number_format($totalSoldCount, 0, ',', '.') }} pcs</h3>
-            <p class="text-[11px] text-amber-700 font-bold">Volume Terjual</p>
+            <div class="text-xl sm:text-2xl font-semibold text-slate-900 mt-2">{{ number_format($totalSoldCount, 0, ',', '.') }} <span class="text-xs font-normal text-slate-500">pcs</span></div>
+            <p class="text-xs text-amber-600 font-medium mt-0.5">Total volume terjual</p>
         </div>
     </div>
 
-    <!-- Search & Category Filter Bar -->
-    <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-4">
-        <!-- Search Input -->
-        <form action="{{ route('admin.products') }}" method="GET" class="w-full md:w-80 relative">
-            <input 
-                type="text" 
-                name="search" 
-                value="{{ request('search') }}"
-                placeholder="Cari nama produk / SKU..." 
-                class="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-4 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none transition-all"
-            >
-            <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
-        </form>
+    <!-- Main Content Container: Status Tabs, Filter & Product List -->
+    <div class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+        <!-- Status Tabs (Shopee / Tokopedia Seller Centre) -->
+        <div class="border-b border-slate-200 px-4 sm:px-6 pt-2 bg-white">
+            <nav class="flex items-center gap-6 overflow-x-auto no-scrollbar -mb-px text-xs sm:text-sm font-medium">
+                @php
+                    $tabs = [
+                        'all'          => ['label' => 'Semua', 'count' => $tabCounts['all']],
+                        'active'       => ['label' => 'Aktif', 'count' => $tabCounts['active']],
+                        'low_stock'    => ['label' => 'Stok Menipis', 'count' => $tabCounts['low_stock'], 'highlight' => 'amber'],
+                        'out_of_stock' => ['label' => 'Habis', 'count' => $tabCounts['out_of_stock'], 'highlight' => 'rose'],
+                        'inactive'     => ['label' => 'Nonaktif', 'count' => $tabCounts['inactive']],
+                    ];
+                @endphp
 
-        <!-- Category Pill Filters (Horizontally Scrollable) -->
-        <div class="flex items-center gap-1.5 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 text-xs font-bold no-scrollbar">
-            <a href="{{ route('admin.products', ['category' => 'all']) }}" class="px-3.5 py-2 rounded-xl border whitespace-nowrap transition-colors {{ request('category', 'all') === 'all' ? 'bg-blue-700 text-white border-blue-700 shadow-2xs' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100' }}">Semua Kategori</a>
-            <a href="{{ route('admin.products', ['category' => 'Pakaian']) }}" class="px-3.5 py-2 rounded-xl border whitespace-nowrap transition-colors {{ request('category') === 'Pakaian' ? 'bg-blue-700 text-white border-blue-700 shadow-2xs' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100' }}">Pakaian</a>
-            <a href="{{ route('admin.products', ['category' => 'Sepatu']) }}" class="px-3.5 py-2 rounded-xl border whitespace-nowrap transition-colors {{ request('category') === 'Sepatu' ? 'bg-blue-700 text-white border-blue-700 shadow-2xs' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100' }}">Sepatu</a>
-            <a href="{{ route('admin.products', ['category' => 'Gadget']) }}" class="px-3.5 py-2 rounded-xl border whitespace-nowrap transition-colors {{ request('category') === 'Gadget' ? 'bg-blue-700 text-white border-blue-700 shadow-2xs' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100' }}">Gadget</a>
-            <a href="{{ route('admin.products', ['category' => 'Aksesoris']) }}" class="px-3.5 py-2 rounded-xl border whitespace-nowrap transition-colors {{ request('category') === 'Aksesoris' ? 'bg-blue-700 text-white border-blue-700 shadow-2xs' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100' }}">Aksesoris</a>
-            <a href="{{ route('admin.products', ['category' => 'Rumah Tangga']) }}" class="px-3.5 py-2 rounded-xl border whitespace-nowrap transition-colors {{ request('category') === 'Rumah Tangga' ? 'bg-blue-700 text-white border-blue-700 shadow-2xs' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100' }}">Rumah Tangga</a>
+                @foreach($tabs as $tabKey => $tabData)
+                    @php
+                        $isActive = ($status === $tabKey);
+                        $queryParams = request()->query();
+                        $queryParams['status'] = $tabKey;
+                        $tabUrl = route('admin.products', $queryParams);
+                    @endphp
+                    <a 
+                        href="{{ $tabUrl }}" 
+                        class="py-3 border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 {{ $isActive ? 'border-blue-600 text-blue-600 font-semibold' : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300' }}"
+                    >
+                        <span>{{ $tabData['label'] }}</span>
+                        <span class="px-1.5 py-0.5 rounded-full text-[11px] {{ $isActive ? 'bg-blue-100 text-blue-700 font-semibold' : 'bg-slate-100 text-slate-600' }} {{ isset($tabData['highlight']) && $tabData['count'] > 0 ? ($tabData['highlight'] === 'amber' ? 'bg-amber-100 text-amber-800 font-semibold' : 'bg-rose-100 text-rose-800 font-semibold') : '' }}">
+                            {{ $tabData['count'] }}
+                        </span>
+                    </a>
+                @endforeach
+            </nav>
         </div>
-    </div>
 
-    <!-- DESKTOP PRODUCT TABLE VIEW (hidden on mobile, visible on md+) -->
-    <div class="hidden md:block bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden">
-        <div class="overflow-x-auto">
+        <!-- Search & Filter Toolbar -->
+        <div class="p-4 sm:p-5 bg-slate-50/50 border-b border-slate-200">
+            <form action="{{ route('admin.products') }}" method="GET" class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                @if($status !== 'all')
+                    <input type="hidden" name="status" value="{{ $status }}">
+                @endif
+
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1 max-w-2xl">
+                    <!-- Search Input -->
+                    <div class="relative flex-1">
+                        <input 
+                            type="text" 
+                            name="search" 
+                            value="{{ $search }}" 
+                            placeholder="Cari nama produk atau SKU (misal: #SKU-001)..." 
+                            class="w-full bg-white border border-slate-300 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all shadow-xs"
+                        >
+                        <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </div>
+
+                    <!-- Category Dropdown Filter -->
+                    <div class="sm:w-48">
+                        <select 
+                            name="category" 
+                            onchange="this.form.submit()" 
+                            class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all shadow-xs cursor-pointer"
+                        >
+                            <option value="all" {{ $category === 'all' ? 'selected' : '' }}>Semua Kategori</option>
+                            @foreach($categories as $cat)
+                                <option value="{{ $cat }}" {{ $category === $cat ? 'selected' : '' }}>{{ $cat }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <button 
+                        type="submit" 
+                        class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium transition-colors shadow-xs cursor-pointer shrink-0"
+                    >
+                        Cari
+                    </button>
+                </div>
+
+                <!-- Reset Filter Link -->
+                @if($search || $category !== 'all' || $status !== 'all')
+                    <a 
+                        href="{{ route('admin.products') }}" 
+                        class="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1 font-medium self-center md:self-auto"
+                    >
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        <span>Reset Filter</span>
+                    </a>
+                @endif
+            </form>
+        </div>
+
+        <!-- Desktop Product Table View (md+) -->
+        <div class="hidden md:block overflow-x-auto">
             <table class="w-full text-left border-collapse text-xs sm:text-sm">
-                <thead class="bg-slate-100/70 border-b border-slate-200 text-slate-600 font-bold text-xs uppercase">
+                <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium text-xs">
                     <tr>
-                        <th class="px-5 py-3.5">Detail Produk</th>
-                        <th class="px-5 py-3.5">Kategori</th>
-                        <th class="px-5 py-3.5">Harga Jual</th>
-                        <th class="px-5 py-3.5">Stok</th>
-                        <th class="px-5 py-3.5">Terjual</th>
-                        <th class="px-5 py-3.5">Status</th>
-                        <th class="px-5 py-3.5">Terakhir Update</th>
-                        <th class="px-5 py-3.5 text-right">Kelola</th>
+                        <th class="px-4 py-3 font-medium">Informasi Produk</th>
+                        <th class="px-3 py-3 font-medium">Kategori</th>
+                        <th class="px-3 py-3 font-medium">Harga</th>
+                        <th class="px-3 py-3 font-medium">Stok</th>
+                        <th class="px-3 py-3 font-medium">Terjual</th>
+                        <th class="px-3 py-3 font-medium">Status</th>
+                        <th class="px-4 py-3 font-medium text-right">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100 font-medium text-slate-800">
+                <tbody class="divide-y divide-slate-100 text-slate-700">
                     @forelse($products as $p)
-                        <tr class="hover:bg-slate-50/80 transition-colors">
-                            <td class="px-5 py-4">
+                        <tr class="hover:bg-slate-50/75 transition-colors">
+                            <!-- Info Produk -->
+                            <td class="px-4 py-3">
                                 <div class="flex items-center gap-3">
-                                    <img src="{{ $p->image }}" alt="{{ $p->name }}" class="w-12 h-12 rounded-xl object-cover border border-slate-200 shadow-2xs shrink-0">
-                                    <div class="max-w-xs">
-                                        <h4 class="font-semibold text-slate-900 line-clamp-1 text-sm">{{ $p->name }}</h4>
-                                        <div class="flex items-center gap-2 text-[11px] text-slate-400 font-mono mt-0.5">
-                                            <span class="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-bold">#SKU-00{{ $p->id }}</span>
+                                    <img src="{{ $p->image }}" alt="{{ $p->name }}" class="w-11 h-11 rounded-lg object-cover border border-slate-200 bg-slate-100 shrink-0">
+                                    <div class="min-w-0 max-w-[220px] lg:max-w-[260px] xl:max-w-xs">
+                                        <h4 class="font-medium text-slate-900 truncate text-xs sm:text-sm" title="{{ $p->name }}">{{ $p->name }}</h4>
+                                        <div class="flex items-center gap-1.5 text-[11px] text-slate-400 mt-0.5 flex-wrap">
+                                            <span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-sans font-medium">#SKU-00{{ $p->id }}</span>
+                                            @if(!empty($p->variants) && is_array($p->variants) && count($p->variants) > 0)
+                                                <span>•</span>
+                                                <span class="text-slate-500">{{ count($p->variants) }} Varian</span>
+                                            @endif
                                             <span>•</span>
-                                            <span class="text-slate-500 font-sans">Rilis: {{ $p->created_at ? $p->created_at->format('d/m/Y') : '-' }}</span>
+                                            <span class="text-slate-400" title="{{ $p->updated_at ? $p->updated_at->format('d M Y, H:i') : '' }}">
+                                                Update: {{ $p->updated_at ? $p->updated_at->diffForHumans() : '-' }}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
                             </td>
-                            <td class="px-5 py-4">
-                                <span class="bg-blue-50 text-blue-700 text-[11px] font-semibold px-2.5 py-1 rounded-lg border border-blue-200">{{ $p->category }}</span>
+
+                            <!-- Kategori -->
+                            <td class="px-3 py-3 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-normal bg-slate-100 text-slate-700 border border-slate-200">
+                                    {{ $p->category }}
+                                </span>
                             </td>
-                            <td class="px-5 py-4 font-bold text-slate-900 text-sm">
-                                {{ $p->formatted_price }}
-                                @if($p->original_price)
-                                    <div class="text-[11px] text-slate-400 line-through font-normal">{{ $p->formatted_original_price }}</div>
+
+                            <!-- Harga -->
+                            <td class="px-3 py-3 whitespace-nowrap">
+                                <div class="font-semibold text-slate-900 text-xs sm:text-sm">{{ $p->formatted_price }}</div>
+                                @if($p->original_price && $p->original_price > $p->price)
+                                    <div class="text-[11px] text-slate-400 line-through">{{ $p->formatted_original_price }}</div>
                                 @endif
                             </td>
-                            <td class="px-5 py-4">
-                                <span class="font-semibold {{ $p->stock > 0 ? 'text-slate-900' : 'text-red-600' }}">{{ $p->stock }} pcs</span>
-                            </td>
-                            <td class="px-5 py-4 text-slate-700 font-semibold">{{ $p->sold }} pcs</td>
-                            <td class="px-5 py-4">
-                                @if($p->stock > 0 && $p->status === 'aktif')
-                                    <span class="bg-emerald-50 text-emerald-700 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-emerald-200">● Aktif</span>
+
+                            <!-- Stok -->
+                            <td class="px-3 py-3 whitespace-nowrap">
+                                @if($p->stock <= 0)
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200">
+                                        Habis (0)
+                                    </span>
+                                @elseif($p->stock <= 5)
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200" title="Stok tersisa sedikit">
+                                        Menipis ({{ $p->stock }})
+                                    </span>
                                 @else
-                                    <span class="bg-red-50 text-red-700 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-red-200">● Nonaktif</span>
+                                    <span class="font-medium text-slate-800">{{ $p->stock }} pcs</span>
                                 @endif
                             </td>
-                            <td class="px-5 py-4 text-xs text-slate-500">
-                                <div class="font-bold text-slate-800">{{ $p->updated_at ? $p->updated_at->format('d M Y, H:i') : ($p->created_at ? $p->created_at->format('d M Y, H:i') : '-') }}</div>
-                                <div class="text-[10px] text-blue-700 font-semibold mt-0.5">({{ $p->updated_at ? $p->updated_at->diffForHumans() : ($p->created_at ? $p->created_at->diffForHumans() : '-') }})</div>
+
+                            <!-- Terjual -->
+                            <td class="px-3 py-3 whitespace-nowrap">
+                                <span class="font-medium text-slate-700">{{ $p->sold }} pcs</span>
                             </td>
-                            <td class="px-5 py-4 text-right">
+
+                            <!-- Status (Klik untuk Cepat Nonaktifkan / Aktifkan Produk) -->
+                            <td class="px-3 py-3 whitespace-nowrap">
+                                <form action="{{ route('admin.products.toggleStatus', $p->id) }}" method="POST" class="inline">
+                                    @csrf
+                                    @if($p->status === 'aktif' && $p->stock > 0)
+                                        <button type="submit" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer group" title="Status Aktif di toko. Klik untuk Nonaktifkan (Arsipkan)">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                            <span>Aktif</span>
+                                        </button>
+                                    @elseif($p->status === 'nonaktif')
+                                        <button type="submit" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-colors cursor-pointer group" title="Status Nonaktif (diarsipkan). Klik untuk Aktifkan kembali ke toko">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                                            <span>Nonaktif</span>
+                                        </button>
+                                    @else
+                                        <button type="submit" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer group" title="Stok Habis. Klik untuk Nonaktifkan">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                            <span>Habis</span>
+                                        </button>
+                                    @endif
+                                </form>
+                            </td>
+
+                            <!-- Aksi -->
+                            <td class="px-4 py-3 text-right whitespace-nowrap">
                                 <div class="flex items-center justify-end gap-1.5">
+                                    <a 
+                                        href="{{ route('product.detail', ['id' => $p->id, 'slug' => $p->slug]) }}" 
+                                        target="_blank" 
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
+                                        title="Lihat Produk di Toko"
+                                    >
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                                        <span>Lihat</span>
+                                    </a>
+
                                     <button 
                                         type="button" 
-                                        @click='openEdit(@json($p))'
-                                        class="text-xs font-bold text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg border border-blue-200 transition-colors cursor-pointer"
+                                        @click="openEditById({{ $p->id }})"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200 cursor-pointer"
                                     >
-                                        Edit
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                        <span>Edit</span>
                                     </button>
 
                                     <form action="{{ route('admin.products.delete', $p->id) }}" method="POST" @submit.prevent="$dispatch('open-confirm', { message: 'Hapus produk ini? Produk yang dihapus akan ditarik dari katalog secara permanen.', action: () => $el.submit() })">
                                         @csrf
-                                        <button type="submit" class="text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg border border-red-200 transition-colors cursor-pointer">
-                                            Hapus
+                                        <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors border border-rose-200 cursor-pointer">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                            <span>Hapus</span>
                                         </button>
                                     </form>
                                 </div>
@@ -185,86 +300,167 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="px-5 py-12 text-center text-slate-400">Tidak ada produk ditemukan.</td>
+                            <td colspan="7" class="px-5 py-12 text-center">
+                                <div class="max-w-xs mx-auto text-center space-y-2">
+                                    <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+                                    </div>
+                                    <p class="text-xs font-medium text-slate-700">Tidak ada produk ditemukan</p>
+                                    <p class="text-xs text-slate-400">Coba ubah kata kunci pencarian atau ganti status filter produk.</p>
+                                    @if($search || $category !== 'all' || $status !== 'all')
+                                        <a href="{{ route('admin.products') }}" class="inline-block mt-2 text-xs text-blue-600 hover:text-blue-700 font-medium">Reset Semua Filter</a>
+                                    @endif
+                                </div>
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-    </div>
 
-    <!-- MOBILE PRODUCT CARDS VIEW (visible on mobile < md) -->
-    <div class="md:hidden space-y-4">
-        @forelse($products as $p)
-            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-3.5">
-                <!-- Top Card Info -->
-                <div class="flex items-start gap-3">
-                    <img src="{{ $p->image }}" alt="{{ $p->name }}" class="w-16 h-16 rounded-xl object-cover border border-slate-200 shadow-2xs shrink-0">
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center justify-between gap-1">
-                            <span class="bg-blue-50 text-blue-700 text-[10px] font-semibold px-2 py-0.5 rounded border border-blue-200">{{ $p->category }}</span>
-                            @if($p->stock > 0 && $p->status === 'aktif')
-                                <span class="bg-emerald-50 text-emerald-700 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-emerald-200">● Aktif</span>
-                            @else
-                                <span class="bg-red-50 text-red-700 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-red-200">● Nonaktif</span>
-                            @endif
+        <!-- Mobile Product Cards View (< md) -->
+        <div class="md:hidden divide-y divide-slate-100">
+            @forelse($products as $p)
+                <div class="p-4 space-y-3">
+                    <div class="flex items-start gap-3">
+                        <img src="{{ $p->image }}" alt="{{ $p->name }}" class="w-16 h-16 rounded-lg object-cover border border-slate-200 bg-slate-100 shrink-0">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between gap-1">
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-normal bg-slate-100 text-slate-700 border border-slate-200">{{ $p->category }}</span>
+                                <form action="{{ route('admin.products.toggleStatus', $p->id) }}" method="POST" class="inline">
+                                    @csrf
+                                    @if($p->status === 'aktif' && $p->stock > 0)
+                                        <button type="submit" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-pointer" title="Klik untuk nonaktifkan"><span class="w-1 h-1 rounded-full bg-emerald-500"></span>Aktif</button>
+                                    @elseif($p->status === 'nonaktif')
+                                        <button type="submit" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200 cursor-pointer" title="Klik untuk aktifkan"><span class="w-1 h-1 rounded-full bg-slate-400"></span>Nonaktif</button>
+                                    @else
+                                        <button type="submit" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-rose-50 text-rose-700 border border-rose-200 cursor-pointer" title="Klik untuk nonaktifkan"><span class="w-1 h-1 rounded-full bg-rose-500"></span>Habis</button>
+                                    @endif
+                                </form>
+                            </div>
+                            <h4 class="font-medium text-slate-900 text-xs mt-1 truncate">{{ $p->name }}</h4>
+                            <p class="text-[11px] text-slate-400 font-mono">#SKU-00{{ $p->id }}</p>
                         </div>
-                        <h4 class="font-semibold text-slate-900 text-sm mt-1 truncate">{{ $p->name }}</h4>
-                        <p class="text-[11px] text-slate-400 font-mono">SKU: #SKU-00{{ $p->id }}</p>
                     </div>
-                </div>
 
-                <!-- Price & Stock Grid -->
-                <div class="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-xl text-xs border border-slate-100">
-                    <div>
-                        <span class="text-[10px] text-slate-400 font-bold block uppercase">Harga Jual</span>
-                        <span class="font-semibold text-slate-900">{{ $p->formatted_price }}</span>
+                    <div class="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-lg text-xs border border-slate-100">
+                        <div>
+                            <span class="text-[10px] text-slate-500 block">Harga</span>
+                            <span class="font-semibold text-slate-900 text-xs">{{ $p->formatted_price }}</span>
+                        </div>
+                        <div class="text-center">
+                            <span class="text-[10px] text-slate-500 block">Stok</span>
+                            <span class="font-medium {{ $p->stock <= 0 ? 'text-rose-600' : ($p->stock <= 5 ? 'text-amber-600' : 'text-slate-800') }} text-xs">{{ $p->stock }} pcs</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[10px] text-slate-500 block">Terjual</span>
+                            <span class="font-medium text-slate-700 text-xs">{{ $p->sold }} pcs</span>
+                        </div>
                     </div>
-                    <div class="text-center">
-                        <span class="text-[10px] text-slate-400 font-bold block uppercase">Stok Gudang</span>
-                        <span class="font-semibold {{ $p->stock > 0 ? 'text-slate-900' : 'text-red-600' }}">{{ $p->stock }} pcs</span>
+
+                    <div class="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                        <span>Terakhir Update:</span>
+                        <span class="text-slate-700 font-medium">{{ $p->updated_at ? $p->updated_at->format('d M Y, H:i') : '-' }}</span>
                     </div>
-                    <div class="text-right">
-                        <span class="text-[10px] text-slate-400 font-bold block uppercase">Terjual</span>
-                        <span class="font-semibold text-slate-700">{{ $p->sold }} pcs</span>
-                    </div>
-                </div>
 
-                <!-- Update Timestamp -->
-                <div class="flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-100 pt-2.5">
-                    <span>Terakhir Update:</span>
-                    <span class="font-bold text-blue-700">{{ $p->updated_at ? $p->updated_at->format('d M Y, H:i') : '-' }}</span>
-                </div>
-
-                <!-- Card Actions -->
-                <div class="flex items-center gap-2 pt-1">
-                    <button 
-                        type="button" 
-                        @click='openEdit(@json($p))'
-                        class="flex-1 text-xs font-semibold text-blue-700 hover:text-blue-800 bg-blue-50 py-2 rounded-xl border border-blue-200 transition-colors text-center cursor-pointer flex items-center justify-center gap-1.5"
-                    >
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                        </svg>
-                        <span>Edit Produk</span>
-                    </button>
-
-                    <form action="{{ route('admin.products.delete', $p->id) }}" method="POST" class="flex-1" @submit.prevent="$dispatch('open-confirm', { message: 'Hapus produk ini? Produk yang dihapus akan ditarik dari katalog secara permanen.', action: () => $el.submit() })">
-                        @csrf
-                        <button type="submit" class="w-full text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 py-2 rounded-xl border border-red-200 transition-colors text-center cursor-pointer flex items-center justify-center gap-1.5">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                            </svg>
-                            <span>Hapus Produk</span>
+                    <div class="flex items-center gap-2 pt-1">
+                        <a 
+                            href="{{ route('product.detail', ['id' => $p->id, 'slug' => $p->slug]) }}" 
+                            target="_blank" 
+                            class="px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-800 bg-white border border-slate-200 rounded-lg text-center"
+                        >
+                            Lihat
+                        </a>
+                        <button 
+                            type="button" 
+                            @click="openEditById({{ $p->id }})"
+                            class="flex-1 text-xs font-medium text-blue-600 hover:text-blue-700 bg-blue-50 py-1.5 rounded-lg border border-blue-200 transition-colors text-center cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                            <span>Edit</span>
                         </button>
-                    </form>
+                        <form action="{{ route('admin.products.delete', $p->id) }}" method="POST" class="flex-1" @submit.prevent="$dispatch('open-confirm', { message: 'Hapus produk ini? Produk yang dihapus akan ditarik dari katalog secara permanen.', action: () => $el.submit() })">
+                            @csrf
+                            <button type="submit" class="w-full text-xs font-medium text-rose-600 hover:text-rose-700 bg-rose-50 py-1.5 rounded-lg border border-rose-200 transition-colors text-center cursor-pointer flex items-center justify-center gap-1.5">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                <span>Hapus</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            @empty
+                <div class="p-8 text-center text-slate-400 text-xs">
+                    Tidak ada produk ditemukan.
+                </div>
+            @endforelse
+        </div>
+
+        <!-- Pagination Footer (Matching User Design with Blue Active Indicator) -->
+        @if ($products->hasPages())
+            <div class="px-4 sm:px-6 py-4 border-t border-slate-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div class="text-xs text-slate-500 font-medium">
+                    Menampilkan <span class="text-slate-900 font-semibold">{{ $products->firstItem() }}</span> - <span class="text-slate-900 font-semibold">{{ $products->lastItem() }}</span> dari <span class="text-slate-900 font-semibold">{{ $products->total() }}</span> produk
+                </div>
+
+                <div class="flex items-center gap-1.5 sm:gap-2">
+                    {{-- Previous Page Link --}}
+                    @if ($products->onFirstPage())
+                        <span class="w-8 h-8 flex items-center justify-center text-slate-300 cursor-not-allowed select-none">
+                            <svg class="w-4 h-4 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                        </span>
+                    @else
+                        <a href="{{ $products->previousPageUrl() }}" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-600 transition-colors select-none" title="Sebelumnya">
+                            <svg class="w-4 h-4 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                        </a>
+                    @endif
+
+                    {{-- Page Numbers --}}
+                    @php
+                        $currentPage = $products->currentPage();
+                        $lastPage = $products->lastPage();
+                        $start = max(1, $currentPage - 2);
+                        $end = min($lastPage, $currentPage + 2);
+                    @endphp
+
+                    @if($start > 1)
+                        <a href="{{ $products->url(1) }}" class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-xs sm:text-sm font-normal text-slate-400 hover:text-blue-600 transition-colors select-none">1</a>
+                        @if($start > 2)
+                            <span class="w-6 h-7 sm:h-8 flex items-center justify-center text-xs sm:text-sm text-slate-400 select-none">...</span>
+                        @endif
+                    @endif
+
+                    @for ($i = $start; $i <= $end; $i++)
+                        @if ($i == $currentPage)
+                            <span class="w-7 h-7 sm:w-8 sm:h-8 rounded-[3px] bg-blue-600 text-white flex items-center justify-center text-xs sm:text-sm font-medium shadow-xs select-none">
+                                {{ $i }}
+                            </span>
+                        @else
+                            <a href="{{ $products->url($i) }}" class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-xs sm:text-sm font-normal text-slate-400 hover:text-blue-600 transition-colors select-none">
+                                {{ $i }}
+                            </a>
+                        @endif
+                    @endfor
+
+                    @if($end < $lastPage)
+                        @if($end < $lastPage - 1)
+                            <span class="w-6 h-7 sm:h-8 flex items-center justify-center text-xs sm:text-sm text-slate-400 select-none">...</span>
+                        @endif
+                        <a href="{{ $products->url($lastPage) }}" class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-xs sm:text-sm font-normal text-slate-400 hover:text-blue-600 transition-colors select-none">{{ $lastPage }}</a>
+                    @endif
+
+                    {{-- Next Page Link --}}
+                    @if ($products->hasMorePages())
+                        <a href="{{ $products->nextPageUrl() }}" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-600 transition-colors select-none" title="Selanjutnya">
+                            <svg class="w-4 h-4 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                        </a>
+                    @else
+                        <span class="w-8 h-8 flex items-center justify-center text-slate-300 cursor-not-allowed select-none">
+                            <svg class="w-4 h-4 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                        </span>
+                    @endif
                 </div>
             </div>
-        @empty
-            <div class="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-400 text-xs">
-                Tidak ada produk ditemukan.
-            </div>
-        @endforelse
+        @endif
     </div>
 
     <!-- MODAL TAMBAH PRODUK BARU (RESPONSIVE MODAL) -->
@@ -291,11 +487,9 @@
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Kategori <span class="text-red-500">*</span></label>
                         <select name="category" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none">
-                            <option value="Pakaian">Pakaian</option>
-                            <option value="Sepatu">Sepatu</option>
-                            <option value="Aksesoris">Aksesoris</option>
-                            <option value="Gadget">Gadget</option>
-                            <option value="Rumah Tangga">Rumah Tangga</option>
+                            @foreach($categories as $cat)
+                                <option value="{{ $cat }}">{{ $cat }}</option>
+                            @endforeach
                         </select>
                     </div>
 
@@ -400,6 +594,63 @@
                     </div>
                 </div>
 
+                <!-- SECTION: SPESIFIKASI PRODUK (DETAIL INFORMASI PRODUK) -->
+                <div class="border border-slate-200 bg-slate-50/70 p-4 rounded-2xl space-y-3.5">
+                    <div class="flex items-center justify-between border-b border-slate-200 pb-2.5">
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                                Spesifikasi Produk (Detail Informasi Tampil di Halaman Produk)
+                            </h4>
+                            <p class="text-[11px] text-slate-500">Isi spesifikasi produk asli Anda (Merek, Bahan, Model, Garansi, dll.).</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Merek / Brand</label>
+                            <input type="text" name="specs[Merek]" placeholder="Misal: No Brand / Forti" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-900 focus:border-blue-700 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Bahan Pakaian / Material</label>
+                            <input type="text" name="specs[Bahan Pakaian]" placeholder="Misal: Katun Fleece 280gsm / Combed 30s" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-900 focus:border-blue-700 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Model / Potongan</label>
+                            <input type="text" name="specs[Model / Potongan]" placeholder="Misal: Regular Fit / Slim Fit" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-900 focus:border-blue-700 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Asal Produk</label>
+                            <input type="text" name="specs[Asal Produk]" value="Indonesia" placeholder="Indonesia" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-900 focus:border-blue-700 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Kondisi</label>
+                            <input type="text" name="specs[Kondisi]" value="Baru (100% Original)" placeholder="Baru (100% Original)" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-900 focus:border-blue-700 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Garansi</label>
+                            <input type="text" name="specs[Garansi]" value="Garansi Resmi Toko" placeholder="Misal: Garansi Toko 1 Bulan" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-900 focus:border-blue-700 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Custom Specs Rows (Dinamis: e.g. Tipe Lengan, Gaya, No. SNI, dll.) -->
+                    <div class="pt-2 border-t border-slate-200/80 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[11px] font-bold text-slate-700">Spesifikasi Kustom Tambahan:</span>
+                            <button type="button" @click="addCustomSpecRow('add')" class="text-[10px] bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold px-2.5 py-1 rounded-lg transition-colors cursor-pointer flex items-center gap-1">
+                                + Tambah Kolom Kustom
+                            </button>
+                        </div>
+                        <template x-for="(spec, sIdx) in addCustomSpecs" :key="sIdx">
+                            <div class="flex items-center gap-2">
+                                <input type="text" x-model="spec.key" placeholder="Nama Label (mis: Gaya / Tipe Lengan)" class="w-1/2 bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-900 focus:border-blue-700 focus:outline-none">
+                                <input type="text" :name="'specs[' + spec.key + ']'" x-model="spec.val" placeholder="Nilai (mis: Casual / Panjang)" class="w-1/2 bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-900 focus:border-blue-700 focus:outline-none">
+                                <button type="button" @click="addCustomSpecs.splice(sIdx, 1)" class="text-red-500 hover:text-red-700 p-1 cursor-pointer" title="Hapus">✕</button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
                 <div>
                     <div class="flex items-center justify-between mb-1">
                         <label class="block text-xs font-bold text-slate-700">Deskripsi Produk</label>
@@ -443,11 +694,9 @@
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Kategori <span class="text-red-500">*</span></label>
                         <select name="category" x-model="editModalData.category" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none">
-                            <option value="Pakaian">Pakaian</option>
-                            <option value="Sepatu">Sepatu</option>
-                            <option value="Aksesoris">Aksesoris</option>
-                            <option value="Gadget">Gadget</option>
-                            <option value="Rumah Tangga">Rumah Tangga</option>
+                            @foreach($categories as $cat)
+                                <option value="{{ $cat }}">{{ $cat }}</option>
+                            @endforeach
                         </select>
                     </div>
 
@@ -578,6 +827,63 @@
                     </div>
                 </div>
 
+                <!-- SECTION: SPESIFIKASI PRODUK (DETAIL INFORMASI PRODUK) - EDIT MODAL -->
+                <div class="border border-slate-200 bg-slate-50/70 p-4 rounded-2xl space-y-3.5">
+                    <div class="flex items-center justify-between border-b border-slate-200 pb-2.5">
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                                Spesifikasi Produk (Detail Informasi Tampil di Halaman Produk)
+                            </h4>
+                            <p class="text-[11px] text-slate-500">Edit spesifikasi produk (Merek, Bahan, Model, Garansi, dll.).</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Merek / Brand</label>
+                            <input type="text" name="specs[Merek]" x-model="editModalData.specs['Merek']" placeholder="Misal: No Brand / Forti" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-900 focus:border-blue-700 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Bahan Pakaian / Material</label>
+                            <input type="text" name="specs[Bahan Pakaian]" x-model="editModalData.specs['Bahan Pakaian']" placeholder="Misal: Katun Fleece 280gsm / Combed 30s" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-900 focus:border-blue-700 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Model / Potongan</label>
+                            <input type="text" name="specs[Model / Potongan]" x-model="editModalData.specs['Model / Potongan']" placeholder="Misal: Regular Fit / Slim Fit" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-900 focus:border-blue-700 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Asal Produk</label>
+                            <input type="text" name="specs[Asal Produk]" x-model="editModalData.specs['Asal Produk']" placeholder="Indonesia" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-900 focus:border-blue-700 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Kondisi</label>
+                            <input type="text" name="specs[Kondisi]" x-model="editModalData.specs['Kondisi']" placeholder="Baru (100% Original)" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-900 focus:border-blue-700 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Garansi</label>
+                            <input type="text" name="specs[Garansi]" x-model="editModalData.specs['Garansi']" placeholder="Misal: Garansi Toko 1 Bulan" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-900 focus:border-blue-700 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Custom Specs Rows (Edit) -->
+                    <div class="pt-2 border-t border-slate-200/80 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[11px] font-bold text-slate-700">Spesifikasi Kustom Tambahan:</span>
+                            <button type="button" @click="addCustomSpecRow('edit')" class="text-[10px] bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold px-2.5 py-1 rounded-lg transition-colors cursor-pointer flex items-center gap-1">
+                                + Tambah Kolom Kustom
+                            </button>
+                        </div>
+                        <template x-for="(spec, sIdx) in editCustomSpecs" :key="sIdx">
+                            <div class="flex items-center gap-2">
+                                <input type="text" x-model="spec.key" placeholder="Nama Label (mis: Gaya / Tipe Lengan)" class="w-1/2 bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-900 focus:border-blue-700 focus:outline-none">
+                                <input type="text" :name="'specs[' + spec.key + ']'" x-model="spec.val" placeholder="Nilai (mis: Casual / Panjang)" class="w-1/2 bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-900 focus:border-blue-700 focus:outline-none">
+                                <button type="button" @click="editCustomSpecs.splice(sIdx, 1)" class="text-red-500 hover:text-red-700 p-1 cursor-pointer" title="Hapus">✕</button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
                 <div>
                     <div class="flex items-center justify-between mb-1">
                         <label class="block text-xs font-bold text-slate-700">Deskripsi Produk</label>
@@ -599,11 +905,29 @@
 
 </div>
 
+<script id="products-data" type="application/json">
+{!! json_encode($products->items()) !!}
+</script>
+
 <script>
 function productManager() {
+    let productsList = [];
+    try {
+        const el = document.getElementById('products-data');
+        if (el) {
+            const parsed = JSON.parse(el.textContent);
+            productsList = Array.isArray(parsed) ? parsed : (parsed.data || []);
+        }
+    } catch(e) {
+        console.error('Failed to parse products-data JSON:', e);
+    }
+
     return {
+        productsList: productsList,
         showAddModal: false,
         showEditModal: false,
+        addCustomSpecs: [],
+        editCustomSpecs: [],
         addVariants: [
             { color: 'Standar', image: '', sizes: [{ name: '', price: 0, stock: 10 }] }
         ],
@@ -620,7 +944,22 @@ function productManager() {
             image: '',
             size_guide_image: '',
             images: '',
-            description: ''
+            description: '',
+            specs: {
+                'Merek': '',
+                'Bahan Pakaian': '',
+                'Model / Potongan': '',
+                'Asal Produk': 'Indonesia',
+                'Kondisi': 'Baru (100% Original)',
+                'Garansi': 'Garansi Resmi Toko'
+            }
+        },
+        addCustomSpecRow(type) {
+            if (type === 'add') {
+                this.addCustomSpecs.push({ key: '', val: '' });
+            } else {
+                this.editCustomSpecs.push({ key: '', val: '' });
+            }
         },
         addVariantRow(type) {
             if (type === 'add') {
@@ -638,7 +977,39 @@ function productManager() {
                 this.editVariants.splice(index, 1);
             }
         },
+        openEditById(id) {
+            const p = this.productsList.find(item => item.id == id);
+            if (p) {
+                this.openEdit(p);
+            } else {
+                console.warn('Produk tidak ditemukan untuk ID:', id);
+            }
+        },
         openEdit(p) {
+            const standardKeys = ['Merek', 'Bahan Pakaian', 'Model / Potongan', 'Asal Produk', 'Kondisi', 'Garansi'];
+            let pSpecs = {};
+            if (typeof p.specs === 'string') {
+                try { pSpecs = JSON.parse(p.specs); } catch(e) {}
+            } else if (typeof p.specs === 'object' && p.specs !== null) {
+                pSpecs = p.specs;
+            }
+            
+            let specsInit = {
+                'Merek': pSpecs['Merek'] || pSpecs['Brand'] || '',
+                'Bahan Pakaian': pSpecs['Bahan Pakaian'] || pSpecs['Bahan'] || '',
+                'Model / Potongan': pSpecs['Model / Potongan'] || pSpecs['Model'] || '',
+                'Asal Produk': pSpecs['Asal Produk'] || 'Indonesia',
+                'Kondisi': pSpecs['Kondisi'] || 'Baru (100% Original)',
+                'Garansi': pSpecs['Garansi'] || 'Garansi Resmi Toko'
+            };
+
+            this.editCustomSpecs = [];
+            for (let k in pSpecs) {
+                if (!standardKeys.includes(k) && !['Brand', 'Bahan', 'Model', 'Stok', 'Berat Produk', 'Dikirim Dari', 'Kategori'].includes(k)) {
+                    this.editCustomSpecs.push({ key: k, val: pSpecs[k] });
+                }
+            }
+
             this.editModalData = {
                 id: p.id,
                 name: p.name || '',
@@ -651,7 +1022,8 @@ function productManager() {
                 image: p.image || '',
                 size_guide_image: p.size_guide_image || '',
                 images: Array.isArray(p.images) ? p.images.join('\n') : (p.images || ''),
-                description: p.description || ''
+                description: p.description || '',
+                specs: specsInit
             };
 
             // Format editVariants

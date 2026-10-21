@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Product;
+use App\Services\RecommendationService;
 
 class HomeController extends Controller
 {
@@ -15,22 +16,8 @@ class HomeController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Product::where('status', 'aktif')->withAvg('reviews', 'rating')->latest();
-
-        $allProducts = $query->get()->values()->map(function($p) {
-            return [
-                'id'            => $p->id,
-                'title'         => $p->name,
-                'category'      => $p->category,
-                'price'         => $p->formatted_price,
-                'originalPrice' => $p->formatted_original_price,
-                'discount'      => $p->discount,
-                'image'         => $p->image,
-                'rating'        => $p->average_rating,
-                'sold'          => $p->sold > 1000 ? round($p->sold / 1000, 1) . 'rb+' : ($p->sold > 0 ? $p->sold . '+' : '0'),
-                'variants'      => $p->formatted_variants,
-            ];
-        });
+        // Inisialisasi Hybrid Recommendation Service
+        $recommendationService = app(RecommendationService::class);
 
         // Calculate Automatic Weekly Best Sellers (Top Products Sold in Last 7 Days)
         $weeklySales = \App\Models\OrderItem::where('created_at', '>=', now()->subDays(7))
@@ -80,7 +67,7 @@ class HomeController extends Controller
                 'discount'      => $p->discount,
                 'image'         => $p->image,
                 'rating'        => $p->average_rating,
-                'sold'          => $p->sold > 1000 ? round($p->sold / 1000, 1) . 'rb+' : ($p->sold > 0 ? $p->sold . '+' : '0'),
+                'sold'          => $p->formatted_sold,
                 'rankBadge'     => $index < 3 ? 'TOP ' . ($index + 1) : 'BESTSELLER',
                 'rankColor'     => $index === 0 ? 'bg-amber-500 text-white' : ($index === 1 ? 'bg-slate-400 text-white' : ($index === 2 ? 'bg-amber-700 text-white' : 'bg-blue-600 text-white')),
                 'variants'      => $p->formatted_variants,
@@ -125,32 +112,26 @@ class HomeController extends Controller
             ]
         ];
 
-        // AUTOMATIC FLASH SALE PRODUCTS: Fetch active products that have a discount or original_price set
-        $promoModels = Product::where('status', 'aktif')
-            ->withAvg('reviews', 'rating')
-            ->where(function($q) {
-                $q->where(function($sub) {
-                    $sub->whereNotNull('original_price')->whereColumn('original_price', '>', 'price');
-                })->orWhere(function($sub) {
-                    $sub->whereNotNull('discount')->where('discount', '!=', '');
-                });
-            })
-            ->latest('updated_at')
-            ->get();
+        $storeSettings     = \App\Models\StoreSetting::getSettings();
+        $flashSaleEndTime  = $storeSettings->flash_sale_end_time ? $storeSettings->flash_sale_end_time->format('Y-m-d\TH:i:s') : null;
+        $flashSaleIsActive = $storeSettings->flash_sale_is_active ?? true;
 
-        // If there are fewer than 6 promo products, fill up with latest active products
-        if ($promoModels->count() < 6) {
-            $needed = 6 - $promoModels->count();
-            $existingIds = $promoModels->pluck('id')->toArray();
-            $additionalPromo = Product::where('status', 'aktif')
+        // MANUAL FLASH SALE PRODUCTS: Diatur khusus secara manual oleh Admin di menu Promo & Flash Sale
+        $selectedFlashSaleIds = $storeSettings->flash_sale_product_ids ?? [];
+        if (!is_array($selectedFlashSaleIds)) {
+            $selectedFlashSaleIds = json_decode($selectedFlashSaleIds, true) ?: [];
+        }
+
+        if (!empty($selectedFlashSaleIds) && $flashSaleIsActive) {
+            $promoModels = Product::where('status', 'aktif')
                 ->withAvg('reviews', 'rating')
-                ->whereNotIn('id', $existingIds)
-                ->latest()
-                ->take($needed)
-                ->get();
-            $promoModels = $promoModels->concat($additionalPromo);
+                ->whereIn('id', $selectedFlashSaleIds)
+                ->get()
+                ->sortBy(function($p) use ($selectedFlashSaleIds) {
+                    return array_search($p->id, $selectedFlashSaleIds);
+                });
         } else {
-            $promoModels = $promoModels->take(6);
+            $promoModels = collect();
         }
 
         $flashSaleProducts = $promoModels->values()->map(function($p) {
@@ -163,19 +144,56 @@ class HomeController extends Controller
                 'discount'      => $p->discount,
                 'image'         => $p->image,
                 'rating'        => $p->average_rating,
-                'sold'          => $p->sold > 1000 ? round($p->sold / 1000, 1) . 'rb+' : ($p->sold > 0 ? $p->sold . '+' : '0'),
+                'sold'          => $p->formatted_sold,
                 'variants'      => $p->formatted_variants,
             ];
         })->all();
 
-        $recommendedProducts = $allProducts->take(18)->values()->all();
+        // Dapatkan 18 Rekomendasi Hibrida (60% Minat Kategori User + 40% Kualitas/Tren Global)
+        $recommendedProducts = $recommendationService->getHybridRecommendations(18);
         $banners             = \App\Models\Banner::where('status', 'aktif')->orderBy('order_column', 'asc')->get();
 
-        $storeSettings     = \App\Models\StoreSetting::getSettings();
-        $flashSaleEndTime  = $storeSettings->flash_sale_end_time ? $storeSettings->flash_sale_end_time->format('Y-m-d\TH:i:s') : null;
-        $flashSaleIsActive = $storeSettings->flash_sale_is_active ?? true;
+        // Fetch New Arrivals (Produk Terbaru)
+        $newArrivalModels = Product::where('status', 'aktif')
+            ->withAvg('reviews', 'rating')
+            ->latest('created_at')
+            ->take(6)
+            ->get();
 
-        return view('pages.home', compact('banners', 'flashSaleProducts', 'bestSellerProducts', 'recommendedProducts', 'categories', 'flashSaleEndTime', 'flashSaleIsActive'));
+        $newArrivalProducts = $newArrivalModels->values()->map(function($p) {
+            return [
+                'id'            => $p->id,
+                'title'         => $p->name,
+                'category'      => $p->category,
+                'price'         => $p->formatted_price,
+                'originalPrice' => $p->formatted_original_price,
+                'discount'      => $p->discount,
+                'image'         => $p->image,
+                'rating'        => $p->average_rating,
+                'sold'          => $p->formatted_sold,
+                'rankBadge'     => 'BARU',
+                'rankColor'     => 'bg-blue-700 text-white',
+                'variants'      => $p->formatted_variants,
+            ];
+        })->all();
+
+        // Fetch Latest Articles (Berita / Artikel Toko)
+        $latestArticles = \App\Models\Article::where('status', 'published')
+            ->latest()
+            ->take(3)
+            ->get();
+
+        return view('pages.home', compact(
+            'banners', 
+            'flashSaleProducts', 
+            'bestSellerProducts', 
+            'newArrivalProducts', 
+            'recommendedProducts', 
+            'categories', 
+            'latestArticles', 
+            'flashSaleEndTime', 
+            'flashSaleIsActive'
+        ));
     }
 
     /**
@@ -186,51 +204,88 @@ class HomeController extends Controller
      */
     public function catalog(Request $request)
     {
-        $search = $request->query('search');
+        $search = trim($request->query('search', ''));
         $selectedCategory = $request->query('category');
+        $minPrice = $request->query('min_price');
+        $maxPrice = $request->query('max_price');
+        $statusFilter = $request->query('status_filter'); // 'diskon', 'ready_stock'
         $sort = $request->query('sort', 'latest');
 
         $query = Product::where('status', 'aktif')->withAvg('reviews', 'rating');
 
-        if ($search) {
-            // Memecah kata pencarian berdasarkan spasi (contoh: "jaket negeri" jadi "jaket" dan "negeri")
-            $searchWords = explode(' ', $search);
-            foreach ($searchWords as $word) {
-                if (!empty($word)) {
-                    // Cari masing-masing kata (harus ada semua kata tersebut di nama produk, urutan bebas)
-                    $query->where('name', 'like', "%{$word}%");
-                }
-            }
+        if ($search !== '') {
+            $query->where(function($q) use ($search) {
+                // Cari berdasarkan SKU persis atau partial
+                $q->where('sku', 'like', "%{$search}%")
+                  ->orWhere('id', $search);
+
+                // Memecah kata pencarian berdasarkan spasi untuk pencarian nama produk
+                $searchWords = explode(' ', $search);
+                $q->orWhere(function($subQ) use ($searchWords) {
+                    foreach ($searchWords as $word) {
+                        if (!empty($word)) {
+                            $subQ->where('name', 'like', "%{$word}%");
+                        }
+                    }
+                });
+            });
         }
 
         if ($selectedCategory && $selectedCategory !== 'all') {
             $query->where('category', $selectedCategory);
         }
 
+        // Filter Rentang Harga (Min - Max)
+        if (is_numeric($minPrice)) {
+            $query->where('price', '>=', (float) $minPrice);
+        }
+        if (is_numeric($maxPrice)) {
+            $query->where('price', '<=', (float) $maxPrice);
+        }
+
+        // Filter Status Produk (Diskon, Ready Stock)
+        if ($statusFilter === 'diskon') {
+            $query->where(function($q) {
+                $q->whereNotNull('discount')->where('discount', '!=', '')
+                  ->orWhere(function($sub) {
+                      $sub->whereNotNull('original_price')->whereColumn('original_price', '>', 'price');
+                  });
+            });
+        } elseif ($statusFilter === 'ready_stock') {
+            $query->where('stock', '>', 0);
+        }
+
+        // Sorting Dropdown
         if ($sort === 'price_asc') {
             $query->orderBy('price', 'asc');
         } elseif ($sort === 'price_desc') {
             $query->orderBy('price', 'desc');
         } elseif ($sort === 'popular') {
             $query->orderBy('sold', 'desc');
+        } elseif ($sort === 'rating_desc') {
+            $query->orderByDesc('reviews_avg_rating');
         } else {
             $query->latest();
         }
-        $paginatedProducts = $query->paginate(18)->withQueryString();
+
+        $paginatedProducts = $query->paginate(20)->withQueryString();
 
         $paginatedProducts->getCollection()->transform(function($p) {
             return [
                 'id' => $p->id,
+                'sku' => $p->sku ?: ('SKU-' . str_pad($p->id, 5, '0', STR_PAD_LEFT)),
                 'title' => $p->name,
                 'slug' => \Illuminate\Support\Str::slug($p->name),
                 'category' => $p->category,
                 'price' => $p->formatted_price,
+                'raw_price' => $p->price,
                 'originalPrice' => $p->formatted_original_price,
                 'hasDiscount' => !empty($p->discount),
                 'discount' => $p->discount,
                 'image' => $p->image,
                 'rating' => $p->average_rating,
-                'sold' => $p->sold > 1000 ? round($p->sold / 1000, 1) . 'rb+' : ($p->sold > 0 ? $p->sold . '+' : '0'),
+                'sold' => $p->formatted_sold,
+                'stock' => $p->stock,
                 'variants' => $p->formatted_variants,
             ];
         });
@@ -245,7 +300,15 @@ class HomeController extends Controller
             ->values()
             ->all();
 
-        return view('pages.catalog', compact('catalogProducts', 'categories', 'selectedCategory'));
+        return view('pages.catalog', compact(
+            'catalogProducts', 
+            'categories', 
+            'selectedCategory', 
+            'minPrice', 
+            'maxPrice', 
+            'statusFilter', 
+            'sort'
+        ));
     }
 
     /**
@@ -263,7 +326,13 @@ class HomeController extends Controller
             abort(404, 'Produk tidak ditemukan');
         }
 
-        $rawReviews = \App\Models\ProductReview::with('user')
+        // Catat aktivitas melihat produk untuk rekomendasi hibrida real-time
+        app(RecommendationService::class)->recordProductView($dbProduct->id, $dbProduct->category);
+
+        $userId = \Illuminate\Support\Facades\Auth::id();
+        $sessionId = session()->getId();
+
+        $rawReviews = \App\Models\ProductReview::with(['user', 'likes'])
             ->where('product_id', $dbProduct->id)
             ->latest()
             ->get();
@@ -276,12 +345,23 @@ class HomeController extends Controller
             1 => $rawReviews->where('rating', 1)->count(),
         ];
 
-        $reviews = $rawReviews->map(function($r) {
-            $name = $r->is_anonymous ? 'Pengguna Anonim' : ($r->user->name ?? 'Pembeli Setia');
-            $avatar = $r->user->avatar ?? null;
-            if (!$avatar) {
+        $reviews = $rawReviews->map(function($r) use ($userId, $sessionId) {
+            $name = $r->display_name;
+            $userAvatarPath = $r->user->avatar ?? null;
+            if ($userAvatarPath) {
+                $avatar = str_starts_with($userAvatarPath, 'http') ? $userAvatarPath : asset('storage/' . ltrim($userAvatarPath, '/'));
+            } else {
                 $avatar = 'https://ui-avatars.com/api/?name=' . urlencode($name) . '&background=0D8ABC&color=fff';
             }
+            $imgUrl = $r->image ? (str_starts_with($r->image, 'http') ? $r->image : asset($r->image)) : null;
+
+            $isLikedByMe = false;
+            if ($userId) {
+                $isLikedByMe = $r->likes->where('user_id', $userId)->isNotEmpty();
+            } else {
+                $isLikedByMe = $r->likes->where('session_id', $sessionId)->isNotEmpty();
+            }
+
             return [
                 'id'          => $r->id,
                 'userName'    => $name,
@@ -289,14 +369,25 @@ class HomeController extends Controller
                 'rating'      => (int) $r->rating,
                 'comment'     => $r->comment ?: 'Tidak ada ulasan tertulis.',
                 'date'        => $r->created_at ? $r->created_at->format('d M Y') : 'Baru saja',
-                'variant'     => 'Variasi Standar',
-                'images'      => $r->image ? [asset($r->image)] : [],
+                'created_at'  => $r->created_at ? $r->created_at->toIso8601String() : null,
+                'variant'     => $r->variant ?: 'Variasi Standar',
+                'image'       => $imgUrl,
+                'images'      => $imgUrl ? [$imgUrl] : [],
                 'isVerified'  => true,
-                'likes'       => rand(1, 5),
+                'likes'       => (int) ($r->likes_count ?? 0),
+                'isLiked'     => $isLikedByMe,
+                'user'        => [
+                    'name'   => $name,
+                    'avatar' => $avatar,
+                ],
             ];
         })->toArray();
         
-        $reviewImages = $rawReviews->whereNotNull('image')->pluck('image')->map(fn($img) => asset($img))->all();
+        $reviewImages = $rawReviews->pluck('image')
+            ->filter(fn($img) => !empty($img))
+            ->map(fn($img) => str_starts_with($img, 'http') ? $img : asset($img))
+            ->values()
+            ->all();
 
 
 
@@ -366,18 +457,71 @@ class HomeController extends Controller
             'variantsList'  => $dbProduct->variants ?: [],
             'rating'        => $dbProduct->average_rating,
             'reviewCount'   => $dbProduct->review_count,
-            'sold'          => $dbProduct->sold > 1000 ? round($dbProduct->sold / 1000, 1) . 'rb+' : ($dbProduct->sold > 0 ? $dbProduct->sold . '+' : '0'),
+            'sold'          => $dbProduct->formatted_sold,
             'stock'         => $dbProduct->stock,
             'description'   => $dbProduct->description ?: 'Produk berkualitas tinggi dari Toko Online Resmi kami.',
             'reviews'       => $reviews,
             'ratingCounts'  => $ratingCounts,
             'reviewImages'  => $reviewImages,
-            'specs'         => [
-                'Kategori'      => $dbProduct->category,
-                'Stok Tersedia' => $dbProduct->stock . ' buah',
-                'Kondisi'       => 'Baru (100% Original)',
-                'Garansi'       => 'Garansi Resmi Toko 1 Tahun',
-            ],
+            'specs'         => (function() use ($dbProduct) {
+                $storeSetting = \App\Models\StoreSetting::first();
+                $storeName = $storeSetting && !empty($storeSetting->store_name) ? $storeSetting->store_name : 'Beranda';
+                $sentFrom = $storeSetting && !empty($storeSetting->city) ? strtoupper($storeSetting->city) : 'TEGAL';
+                $dbSpecs = is_array($dbProduct->specs) ? $dbProduct->specs : [];
+
+                $specs = [
+                    'Kategori' => [
+                        'type' => 'breadcrumb',
+                        'items' => [
+                            ['name' => $storeName, 'url' => route('home')],
+                            ['name' => $dbProduct->category ?: 'Katalog', 'url' => route('catalog', ['category' => $dbProduct->category ?: 'all'])],
+                            ['name' => $dbProduct->name, 'url' => null],
+                        ]
+                    ],
+                ];
+
+                // Merek (Brand - Plain text, tidak berupa link)
+                $brand = !empty($dbSpecs['Merek']) ? $dbSpecs['Merek'] : (!empty($dbSpecs['Brand']) ? $dbSpecs['Brand'] : 'No Brand');
+                $specs['Merek'] = $brand;
+
+                // Asal Produk
+                $specs['Asal Produk'] = !empty($dbSpecs['Asal Produk']) ? $dbSpecs['Asal Produk'] : 'Indonesia';
+
+                // Masukkan spesifikasi yang diisi dari database (jika ada)
+                if (!empty($dbSpecs)) {
+                    foreach ($dbSpecs as $key => $val) {
+                        if (in_array($key, ['Merek', 'Brand', 'Asal Produk', 'Stok', 'Berat Produk', 'Dikirim Dari', 'Kategori'])) {
+                            continue;
+                        }
+                        if (!empty($val)) {
+                            $specs[$key] = $val;
+                        }
+                    }
+                } else {
+                    // Fallback default berdasarkan kategori jika admin belum mengisi spesifikasi khusus
+                    $catLower = strtolower(($dbProduct->category ?? '') . ' ' . ($dbProduct->name ?? ''));
+                    if (str_contains($catLower, 'sepatu') || str_contains($catLower, 'sandal')) {
+                        $specs['Tipe Ujung Sepatu'] = 'Ujung Bulat';
+                        $specs['Tipe Pengikat'] = 'Slip-On / Tali';
+                    } elseif (str_contains($catLower, 'jaket') || str_contains($catLower, 'hoodie')) {
+                        $specs['Bahan Pakaian'] = 'Fleece Cotton Premium';
+                        $specs['Model / Potongan'] = 'Regular Fit Unisex';
+                        $specs['Tipe Lengan'] = 'Lengan Panjang';
+                    } elseif (str_contains($catLower, 'baju') || str_contains($catLower, 'kaos')) {
+                        $specs['Bahan Pakaian'] = 'Katun Combed 30s';
+                        $specs['Model / Potongan'] = 'Regular Fit';
+                    }
+                }
+
+                // Field Dinamis & Real-time Toko
+                $specs['Stok'] = $dbProduct->stock . ' buah';
+                $specs['Berat Produk'] = ($dbProduct->weight ?: 1000) . ' gram';
+                $specs['Kondisi'] = !empty($dbSpecs['Kondisi']) ? $dbSpecs['Kondisi'] : 'Baru (100% Original)';
+                $specs['Garansi'] = !empty($dbSpecs['Garansi']) ? $dbSpecs['Garansi'] : 'Garansi Resmi Toko';
+                $specs['Dikirim Dari'] = $sentFrom;
+
+                return $specs;
+            })(),
         ];
 
         $relatedProducts = Product::where('status', 'aktif')
@@ -397,7 +541,7 @@ class HomeController extends Controller
                     'image' => $p->image,
                     'images' => [$p->image],
                     'rating' => $p->average_rating,
-                    'sold' => $p->sold > 1000 ? round($p->sold / 1000, 1) . 'rb+' : ($p->sold > 0 ? $p->sold . '+' : '0'),
+                    'sold' => $p->formatted_sold,
                     'variants' => $p->formatted_variants,
                 ];
             });
@@ -410,6 +554,49 @@ class HomeController extends Controller
         }
 
         return view('pages.product-detail', compact('product', 'relatedProducts', 'isWishlisted'));
+    }
+
+    /**
+     * Realtime toggle like / helpful on a product review.
+     */
+    public function toggleReviewLike($id)
+    {
+        $review = \App\Models\ProductReview::findOrFail($id);
+        $userId = \Illuminate\Support\Facades\Auth::id();
+        $sessionId = session()->getId();
+        $ip = request()->ip();
+
+        $query = \App\Models\ReviewLike::where('review_id', $review->id);
+        if ($userId) {
+            $query->where('user_id', $userId);
+        } else {
+            $query->where('session_id', $sessionId);
+        }
+
+        $existing = $query->first();
+
+        if ($existing) {
+            $existing->delete();
+            $isLiked = false;
+        } else {
+            \App\Models\ReviewLike::create([
+                'review_id' => $review->id,
+                'user_id' => $userId,
+                'session_id' => $sessionId,
+                'ip_address' => $ip,
+            ]);
+            $isLiked = true;
+        }
+
+        $totalLikes = \App\Models\ReviewLike::where('review_id', $review->id)->count();
+        $review->update(['likes_count' => $totalLikes]);
+
+        return response()->json([
+            'success' => true,
+            'is_liked' => $isLiked,
+            'likes_count' => $totalLikes,
+            'message' => $isLiked ? 'Ulasan dinilai membantu!' : 'Penilaian ulasan dibatalkan.',
+        ]);
     }
 
     /**
@@ -434,10 +621,10 @@ class HomeController extends Controller
             $query->where('category', $selectedCategory);
         }
 
-        $paginatedPromo = $query->paginate(18)->withQueryString();
+        $paginatedPromo = $query->paginate(20)->withQueryString();
 
         if ($paginatedPromo->isEmpty() && $selectedCategory === 'all') {
-            $paginatedPromo = Product::where('status', 'aktif')->withAvg('reviews', 'rating')->latest()->paginate(18)->withQueryString();
+            $paginatedPromo = Product::where('status', 'aktif')->withAvg('reviews', 'rating')->latest()->paginate(20)->withQueryString();
         }
 
         $paginatedPromo->getCollection()->transform(function($p) {
@@ -450,7 +637,7 @@ class HomeController extends Controller
                 'discount' => $p->discount,
                 'image' => $p->image,
                 'rating' => $p->average_rating,
-                'sold' => $p->sold > 1000 ? round($p->sold / 1000, 1) . 'rb+' : ($p->sold > 0 ? $p->sold . '+' : '0'),
+                'sold' => $p->formatted_sold,
                 'variants' => $p->formatted_variants,
             ];
         });
@@ -509,11 +696,29 @@ class HomeController extends Controller
      */
     public function articlesIndex(Request $request)
     {
-        $articles = \App\Models\Article::where('status', 'published')
-            ->latest()
-            ->paginate(12);
+        $search = $request->query('q');
+        $tag    = $request->query('tag');
 
-        return view('articles.index', compact('articles'));
+        $query = \App\Models\Article::where('status', 'published');
+
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('summary', 'like', "%{$search}%")
+                  ->orWhere('content', 'like', "%{$search}%");
+            });
+        }
+
+        if ($tag && $tag !== 'semua') {
+            $query->where(function($q) use ($tag) {
+                $q->where('title', 'like', "%{$tag}%")
+                  ->orWhere('summary', 'like', "%{$tag}%");
+            });
+        }
+
+        $articles = $query->latest()->paginate(12)->withQueryString();
+
+        return view('articles.index', compact('articles', 'search', 'tag'));
     }
 
     /**
@@ -535,7 +740,120 @@ class HomeController extends Controller
     }
 
     /**
-     * Mark a specific notification as read and redirect to target page.
+     * Display the Notification Center Page.
+     */
+    public function notificationsIndex(Request $request)
+    {
+        $userId = auth()->id() ?? (session('user.id') ?? null);
+        if (!$userId) {
+            return redirect()->route('login')->with('error', 'Silakan masuk untuk melihat notifikasi.');
+        }
+
+        $filter = $request->query('filter', 'semua');
+
+        $baseQuery = \App\Models\Announcement::where('status', 'ditayangkan')
+            ->where(function($q) use ($userId) {
+                $q->where('user_id', $userId)
+                  ->orWhere(function($subQ) {
+                      $subQ->whereNull('user_id')
+                           ->where('type', '!=', 'notifikasi');
+                  });
+            });
+
+        $query = clone $baseQuery;
+
+        if ($filter === 'unread') {
+            $query->where('is_read', false);
+        } elseif ($filter === 'orders') {
+            $query->where(function($q) {
+                $q->where('title', 'like', '%pesanan%')
+                  ->orWhere('title', 'like', '%retur%')
+                  ->orWhere('title', 'like', '%refund%')
+                  ->orWhere('title', 'like', '%batal%')
+                  ->orWhere('title', 'like', '%inv%')
+                  ->orWhere('content', 'like', '%pesanan%')
+                  ->orWhere('content', 'like', '%invoice%')
+                  ->orWhere('content', 'like', '%retur%')
+                  ->orWhere('content', 'like', '%resi%');
+            });
+        } elseif ($filter === 'promo') {
+            $query->where(function($q) {
+                $q->where('title', 'like', '%promo%')
+                  ->orWhere('title', 'like', '%diskon%')
+                  ->orWhere('title', 'like', '%voucher%')
+                  ->orWhere('content', 'like', '%promo%')
+                  ->orWhere('content', 'like', '%diskon%')
+                  ->orWhere('content', 'like', '%voucher%');
+            });
+        }
+
+        $notifications = $query->latest()->paginate(15)->withQueryString();
+
+        $counts = [
+            'semua' => (clone $baseQuery)->count(),
+            'unread' => (clone $baseQuery)->where('is_read', false)->count(),
+            'orders' => (clone $baseQuery)->where(function($q) {
+                $q->where('title', 'like', '%pesanan%')
+                  ->orWhere('title', 'like', '%retur%')
+                  ->orWhere('title', 'like', '%refund%')
+                  ->orWhere('title', 'like', '%batal%')
+                  ->orWhere('title', 'like', '%inv%')
+                  ->orWhere('content', 'like', '%pesanan%')
+                  ->orWhere('content', 'like', '%invoice%')
+                  ->orWhere('content', 'like', '%retur%')
+                  ->orWhere('content', 'like', '%resi%');
+            })->count(),
+            'promo' => (clone $baseQuery)->where(function($q) {
+                $q->where('title', 'like', '%promo%')
+                  ->orWhere('title', 'like', '%diskon%')
+                  ->orWhere('title', 'like', '%voucher%')
+                  ->orWhere('content', 'like', '%promo%')
+                  ->orWhere('content', 'like', '%diskon%')
+                  ->orWhere('content', 'like', '%voucher%');
+            })->count(),
+        ];
+
+        return view('pages.notifications', compact('notifications', 'filter', 'counts'));
+    }
+
+    /**
+     * AJAX/Form: Mark single notification as read.
+     */
+    public function markNotificationAsRead($id)
+    {
+        $userId = auth()->id() ?? (session('user.id') ?? null);
+        $ann = \App\Models\Announcement::where('id', $id)
+            ->where(function($q) use ($userId) {
+                $q->where('user_id', $userId)->orWhereNull('user_id');
+            })
+            ->first();
+
+        if ($ann) {
+            $ann->update(['is_read' => true]);
+        }
+
+        $unreadCount = \App\Models\Announcement::where('status', 'ditayangkan')
+            ->where(function($q) use ($userId) {
+                $q->where('user_id', $userId)->orWhere(function($subQ) {
+                    $subQ->whereNull('user_id')->where('type', '!=', 'notifikasi');
+                });
+            })
+            ->where('is_read', false)
+            ->count();
+
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json([
+                'success' => true,
+                'unread_count' => $unreadCount,
+                'announcement' => $ann
+            ]);
+        }
+
+        return back()->with('success', 'Notifikasi telah ditandai sebagai dibaca.');
+    }
+
+    /**
+     * Mark a specific notification as read and redirect to target page or notifications list.
      */
     public function readNotification($id)
     {
@@ -543,15 +861,29 @@ class HomeController extends Controller
         if ($ann) {
             $ann->update(['is_read' => true]);
 
-            $searchStr = strtolower($ann->title . ' ' . $ann->content);
+            $text = $ann->title . ' ' . $ann->content;
+
+            // Check if invoice number is present, e.g. #INV-20261013-TK-A2A28426 or INV/20261008/TK/7E44A19D
+            if (preg_match('/(INV[-\/][A-Za-z0-9\-\/]+)/i', $text, $matches)) {
+                $invoice = $matches[1];
+                return redirect()->route('orders', ['search' => $invoice]);
+            }
+
+            // Check if waybill / resi number is present
+            if (preg_match('/(?:Resi|waybill)[:\s]+([A-Za-z0-9\-]+)/i', $text, $matches)) {
+                $waybill = $matches[1];
+                return redirect()->route('tracking.public', ['waybill' => $waybill]);
+            }
+
+            $searchStr = strtolower($text);
             if (str_contains($searchStr, 'promo') || str_contains($searchStr, 'diskon') || str_contains($searchStr, 'voucher') || str_contains($searchStr, 'vocer')) {
                 return redirect()->route('promo');
-            } elseif (str_contains($searchStr, 'pesanan') || str_contains($searchStr, 'order') || str_contains($searchStr, 'dikemas') || str_contains($searchStr, 'dikirim')) {
+            } elseif (str_contains($searchStr, 'pesanan') || str_contains($searchStr, 'order') || str_contains($searchStr, 'dikemas') || str_contains($searchStr, 'dikirim') || str_contains($searchStr, 'retur')) {
                 return redirect()->route('orders');
             }
         }
 
-        return redirect()->route('home');
+        return redirect()->route('notifications.index');
     }
 
     /**
@@ -565,6 +897,14 @@ class HomeController extends Controller
                 $q->where('user_id', $userId)
                   ->orWhereNull('user_id');
             })->where('is_read', false)->update(['is_read' => true]);
+        }
+
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json([
+                'success' => true,
+                'unread_count' => 0,
+                'message' => 'Semua notifikasi telah ditandai sebagai dibaca.'
+            ]);
         }
 
         return back()->with('success', 'Semua notifikasi telah ditandai sebagai dibaca.');

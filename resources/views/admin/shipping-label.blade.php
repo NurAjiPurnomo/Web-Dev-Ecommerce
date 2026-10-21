@@ -3,9 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Label Pengiriman - {{ $order->waybill_number ?: $order->tracking_number ?: $order->invoice_number }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
     <style>
+        body, * {
+            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+        }
         @page {
             size: 100mm 150mm;
             margin: 0;
@@ -110,7 +126,7 @@
                 <span class="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">PENERIMA:</span>
                 <h2 class="font-extrabold text-slate-900 text-xs mb-0.5">{{ $order->recipient_name ?: ($order->user->name ?? 'Pelanggan') }}</h2>
                 <div class="text-[11px] font-semibold text-slate-800 mb-1">
-                    📞 {{ $order->recipient_phone ?: ($order->user->phone ?? '081234567890') }}
+                    📞 {{ $order->recipient_phone ?: ($order->user->phone ?? '-') }}
                 </div>
                 <p class="text-[10px] text-slate-700 leading-tight">
                     {{ $order->shipping_address }}
@@ -122,7 +138,7 @@
                 <span class="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">PENGIRIM:</span>
                 <h2 class="font-extrabold text-slate-900 text-xs mb-0.5">{{ $store->store_name ?? 'Toko Online Official' }}</h2>
                 <div class="text-[11px] font-semibold text-slate-800 mb-1">
-                    📞 {{ $store->sender_phone ?? '081234567890' }}
+                    📞 {{ $store->sender_phone ?? '-' }}
                 </div>
                 <p class="text-[10px] text-slate-700 leading-tight">
                     {{ $store->address_detail ?? 'Pusat Distribusi Utama' }}, {{ $store->district ?? 'Jakarta' }}, {{ $store->city ?? 'Jakarta Pusat' }}

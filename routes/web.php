@@ -20,6 +20,7 @@ Route::get('/product/{id?}/{slug?}', [HomeController::class, 'productDetail'])->
 Route::get('/promo', [HomeController::class, 'promo'])->name('promo');
 Route::get('/berita', [HomeController::class, 'articlesIndex'])->name('articles.index');
 Route::get('/berita/{slug}', [HomeController::class, 'articleDetail'])->name('articles.detail');
+Route::post('/reviews/{id}/like', [HomeController::class, 'toggleReviewLike'])->name('reviews.like');
 
 // Biteship Shipping API Routes
 Route::get('/shipping/biteship/areas', [ShippingController::class, 'searchArea'])->name('shipping.biteship.areas');
@@ -36,6 +37,7 @@ Route::get('/api/recent-purchases', function () {
 
 // Cart Routes
 Route::get('/cart', [CartController::class, 'index'])->name('cart');
+Route::get('/cart/items', [CartController::class, 'getItems'])->name('cart.items');
 Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
 Route::post('/cart/buy-now', [CartController::class, 'buyNow'])->name('cart.buyNow');
 Route::post('/cart/update', [CartController::class, 'update'])->name('cart.update');
@@ -63,14 +65,18 @@ Route::post('/orders/{id}/cancel', [OrderController::class, 'cancel'])->name('or
 Route::post('/orders/{id}/complete', [OrderController::class, 'complete'])->name('orders.complete')->where('id', '.*')->middleware('auth');
 Route::post('/orders/review', [OrderController::class, 'submitReview'])->name('orders.review')->middleware('auth');
 Route::post('/orders/return', [OrderController::class, 'submitReturn'])->name('orders.return')->middleware('auth');
+Route::post('/orders/return-tracking', [OrderController::class, 'submitReturnTracking'])->name('orders.returnTracking')->middleware('auth');
 
 
 // Wishlist Routes
 Route::get('/wishlist', [WishlistController::class, 'index'])->name('wishlist')->middleware('auth');
 Route::post('/wishlist/toggle', [WishlistController::class, 'toggle'])->name('wishlist.toggle')->middleware('auth');
+Route::post('/wishlist/move-all', [WishlistController::class, 'moveAllToCart'])->name('wishlist.moveAll')->middleware('auth');
 
 // User Notification Routes
+Route::get('/notifications', [HomeController::class, 'notificationsIndex'])->name('notifications.index')->middleware('auth');
 Route::get('/notifications/{id}/read', [HomeController::class, 'readNotification'])->name('notifications.read')->middleware('auth');
+Route::post('/notifications/{id}/mark-read', [HomeController::class, 'markNotificationAsRead'])->name('notifications.markRead')->middleware('auth');
 Route::post('/notifications/read-all', [HomeController::class, 'readAllNotifications'])->name('notifications.readAll')->middleware('auth');
 
 // Voucher Routes
@@ -113,16 +119,20 @@ Route::middleware([AdminMiddleware::class])->prefix('admin')->group(function () 
     Route::get('/products', [AdminController::class, 'products'])->name('admin.products');
     Route::post('/products', [AdminController::class, 'storeProduct'])->name('admin.products.store');
     Route::post('/products/{id}/update', [AdminController::class, 'updateProduct'])->name('admin.products.update');
+    Route::post('/products/{id}/toggle-status', [AdminController::class, 'toggleProductStatus'])->name('admin.products.toggleStatus');
     Route::match(['post', 'delete'], '/products/{id}/delete', [AdminController::class, 'deleteProduct'])->name('admin.products.delete');
 
     // Users Management
     Route::get('/users', [AdminController::class, 'users'])->name('admin.users');
+    Route::get('/users/export', [AdminController::class, 'exportUsers'])->name('admin.users.export');
     Route::post('/users/{id}/toggle', [AdminController::class, 'toggleUserStatus'])->name('admin.users.toggle');
 
     // Orders Management
     Route::get('/orders', [AdminController::class, 'orders'])->name('admin.orders');
     Route::get('/orders/export', [AdminController::class, 'exportOrders'])->name('admin.orders.export');
     Route::post('/orders/{id}/update', [AdminController::class, 'updateOrder'])->name('admin.orders.update');
+    Route::post('/orders/{id}/pickup', [AdminController::class, 'createBiteshipOrder'])->name('admin.orders.pickup');
+    Route::get('/orders/{id}/shipping-label', [AdminController::class, 'shippingLabel'])->name('admin.orders.shippingLabel');
 
 
     // Vouchers Management
@@ -132,6 +142,7 @@ Route::middleware([AdminMiddleware::class])->prefix('admin')->group(function () 
 
     // Customer Returns & Complaints Management (Photo & Video Unboxing Proof)
     Route::get('/returns', [AdminController::class, 'returns'])->name('admin.returns');
+    Route::get('/returns/export', [AdminController::class, 'exportReturns'])->name('admin.returns.export');
     Route::post('/returns/{id}/process', [AdminController::class, 'processReturn'])->name('admin.returns.process');
 
     // Affiliates Management
@@ -175,7 +186,6 @@ Route::middleware([AdminMiddleware::class])->prefix('admin')->group(function () 
     Route::get('/store-settings', [AdminController::class, 'storeSettings'])->name('admin.storeSettings');
     Route::post('/store-settings', [AdminController::class, 'updateStoreSettings'])->name('admin.storeSettings.update');
     Route::post('/orders/{id}/create-biteship', [AdminController::class, 'createBiteshipOrder'])->name('admin.orders.createBiteship');
-    Route::get('/orders/{id}/shipping-label', [AdminController::class, 'shippingLabel'])->name('admin.orders.shippingLabel');
 });
 
 // Dynamic Pages Route (must be at the end to avoid conflicts)

@@ -78,39 +78,33 @@ class ShippingController extends Controller
         ] : null;
 
         if (!$result['status']) {
-            if ($order) {
-                // If order exists in DB (e.g., in Sandbox Testing Mode), return order data so GPS map renders smoothly
-                return response()->json([
-                    'status' => 'success',
-                    'order' => $orderData,
-                    'courier_name' => strtoupper($order->courier ?: 'EKSPEDISI'),
-                    'waybill_number' => $trackingNumber,
-                    'current_status' => ($order->status == 'selesai') ? 'DELIVERED' : 'IN_TRANSIT',
-                    'history' => [
-                        [
-                            'note' => 'Paket telah terdaftar di sistem pengiriman ' . strtoupper($order->courier ?: 'Ekspedisi') . '.',
-                            'service_type' => 'REG',
-                            'updated_at' => $order->created_at ? $order->created_at->format('Y-m-d H:i:s') : now()->format('Y-m-d H:i:s'),
-                        ]
-                    ],
-                ]);
-            }
-
             return response()->json([
                 'status' => 'error',
-                'message' => 'Nomor resi atau invoice tidak ditemukan di sistem.',
-                'order' => null,
+                'message' => $result['message'] ?? 'Nomor resi atau invoice belum terdaftar di Biteship API.',
+                'order' => $orderData,
+                'courier_name' => strtoupper($order ? ($order->courier ?: 'EKSPEDISI') : 'EKSPEDISI'),
+                'waybill_number' => $trackingNumber,
                 'history' => [],
+                'biteship_link' => null,
             ], 404);
+        }
+
+        $formattedHistory = [];
+        foreach (($result['data'] ?? []) as $h) {
+            $rawNote = $h['note'] ?? $h['description'] ?? '';
+            $h['note'] = \App\Services\CourierTrackingService::formatProfessionalNote($rawNote, $order->courier ?? 'Ekspedisi', $order->customer_name ?? 'Pelanggan');
+            $h['status_label'] = ucwords(str_replace('_', ' ', $h['status'] ?? ''));
+            $formattedHistory[] = $h;
         }
 
         return response()->json([
             'status' => 'success',
             'order' => $orderData,
-            'courier_name' => strtoupper($order ? ($order->courier ?: 'EKSPEDISI') : 'EKSPEDISI'),
+            'courier_name' => $order ? ($order->courier ?: 'Ekspedisi') : 'Ekspedisi',
             'waybill_number' => $trackingNumber,
             'current_status' => $result['current_status'] ?? 'IN_TRANSIT',
-            'history' => $result['data'],
+            'history' => $formattedHistory,
+            'biteship_link' => $result['link'] ?? null,
         ]);
     }
 
@@ -150,12 +144,18 @@ class ShippingController extends Controller
 
         if (!empty($cart)) {
             foreach ($cart as $id => $details) {
+                $productId = $details['product_id'] ?? null;
+                $dbProduct = $productId ? \App\Models\Product::find($productId) : null;
+                $itemWeight = ($dbProduct && $dbProduct->weight > 0)
+                    ? (int) $dbProduct->weight
+                    : (isset($details['weight']) && (int) $details['weight'] > 0 ? (int) $details['weight'] : 1000);
+
                 $items[] = [
                     'name' => substr($details['name'] ?? 'Produk', 0, 50),
                     'description' => 'Produk Toko',
                     'value' => (int) ($details['price'] ?? 10000),
-                    'weight' => (int) ($details['weight'] ?? 1000),
-                    'quantity' => (int) ($details['quantity'] ?? 1),
+                    'weight' => $itemWeight,
+                    'quantity' => (int) ($details['quantity'] ?? $details['qty'] ?? 1),
                 ];
             }
         } else {
@@ -194,9 +194,54 @@ class ShippingController extends Controller
     /**
      * Track Order Status Real-Time.
      */
-    public function trackOrder($orderId)
+    public function trackOrder(Request $request, $orderId)
     {
-        $order = Order::findOrFail($orderId);
+        $order = is_numeric($orderId) 
+            ? Order::find($orderId) 
+            : Order::where('invoice_number', $orderId)->first();
+
+        if (!$order) {
+            $order = Order::where('tracking_number', $orderId)
+                ->orWhere('waybill_number', $orderId)
+                ->first();
+        }
+
+        if (!$order) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pesanan tidak ditemukan.',
+            ], 404);
+        }
+
+        // If requesting return tracking or order is in return status and has return tracking
+        $isReturnTracking = $request->has('return') || in_array($order->status, ['retur', 'retur_proses', 'retur_disetujui']);
+        $latestReturn = $order->returns ? $order->returns->last() : null;
+
+        if ($isReturnTracking && $latestReturn && (!empty($latestReturn->biteship_order_id) || !empty($latestReturn->return_tracking_number))) {
+            $trackingId = $latestReturn->biteship_order_id ?: $latestReturn->return_tracking_number;
+            $courierCode = $order->courier_code ?: strtolower(explode(' ', $order->courier)[0] ?? 'jnt');
+            $result = $this->biteshipService->getTracking($trackingId, $courierCode);
+
+            if ($result['status'] && !empty($result['data'])) {
+                $formattedHistory = [];
+                foreach ($result['data'] as $h) {
+                    $rawNote = $h['note'] ?? $h['description'] ?? '';
+                    $h['note'] = \App\Services\CourierTrackingService::formatReturnNote($rawNote, $order->courier ?: 'Ekspedisi');
+                    $h['status_label'] = ucwords(str_replace('_', ' ', $h['status'] ?? ''));
+                    $formattedHistory[] = $h;
+                }
+
+                return response()->json([
+                    'status' => 'success',
+                    'is_return' => true,
+                    'courier_name' => $order->courier ?: 'J&T Express',
+                    'waybill_number' => $latestReturn->return_tracking_number,
+                    'current_status' => $result['current_status'] ?? 'IN_TRANSIT',
+                    'history' => $formattedHistory,
+                    'biteship_link' => $result['courier']['link'] ?? ($result['link'] ?? null),
+                ]);
+            }
+        }
 
         $trackingNumber = $order->waybill_number ?: $order->tracking_number;
         if (empty($trackingNumber)) {
@@ -210,22 +255,31 @@ class ShippingController extends Controller
 
         $result = $this->biteshipService->getTracking($trackingNumber, $courierCode);
 
-        if (!$result['status']) {
+        if (!$result['status'] || empty($result['data'])) {
             return response()->json([
                 'status' => 'error',
-                'message' => $result['message'] ?? 'Data tracking belum tersedia di sistem Biteship API.',
+                'message' => $result['message'] ?? 'Data tracking belum ditemukan atau belum terdaftar di sistem Biteship API.',
                 'courier_name' => strtoupper($order->courier ?: 'EKSPEDISI'),
                 'waybill_number' => $trackingNumber,
                 'history' => [],
             ], 404);
         }
 
+        $formattedHistory = [];
+        foreach (($result['data'] ?? []) as $h) {
+            $rawNote = $h['note'] ?? $h['description'] ?? '';
+            $h['note'] = \App\Services\CourierTrackingService::formatProfessionalNote($rawNote, $order->courier ?: 'Ekspedisi', $order->recipient_name ?: ($order->user->name ?? 'Pelanggan'));
+            $h['status_label'] = ucwords(str_replace('_', ' ', $h['status'] ?? ''));
+            $formattedHistory[] = $h;
+        }
+
         return response()->json([
             'status' => 'success',
-            'courier_name' => strtoupper($order->courier),
+            'courier_name' => $order->courier,
             'waybill_number' => $trackingNumber,
             'current_status' => $result['current_status'] ?? 'IN_TRANSIT',
-            'history' => $result['data'],
+            'history' => $formattedHistory,
+            'biteship_link' => $result['link'] ?? null,
         ]);
     }
 }

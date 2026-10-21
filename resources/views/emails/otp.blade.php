@@ -3,66 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kode Verifikasi OTP - Toko Online</title>
+    <title>Kode Verifikasi OTP</title>
     <style>
         body {
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #1e293b;
             background-color: #f8fafc;
             margin: 0;
             padding: 0;
-            color: #334155;
+        }
+        .wrapper {
+            width: 100%;
+            table-layout: fixed;
+            background-color: #f8fafc;
+            padding: 40px 0;
         }
         .container {
             max-width: 520px;
-            margin: 30px auto;
+            margin: 0 auto;
             background: #ffffff;
-            border-radius: 16px;
-            overflow: hidden;
             border: 1px solid #e2e8f0;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            border-radius: 12px;
+            overflow: hidden;
         }
         .header {
-            background-color: #1d4ed8;
-            padding: 24px;
-            text-align: center;
-            color: #ffffff;
+            background-color: #ffffff;
+            padding: 24px 32px;
+            text-align: left;
+            border-bottom: 1px solid #f1f5f9;
         }
-        .header h1 {
-            margin: 0;
-            font-size: 22px;
+        .brand-name {
+            font-size: 20px;
             font-weight: 800;
+            color: #0f172a;
             letter-spacing: -0.5px;
+            text-decoration: none;
         }
-        .header p {
-            margin: 4px 0 0 0;
-            font-size: 12px;
-            opacity: 0.85;
+        .brand-blue {
+            color: #1d4ed8;
         }
-        .body {
-            padding: 32px 28px;
+        .content {
+            padding: 32px;
             text-align: center;
         }
-        .title {
-            font-size: 18px;
-            font-weight: 700;
+        .headline {
+            font-size: 20px;
+            font-weight: 800;
             color: #0f172a;
-            margin-bottom: 8px;
+            margin: 0 0 10px 0;
         }
         .subtitle {
-            font-size: 13px;
-            color: #64748b;
-            line-height: 1.6;
+            font-size: 14px;
+            color: #475569;
             margin-bottom: 24px;
         }
         .otp-box {
-            background-color: #eff6ff;
-            border: 2px dashed #3b82f6;
-            border-radius: 12px;
-            padding: 18px 24px;
+            background-color: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 20px;
             display: inline-block;
             margin-bottom: 24px;
         }
         .otp-code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
             font-size: 32px;
             font-weight: 800;
             letter-spacing: 8px;
@@ -71,46 +76,56 @@
         }
         .warning {
             font-size: 12px;
-            color: #94a3b8;
-            line-height: 1.5;
-            margin-bottom: 24px;
+            color: #64748b;
+            line-height: 1.6;
             background: #f8fafc;
-            padding: 12px;
+            padding: 12px 16px;
             border-radius: 8px;
+            border: 1px solid #e2e8f0;
         }
         .footer {
-            background-color: #f1f5f9;
-            padding: 16px;
+            background-color: #f8fafc;
+            padding: 20px 32px;
             text-align: center;
-            font-size: 11px;
+            font-size: 12px;
             color: #94a3b8;
-            border-top: 1px solid #e2e8f0;
+            border-top: 1px solid #f1f5f9;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>TokoOnline</h1>
-            <p>Official Verification Service</p>
-        </div>
-        <div class="body">
-            <div class="title">Kode Verifikasi OTP Anda</div>
-            <div class="subtitle">
-                Gunakan kode OTP 6-digit di bawah ini untuk menyelesaikan proses pendaftaran / masuk ke akun Toko Online Anda.
+    <div class="wrapper">
+        <div class="container">
+            <div class="header">
+                <table border="0" cellpadding="0" cellspacing="0">
+                    <tr>
+                        <td style="background-color: #1d4ed8; color: #ffffff; border-radius: 6px; width: 32px; height: 32px; text-align: center; vertical-align: middle; font-weight: bold; font-size: 14px;">
+                            TO
+                        </td>
+                        <td style="padding-left: 10px;">
+                            <span class="brand-name">Toko<span class="brand-blue">Online</span></span>
+                        </td>
+                    </tr>
+                </table>
             </div>
-            
-            <div class="otp-box">
-                <div class="otp-code">{{ $otpCode }}</div>
-            </div>
+            <div class="content">
+                <h1 class="headline">Kode Verifikasi OTP Anda</h1>
+                <div class="subtitle">
+                    Gunakan kode 6-digit di bawah ini untuk menyelesaikan proses autentikasi akun Anda.
+                </div>
+                
+                <div class="otp-box">
+                    <div class="otp-code">{{ $otpCode }}</div>
+                </div>
 
-            <div class="warning">
-                ⏰ Kode ini hanya berlaku selama <strong>5 menit</strong>.<br>
-                🔒 Jangan bagikan kode ini kepada siapapun, termasuk pihak Toko Online.
+                <div class="warning">
+                    Kode ini berlaku selama <strong>5 menit</strong>.<br>
+                    Demi keamanan akun, jangan berikan kode ini kepada siapa pun.
+                </div>
             </div>
-        </div>
-        <div class="footer">
-            &copy; {{ date('Y') }} Toko Online Official Store. Semua Hak Dilindungi.
+            <div class="footer">
+                &copy; {{ date('Y') }} Toko Online. Hak cipta dilindungi.
+            </div>
         </div>
     </div>
 </body>

@@ -19,10 +19,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if (config('app.url') && str_contains(config('app.url'), 'http')) {
-            \Illuminate\Support\Facades\URL::forceRootUrl(config('app.url'));
-            if (str_contains(config('app.url'), 'https')) {
-                \Illuminate\Support\Facades\URL::forceScheme('https');
+        if (!app()->runningInConsole() && app()->bound('request')) {
+            $req = app('request');
+            $reqHost = $req ? $req->getHost() : null;
+            if ($reqHost && $reqHost !== '127.0.0.1' && $reqHost !== 'localhost') {
+                if (config('app.url') && str_contains(config('app.url'), 'http')) {
+                    \Illuminate\Support\Facades\URL::forceRootUrl(config('app.url'));
+                    if (str_contains(config('app.url'), 'https')) {
+                        \Illuminate\Support\Facades\URL::forceScheme('https');
+                    }
+                }
             }
         }
 

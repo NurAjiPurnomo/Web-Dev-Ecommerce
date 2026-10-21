@@ -28,12 +28,14 @@ class StoreSetting extends Model
         'biteship_round_shipping',
         'flash_sale_end_time',
         'flash_sale_is_active',
+        'flash_sale_product_ids',
     ];
 
     protected $casts = [
         'active_couriers' => 'array',
         'flash_sale_end_time' => 'datetime',
         'flash_sale_is_active' => 'boolean',
+        'flash_sale_product_ids' => 'array',
     ];
 
     /**

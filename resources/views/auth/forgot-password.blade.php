@@ -6,17 +6,22 @@
 
         <!-- Brand Header -->
         <div class="text-center space-y-1.5">
-            <a href="{{ route('home') }}" class="inline-flex items-center gap-2 mb-2">
-                <div class="w-9 h-9 rounded-lg bg-blue-700 text-white font-extrabold text-xl flex items-center justify-center shadow-2xs">
-                    T
+            <a href="{{ route('home') }}" class="inline-flex items-center gap-2.5 mb-2 group">
+                <div class="w-9 h-9 rounded-xl bg-blue-700 text-white flex items-center justify-center shadow-sm group-hover:bg-blue-800 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                    </svg>
                 </div>
-                <span class="text-xl font-black text-slate-900 tracking-tight">Toko<span class="text-blue-700">Online</span></span>
+                <div class="flex flex-col text-left">
+                    <span class="text-xl font-bold text-slate-900 leading-none tracking-tight">Toko<span class="text-blue-700">Online</span></span>
+                    <span class="text-[10px] text-slate-400 font-medium leading-tight">Official Store</span>
+                </div>
             </a>
             <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
                 Lupa Kata Sandi?
             </h1>
             <p class="text-xs text-slate-500 leading-relaxed">
-                Masukkan alamat email yang terdaftar pada akun Toko Online Anda. Kami akan mengirimkan <strong>kode OTP 6-digit</strong> untuk mengatur ulang kata sandi.
+                Masukkan alamat email atau nomor HP yang terdaftar pada akun Toko Online Anda. Kami akan mengirimkan <strong>kode OTP 6-digit</strong> untuk mengatur ulang kata sandi.
             </p>
         </div>
 
@@ -56,21 +61,22 @@
         <form action="{{ route('password.email') }}" method="POST" class="space-y-4">
             @csrf
             
-            <!-- Email Field -->
+            <!-- Email / Phone Field -->
             <div class="space-y-1.5">
-                <label for="email" class="block text-xs font-bold text-slate-700">Alamat Email Terdaftar <span class="text-red-500">*</span></label>
+                <label for="login" class="block text-xs font-bold text-slate-700">Email atau Nomor HP Terdaftar <span class="text-red-500">*</span></label>
                 <input 
-                    type="email" 
-                    id="email" 
-                    name="email" 
+                    type="text" 
+                    id="login" 
+                    name="login" 
                     required 
-                    autocomplete="email"
-                    value="{{ old('email') }}"
-                    placeholder="Alamat Email Terdaftar"
-                    style="text-transform: lowercase;"
-                    oninput="this.value = this.value.toLowerCase()"
-                    class="w-full px-3.5 py-2.5 bg-white border {{ $errors->has('email') ? 'border-red-400 bg-red-50' : 'border-slate-300' }} rounded-lg text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-colors"
+                    autocomplete="username"
+                    value="{{ old('login', old('email')) }}"
+                    placeholder="Alamat Email atau Nomor HP (contoh: 081234567890)"
+                    class="w-full px-3.5 py-2.5 bg-white border {{ $errors->has('login') || $errors->has('email') ? 'border-red-400 bg-red-50' : 'border-slate-300' }} rounded-lg text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-colors"
                 >
+                @error('login')
+                    <p class="text-[11px] text-red-600 font-medium">{{ $message }}</p>
+                @enderror
                 @error('email')
                     <p class="text-[11px] text-red-600 font-medium">{{ $message }}</p>
                 @enderror
@@ -156,34 +162,59 @@
     }
 
     document.addEventListener('DOMContentLoaded', function(){
-        var fEmail = document.getElementById('email');
-        if (fEmail) {
-            fEmail.parentElement.style.position = 'relative';
-            fEmail.addEventListener('input', function(){
+        var fLogin = document.getElementById('login');
+        if (fLogin) {
+            fLogin.parentElement.style.position = 'relative';
+            fLogin.addEventListener('input', function(){
                 var v = this.value.trim();
-                if (!v) return tip(this, 'Alamat email wajib diisi.', false);
-                if (v !== v.toLowerCase()) return tip(this, 'Email tidak boleh ada huruf kapital.', false);
-                if (!v.includes('@')) return tip(this, 'Email harus ada tanda @. Contoh: nama@gmail.com', false);
-                var parts = v.split('@');
-                if (!parts[0]) return tip(this, 'Nama pengguna sebelum @ tidak boleh kosong.', false);
-                if (!parts[1] || !parts[1].includes('.')) return tip(this, 'Domain tidak valid. Contoh: @gmail.com', false);
+                if (!v) return tip(this, 'Email atau Nomor HP wajib diisi.', false);
 
-                var domainParts = parts[1].split('.');
-                var tld = domainParts[domainParts.length - 1].toLowerCase();
-                var knownTlds = ['com','net','org','id','co','io','info','biz','edu','gov','my','sg','au','uk','us','de','fr','jp','cn','in','app','dev','store','shop','online','site','web','tech','me','tv','cc','xyz','ac','go','or','sch','mil','int','name','pro'];
-                var typoMap = {'comn':'com','coom':'com','ocm':'com','con':'com','comm':'com','cmo':'com','xom':'com','dom':'com','vom':'com','cam':'com','cpm':'com','col':'com','nett':'net','ney':'net','nte':'net','orgg':'org','prg':'org','ogr':'org','iid':'id','di':'id'};
+                var isPhone = /^[0-9+\s\-]+$/.test(v);
 
-                if (typoMap[tld]) {
-                    return tip(this, '⚠️ Sepertinya ada typo — maksud kamu .' + typoMap[tld] + '? (bukan .' + tld + ')', false);
+                if (isPhone) {
+                    var cleanPhone = v.replace(/[^0-9]/g, '');
+                    if (cleanPhone.length < 10) {
+                        return tip(this, 'Nomor HP minimal 10 digit. (sekarang: ' + cleanPhone.length + ')', false);
+                    }
+                    if (cleanPhone.length > 13) {
+                        return tip(this, 'Nomor HP maksimal 13 digit. (sekarang: ' + cleanPhone.length + ')', false);
+                    }
+                    if (!cleanPhone.startsWith('08') && !cleanPhone.startsWith('628')) {
+                        return tip(this, 'Nomor HP Indonesia biasanya diawali 08... atau 628...', false);
+                    }
+                    tip(this, '✓ Format nomor HP valid.', true);
+                    var t=this; setTimeout(function(){ hide(t); }, 1400);
+                    return;
                 }
-                if (knownTlds.indexOf(tld) === -1 && tld.length > 5) {
-                    return tip(this, '⚠️ Ekstensi ".' + tld + '" tidak dikenal. Periksa kembali.', false);
+
+                if (v.includes('@')) {
+                    if (v !== v.toLowerCase()) {
+                        this.value = v.toLowerCase();
+                        v = this.value;
+                    }
+                    var parts = v.split('@');
+                    if (!parts[0]) return tip(this, 'Nama pengguna sebelum @ tidak boleh kosong.', false);
+                    if (!parts[1] || !parts[1].includes('.')) return tip(this, 'Domain tidak valid. Contoh: @gmail.com', false);
+
+                    var domainParts = parts[1].split('.');
+                    var tld = domainParts[domainParts.length - 1].toLowerCase();
+                    var knownTlds = ['com','net','org','id','co','io','info','biz','edu','gov','my','sg','au','uk','us','de','fr','jp','cn','in','app','dev','store','shop','online','site','web','tech','me','tv','cc','xyz','ac','go','or','sch','mil','int','name','pro'];
+                    var typoMap = {'comn':'com','coom':'com','ocm':'com','con':'com','comm':'com','cmo':'com','xom':'com','dom':'com','vom':'com','cam':'com','cpm':'com','col':'com','nett':'net','ney':'net','nte':'net','orgg':'org','prg':'org','ogr':'org','iid':'id','di':'id'};
+
+                    if (typoMap[tld]) {
+                        return tip(this, '⚠️ Kemungkinan terdapat kesalahan penulisan — apakah maksud Anda .' + typoMap[tld] + '? (bukan .' + tld + ')', false);
+                    }
+                    if (knownTlds.indexOf(tld) === -1 && tld.length > 5) {
+                        return tip(this, '⚠️ Ekstensi ".' + tld + '" tidak dikenal. Periksa kembali.', false);
+                    }
+                    if (tld.length < 2) return tip(this, 'Ekstensi domain tidak valid. Contoh: .com / .id', false);
+                    tip(this, '✓ Format email valid.', true);
+                    var t=this; setTimeout(function(){ hide(t); }, 1400);
+                } else {
+                    tip(this, 'Masukkan email terdaftar atau nomor HP (contoh: 081234567890)', false);
                 }
-                if (tld.length < 2) return tip(this, 'Ekstensi domain tidak valid. Contoh: .com / .id', false);
-                tip(this, '✓ Format email valid.', true);
-                var t=this; setTimeout(function(){ hide(t); }, 1400);
             });
-            fEmail.addEventListener('blur', function(){ var t=this; setTimeout(function(){ hide(t); }, 250); });
+            fLogin.addEventListener('blur', function(){ var t=this; setTimeout(function(){ hide(t); }, 250); });
         }
     });
 })();

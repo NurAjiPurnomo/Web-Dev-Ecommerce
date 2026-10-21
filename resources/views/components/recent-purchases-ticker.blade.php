@@ -29,6 +29,12 @@
         <div class="overflow-hidden w-full relative flex items-center ticker-fade-mask">
             <div class="animate-running-slow flex items-center gap-4 py-0.5">
                 <!-- FIRST LOOP -->
+                <a href="{{ route('promo') }}" class="inline-flex items-center gap-2 text-amber-300 hover:text-white transition-colors font-extrabold text-xs shrink-0 cursor-pointer">
+                    <span class="bg-amber-400 text-blue-950 font-black text-[10px] px-2 py-0.5 rounded tracking-wider uppercase">PENGUMUMAN PROMO</span>
+                    <span>⚡ Gratis Ongkir Rp0 Se-Indonesia & Extra Cashback s.d. 100RB Hari Ini!</span>
+                </a>
+                <span class="text-blue-400/50 font-mono text-xs shrink-0 select-none">|</span>
+
                 @foreach($recentPurchases as $p)
                     <a href="{{ $p['product_url'] }}" class="inline-flex items-center gap-2 text-slate-100 hover:text-amber-300 transition-colors font-medium text-xs shrink-0 cursor-pointer group/item">
                         <span class="font-extrabold text-white text-[11px] group-hover/item:text-amber-300 transition-colors">{{ $p['name'] }}</span>
@@ -40,6 +46,12 @@
                 @endforeach
 
                 <!-- DUPLICATED LOOP FOR SEAMLESS SCROLL -->
+                <a href="{{ route('promo') }}" class="inline-flex items-center gap-2 text-amber-300 hover:text-white transition-colors font-extrabold text-xs shrink-0 cursor-pointer">
+                    <span class="bg-amber-400 text-blue-950 font-black text-[10px] px-2 py-0.5 rounded tracking-wider uppercase">PENGUMUMAN PROMO</span>
+                    <span>⚡ Gratis Ongkir Rp0 Se-Indonesia & Extra Cashback s.d. 100RB Hari Ini!</span>
+                </a>
+                <span class="text-blue-400/50 font-mono text-xs shrink-0 select-none">|</span>
+
                 @foreach($recentPurchases as $p)
                     <a href="{{ $p['product_url'] }}" class="inline-flex items-center gap-2 text-slate-100 hover:text-amber-300 transition-colors font-medium text-xs shrink-0 cursor-pointer group/item">
                         <span class="font-extrabold text-white text-[11px] group-hover/item:text-amber-300 transition-colors">{{ $p['name'] }}</span>

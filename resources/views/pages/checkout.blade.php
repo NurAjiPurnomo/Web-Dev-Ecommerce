@@ -19,6 +19,7 @@
 
     <form action="{{ route('checkout.process') }}" method="POST" id="checkout-form">
         @csrf
+        <input type="hidden" name="is_direct" value="{{ ($isDirectBuy ?? false) ? 1 : 0 }}">
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
@@ -132,6 +133,17 @@
                                 <span>Menghitung Ongkir...</span>
                             </div>
                         </template>
+                    </div>
+
+                    <!-- Real-Time Biteship Error Alert -->
+                    <div x-show="shippingErrorMsg && couriers.length === 0" class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs">
+                        <div class="font-bold text-sm mb-1 flex items-center gap-1.5">
+                            <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            <span>Respons Error Real-Time Biteship API:</span>
+                        </div>
+                        <p x-text="shippingErrorMsg"></p>
                     </div>
 
                     <!-- Dynamic List Couriers from Biteship -->
@@ -276,7 +288,7 @@
             </div>
 
             <!-- RIGHT COLUMN (~35% / 4 cols - Ringkasan Pembayaran Sticky) -->
-            <div class="lg:col-span-4 sticky top-20">
+            <div class="lg:col-span-4 lg:sticky lg:top-20">
                 <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-5">
                     
                     <h2 class="text-base sm:text-lg font-extrabold text-slate-900 border-b border-slate-100 pb-3">
@@ -367,7 +379,7 @@
                             <span class="font-bold text-slate-900">Rp {{ number_format(array_sum(array_map(fn($i) => $i['price'] * $i['qty'], $checkoutItems)), 0, ',', '.') }}</span>
                         </div>
                         <div class="flex items-center justify-between text-slate-600">
-                            <span>Ongkos Kirim Realtime</span>
+                            <span>Ongkos Kirim</span>
                             <span class="font-bold text-blue-700" x-text="formatRupiah(selectedCourierCost)"></span>
                         </div>
 
@@ -549,8 +561,8 @@ function checkoutApp() {
 
                 if (data.status === 'success' && data.couriers && data.couriers.length > 0) {
                     this.couriers = data.couriers;
-                    this.isLiveApi = (data.source === 'api');
-                    this.shippingErrorMsg = data.message || '';
+                    this.isLiveApi = true;
+                    this.shippingErrorMsg = '';
                     
                     const match = this.couriers.find(c => c.id === this.selectedCourier);
                     if (match) {
@@ -572,11 +584,11 @@ function checkoutApp() {
 
             } catch (error) {
                 console.error('Error fetching Biteship rates:', error);
-                this.shippingErrorMsg = 'Gagal menghubungi server Biteship. Silakan periksa koneksi internet / API Key.';
                 this.couriers = [];
                 this.selectedCourier = null;
                 this.selectedCourierCost = 0;
                 this.selectedCourierName = '';
+                this.shippingErrorMsg = 'Gagal terhubung ke server Biteship. Silakan periksa koneksi internet / API Key.';
             } finally {
                 this.loadingShipping = false;
             }

@@ -171,86 +171,233 @@
     </div>
 
     <!-- SECTION 3: PRODUK DISKON & FLASH SALE -->
-    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-4">
-        <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-6"
+         x-data="{
+             search: '',
+             selectedIds: @js(array_map('strval', $settings->flash_sale_product_ids ?? [])),
+             toggleProduct(id) {
+                 id = String(id);
+                 const idx = this.selectedIds.indexOf(id);
+                 if (idx > -1) {
+                     this.selectedIds.splice(idx, 1);
+                 } else {
+                     this.selectedIds.push(id);
+                 }
+             },
+             isSelected(id) {
+                 return this.selectedIds.includes(String(id));
+             },
+             selectAllDiscounted(ids) {
+                 ids.forEach(id => {
+                     const sId = String(id);
+                     if (!this.selectedIds.includes(sId)) {
+                         this.selectedIds.push(sId);
+                     }
+                 });
+             },
+             clearAll() {
+                 this.selectedIds = [];
+             }
+         }">
+        
+        <!-- Header Section -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
             <div>
-                <h3 class="text-base font-semibold text-slate-900 flex items-center gap-2">
-                    <span class="w-2 h-2 bg-purple-600 rounded-full"></span>
-                    <span>3. Produk Diskon &amp; Flash Sale</span>
+                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 bg-purple-600 rounded-full"></span>
+                    <span>3. Pengaturan Khusus Flash Sale Toko</span>
                 </h3>
-                <p class="text-xs text-slate-500 mt-0.5">Produk yang memiliki harga coret / diskon otomatis masuk ke Halaman Promo &amp; Flash Sale Beranda</p>
+                <p class="text-xs text-slate-500 mt-0.5">Pilih secara manual produk apa saja yang ingin Anda tampilkan di Flash Sale Beranda beserta jadwal tayangnya.</p>
             </div>
-            <a href="{{ route('admin.products') }}" class="bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <a href="{{ route('admin.products') }}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer shrink-0">
+                <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                 </svg>
                 <span>Edit Diskon di Manajemen Produk</span>
             </a>
         </div>
 
-        <!-- Flash Sale Timer Settings Form -->
-        <form action="{{ route('admin.promos.flash-sale.update') }}" method="POST" class="bg-purple-50/60 border border-purple-200 rounded-xl p-4 space-y-3">
+        <!-- Flash Sale Form -->
+        <form action="{{ route('admin.promos.flash-sale.update') }}" method="POST" class="space-y-6">
             @csrf
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-purple-200/60 pb-3">
-                <div>
-                    <h4 class="text-xs font-bold text-purple-900 uppercase tracking-wider flex items-center gap-1.5">
-                        <svg class="w-4 h-4 text-purple-700" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+
+            <!-- Panel Pengaturan Waktu & Status -->
+            <div class="bg-gradient-to-r from-purple-50/80 to-indigo-50/50 border border-purple-200/80 rounded-2xl p-5 space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-purple-200/60 pb-3">
+                    <div>
+                        <h4 class="text-xs font-extrabold text-purple-950 uppercase tracking-wider flex items-center gap-1.5">
+                            <svg class="w-4 h-4 text-purple-700" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                            </svg>
+                            Jadwal &amp; Status Flash Sale Beranda
+                        </h4>
+                        <p class="text-[11px] text-purple-700">Tentukan apakah baris Flash Sale aktif serta batas waktu countdown timer-nya.</p>
+                    </div>
+                    <button type="submit" class="bg-purple-700 hover:bg-purple-800 text-white text-xs font-extrabold px-5 py-2.5 rounded-xl transition-all shadow-sm hover:shadow-md shrink-0 cursor-pointer flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
                         </svg>
-                        Pengaturan Timer &amp; Status Flash Sale Beranda
-                    </h4>
-                    <p class="text-[11px] text-purple-700">Atur status penayangan dan batas waktu countdown berakhirnya Flash Sale di Halaman Utama Toko</p>
+                        <span>Simpan Pengaturan Flash Sale</span>
+                    </button>
                 </div>
-                <button type="submit" class="bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-xs shrink-0 cursor-pointer flex items-center gap-1">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                    </svg>
-                    <span>Simpan Waktu Flash Sale</span>
-                </button>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Status Switch -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-800 mb-1.5">Status Penayangan Flash Sale</label>
+                        <select name="flash_sale_is_active" class="w-full text-xs border border-slate-300 rounded-xl px-3.5 py-2.5 bg-white focus:outline-none focus:border-purple-600 font-semibold text-slate-800 shadow-2xs">
+                            <option value="1" {{ ($settings->flash_sale_is_active ?? true) ? 'selected' : '' }}>🟢 Aktif (Tampilkan Section Flash Sale di Beranda)</option>
+                            <option value="0" {{ !($settings->flash_sale_is_active ?? true) ? 'selected' : '' }}>🔴 Sembunyikan (Nonaktifkan Flash Sale)</option>
+                        </select>
+                    </div>
+
+                    <!-- Datetime Picker -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-800 mb-1.5">Batas Waktu Berakhir (Countdown Timer)</label>
+                        <input type="datetime-local" name="flash_sale_end_time" 
+                            value="{{ optional($settings->flash_sale_end_time)->format('Y-m-d\TH:i') }}"
+                            class="w-full text-xs border border-slate-300 rounded-xl px-3.5 py-2.5 bg-white focus:outline-none focus:border-purple-600 font-semibold text-slate-800 shadow-2xs">
+                        <span class="text-[10px] text-slate-500 mt-1 block">Kosongkan jika ingin countdown otomatis 24 jam setiap harinya.</span>
+                    </div>
+                </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                <!-- Status Switch -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Status Flash Sale Halaman Utama</label>
-                    <select name="flash_sale_is_active" class="w-full text-xs border border-slate-300 rounded-xl px-3 py-2 bg-white focus:outline-none focus:border-purple-600 font-semibold text-slate-800">
-                        <option value="1" {{ ($settings->flash_sale_is_active ?? true) ? 'selected' : '' }}>🟢 Aktif (Tampilkan Section Flash Sale)</option>
-                        <option value="0" {{ !($settings->flash_sale_is_active ?? true) ? 'selected' : '' }}>🔴 Sembunyikan (Nonaktifkan Flash Sale)</option>
-                    </select>
+            <!-- Panel Pemilihan Produk Manual -->
+            <div class="space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 border border-slate-200/80 rounded-2xl p-4">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h4 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider">
+                                Pilih Produk Khusus Flash Sale
+                            </h4>
+                            <span class="bg-purple-100 text-purple-800 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border border-purple-200"
+                                  x-text="selectedIds.length + ' Produk Dipilih'">
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Centang produk yang ingin dimasukkan ke Flash Sale. Hanya produk yang Anda centang yang akan tampil di Beranda.</p>
+                    </div>
+
+                    <!-- Tombol Cepat -->
+                    <div class="flex items-center gap-2 shrink-0">
+                        @php
+                            $discountedIds = $allActiveProducts->filter(function($p) {
+                                return !empty($p->discount) || ($p->original_price && $p->original_price > $p->price);
+                            })->pluck('id')->values()->all();
+                        @endphp
+                        <button type="button" 
+                                @click="selectAllDiscounted(@js($discountedIds))"
+                                class="text-[11px] font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span>Pilih Semua Berdiskon ({{ count($discountedIds) }})</span>
+                        </button>
+                        <button type="button" 
+                                @click="clearAll()"
+                                class="text-[11px] font-bold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                            <span>Kosongkan</span>
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Datetime Picker -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Batas Waktu Berakhir (Countdown Timer)</label>
-                    <input type="datetime-local" name="flash_sale_end_time" 
-                        value="{{ optional($settings->flash_sale_end_time)->format('Y-m-d\TH:i') }}"
-                        class="w-full text-xs border border-slate-300 rounded-xl px-3 py-2 bg-white focus:outline-none focus:border-purple-600 font-semibold text-slate-800">
-                    <span class="text-[10px] text-slate-500 mt-1 block">Kosongkan jika ingin countdown otomatis 24 jam setiap harinya.</span>
+                <!-- Search Bar -->
+                <div class="relative w-full">
+                    <input type="text" 
+                           x-model="search" 
+                           placeholder="Cari produk berdasarkan nama atau kategori..." 
+                           class="w-full text-xs pl-9 pr-4 py-2.5 border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-purple-600 focus:ring-1 focus:ring-purple-600 font-medium shadow-2xs">
+                    <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+
+                <!-- Product Grid Selector -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-h-[520px] overflow-y-auto p-2 border border-slate-200 rounded-2xl bg-slate-50/50">
+                    @forelse($allActiveProducts as $p)
+                        @php
+                            $searchHaystack = strtolower(addslashes($p->name . ' ' . $p->category));
+                        @endphp
+                        <div x-show="search === '' || '{{ $searchHaystack }}'.includes(search.toLowerCase())"
+                             @click="toggleProduct({{ $p->id }})"
+                             :class="isSelected({{ $p->id }}) ? 'border-purple-600 bg-purple-50/80 ring-2 ring-purple-600/30 shadow-sm' : 'border-slate-200 bg-white hover:border-purple-300 hover:shadow-2xs'"
+                             class="border rounded-xl p-2.5 space-y-2 relative cursor-pointer transition-all select-none group flex flex-col justify-between">
+                            
+                            <div>
+                                <!-- Top Bar Checkbox & Badge -->
+                                <div class="flex items-center justify-between gap-1 mb-1.5">
+                                    <div class="flex items-center gap-1.5">
+                                        <input type="checkbox" 
+                                               name="flash_sale_product_ids[]" 
+                                               value="{{ $p->id }}" 
+                                               :checked="isSelected({{ $p->id }})" 
+                                               @click.stop="toggleProduct({{ $p->id }})"
+                                               class="w-4 h-4 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer">
+                                        <span class="text-[10px] font-extrabold uppercase tracking-wider"
+                                              :class="isSelected({{ $p->id }}) ? 'text-purple-700' : 'text-slate-400'"
+                                              x-text="isSelected({{ $p->id }}) ? 'AKTIF' : 'PILIH'"></span>
+                                    </div>
+                                    @if($p->discount)
+                                        <span class="bg-red-600 text-white font-extrabold text-[9px] px-1.5 py-0.5 rounded shadow-2xs">
+                                            {{ $p->discount }}
+                                        </span>
+                                    @endif
+                                </div>
+
+                                <!-- Product Image -->
+                                <div class="relative w-full h-28 rounded-lg overflow-hidden bg-slate-100 border border-slate-100 mb-2">
+                                    <img src="{{ $p->image }}" alt="{{ $p->name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                                    <div x-show="isSelected({{ $p->id }})" class="absolute inset-0 bg-purple-900/15 flex items-center justify-center">
+                                        <span class="bg-purple-700 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                                            </svg>
+                                            Flash Sale
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Title & Category -->
+                                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block truncate">{{ $p->category ?: 'Umum' }}</span>
+                                <h4 class="font-bold text-slate-800 text-xs line-clamp-2 leading-snug group-hover:text-purple-700 transition-colors" title="{{ $p->name }}">
+                                    {{ $p->name }}
+                                </h4>
+                            </div>
+
+                            <!-- Pricing -->
+                            <div class="pt-1.5 border-t border-slate-100">
+                                <div class="font-extrabold text-blue-700 text-xs">{{ $p->formatted_price }}</div>
+                                @if($p->original_price)
+                                    <div class="text-[10px] text-slate-400 line-through">{{ $p->formatted_original_price }}</div>
+                                @endif
+                            </div>
+                        </div>
+                    @empty
+                        <div class="col-span-full text-center py-8 text-slate-400 text-xs">
+                            Belum ada produk aktif di toko. Silakan tambahkan produk di Manajemen Produk.
+                        </div>
+                    @endforelse
+                </div>
+
+                <!-- Bottom Action Bar -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                    <div class="flex items-center gap-2 text-xs text-slate-600 font-medium">
+                        <svg class="w-4 h-4 text-purple-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span>Hanya produk yang Anda centang yang akan tampil di baris Flash Sale Beranda.</span>
+                    </div>
+                    <button type="submit" class="bg-purple-700 hover:bg-purple-800 text-white text-xs font-extrabold px-6 py-2.5 rounded-xl transition-all shadow-sm hover:shadow-md cursor-pointer flex items-center justify-center gap-1.5 shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <span>Simpan Perubahan Flash Sale</span>
+                    </button>
                 </div>
             </div>
         </form>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            @forelse($promoProducts->take(8) as $p)
-                <div class="border border-slate-200 rounded-xl p-3 bg-white space-y-2 relative">
-                    @if($p->discount)
-                        <span class="absolute top-2 right-2 bg-red-600 text-white font-semibold text-[10px] px-2 py-0.5 rounded">
-                            {{ $p->discount }}
-                        </span>
-                    @endif
-                    <img src="{{ $p->image }}" alt="{{ $p->name }}" class="w-full h-32 object-cover rounded-lg border border-slate-100">
-                    <h4 class="font-bold text-slate-900 text-xs truncate">{{ $p->name }}</h4>
-                    <div class="flex items-center gap-2">
-                        <span class="font-semibold text-blue-700 text-xs">{{ $p->formatted_price }}</span>
-                        @if($p->original_price)
-                            <span class="text-[10px] text-slate-400 line-through">{{ $p->formatted_original_price }}</span>
-                        @endif
-                    </div>
-                </div>
-            @empty
-                <div class="col-span-4 text-center py-6 text-slate-400 text-xs">Belum ada produk promo diskon. Edit produk di Manajemen Produk untuk memberi diskon.</div>
-            @endforelse
-        </div>
     </div>
 
     <!-- SECTION 4: PENGUMUMAN & BROADCAST PROMO TOKO (DIBUAT OLEH ADMIN) -->
