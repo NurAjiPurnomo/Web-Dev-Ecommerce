@@ -1,62 +1,62 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="space-y-6 sm:space-y-8 pb-4 sm:pb-6">
+<div class="space-y-4 sm:space-y-5 pb-4">
 
     <!-- HERO SLIDER SECTION (Clean, Compact, Solid Blue Theme - 5 Slides Auto Slideshow) -->
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-        <div id="hero-slider" class="relative rounded-2xl overflow-hidden shadow-xs bg-blue-700 text-white min-h-[250px] sm:min-h-[280px] group">
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 sm:pt-3">
+        <div id="hero-slider" class="relative rounded-2xl overflow-hidden shadow-xs bg-blue-700 text-white min-h-[210px] sm:min-h-[240px] group">
             
             <!-- DYNAMIC SLIDES FROM DATABASE -->
             @forelse($banners as $index => $banner)
-                <div class="hero-slide {{ $index === 0 ? '' : 'hidden opacity-0' }} transition-all duration-500 flex items-center min-h-[250px] sm:min-h-[280px] p-6 sm:p-8">
-                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center w-full">
-                        <div class="lg:col-span-7 space-y-2.5 sm:space-y-3 text-center lg:text-left">
-                            <span class="text-blue-200 text-xs font-bold uppercase tracking-wider">
+                <div class="hero-slide {{ $index === 0 ? '' : 'hidden opacity-0' }} transition-all duration-500 flex items-center min-h-[210px] sm:min-h-[240px] p-4 sm:p-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center w-full">
+                        <div class="lg:col-span-7 space-y-2 sm:space-y-2.5 text-center lg:text-left">
+                            <span class="text-blue-200 text-[11px] font-bold uppercase tracking-wider">
                                 {{ $banner->subtitle ?: 'PROMO SPESIAL' }}
                             </span>
-                            <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight leading-snug">
+                            <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight leading-snug">
                                 {{ $banner->title }} <br class="hidden sm:inline">
                                 @if($banner->highlight_text)
                                     <span class="text-yellow-300">{{ $banner->highlight_text }}</span>
                                 @endif
                             </h1>
-                            <p class="text-blue-100 text-xs sm:text-sm max-w-lg mx-auto lg:mx-0 font-normal line-clamp-2">
+                            <p class="text-blue-100 text-xs sm:text-[13px] max-w-lg mx-auto lg:mx-0 font-normal line-clamp-2">
                                 {{ $banner->description }}
                             </p>
                             <div class="pt-1">
                                 <a 
                                     href="{{ $banner->button_url ?: route('catalog') }}" 
-                                    class="inline-flex items-center gap-2 bg-white hover:bg-blue-50 text-blue-800 font-bold text-xs sm:text-sm px-5 py-2.5 rounded-full shadow-xs transition-colors"
+                                    class="inline-flex items-center gap-1.5 bg-white hover:bg-blue-50 text-blue-800 font-bold text-xs px-4 py-2 rounded-full shadow-xs transition-colors"
                                 >
                                     {{ $banner->button_text ?: 'Belanja Sekarang' }}
-                                    <svg class="w-4 h-4 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-3.5 h-3.5 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
                                     </svg>
                                 </a>
                             </div>
                         </div>
                         <div class="lg:col-span-5 hidden lg:flex justify-center">
-                            <div class="relative w-52 h-52 sm:w-56 sm:h-56 rounded-xl overflow-hidden shadow-sm border border-white/20">
+                            <div class="relative w-44 h-44 sm:w-48 sm:h-48 rounded-xl overflow-hidden shadow-sm border border-white/20">
                                 <img 
                                     src="{{ $banner->image }}" 
                                     alt="{{ $banner->title }}" 
                                     class="w-full h-full object-cover"
                                 >
-                                <div class="absolute inset-x-0 bottom-0 bg-slate-900/80 p-2.5 text-white">
-                                    <span class="bg-blue-700 text-white font-bold text-[10px] px-2 py-0.5 rounded">{{ $banner->category_tag ?: 'Promo Toko' }}</span>
-                                    <h3 class="font-semibold text-xs mt-0.5 truncate">{{ $banner->title }}</h3>
+                                <div class="absolute inset-x-0 bottom-0 bg-slate-900/80 p-2 text-white">
+                                    <span class="bg-blue-700 text-white font-bold text-[10px] px-1.5 py-0.5 rounded">{{ $banner->category_tag ?: 'Promo Toko' }}</span>
+                                    <h3 class="font-semibold text-[11px] mt-0.5 truncate">{{ $banner->title }}</h3>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             @empty
-                <div class="hero-slide flex items-center min-h-[250px] sm:min-h-[280px] p-6 sm:p-8">
+                <div class="hero-slide flex items-center min-h-[210px] sm:min-h-[240px] p-4 sm:p-6">
                     <div class="text-center w-full text-white space-y-2">
-                        <h1 class="text-2xl font-extrabold">SELAMAT DATANG DI TOKO ONLINE</h1>
+                        <h1 class="text-xl sm:text-2xl font-extrabold">SELAMAT DATANG DI TOKO ONLINE</h1>
                         <p class="text-xs text-blue-100">Koleksi produk berkualitas dengan penawaran terbaik setiap hari.</p>
-                        <a href="{{ route('catalog') }}" class="inline-block bg-white text-blue-800 font-bold text-xs px-5 py-2 rounded-full mt-2">Lihat Katalog</a>
+                        <a href="{{ route('catalog') }}" class="inline-block bg-white text-blue-800 font-bold text-xs px-4 py-2 rounded-full mt-2">Lihat Katalog</a>
                     </div>
                 </div>
             @endforelse
@@ -85,7 +85,7 @@
             </button>
 
             <!-- Slider Dots Indicator (Dynamic) -->
-            <div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-20">
+            <div class="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-20">
                 @foreach($banners as $index => $banner)
                     <button type="button" class="slide-dot {{ $index === 0 ? 'w-6 bg-white' : 'w-1.5 bg-white/40' }} h-1.5 rounded-full hover:bg-white/70 transition-all duration-300 cursor-pointer" aria-label="Go to Slide {{ $index + 1 }}"></button>
                 @endforeach
@@ -96,53 +96,54 @@
 
     <!-- TRUST FEATURES STRIP -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+        <div class="bg-white rounded-xl border border-slate-200 px-3.5 py-2.5 sm:px-4 sm:py-3 shadow-2xs">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 divide-y md:divide-y-0 md:divide-x divide-slate-100">
                 
-                <div class="flex items-center gap-3 pt-2 md:pt-0">
-                    <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                <div class="flex items-center gap-2.5 pt-1.5 md:pt-0">
+                    <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
                         </svg>
                     </div>
                     <div>
-                        <h4 class="text-xs font-bold text-slate-900">Gratis Ongkir Rp0</h4>
+                        <h4 class="text-xs font-bold text-slate-900 leading-snug">Gratis Ongkir Rp0</h4>
                         <p class="text-[11px] text-slate-500">Pengiriman cepat se-Indonesia</p>
                     </div>
                 </div>
 
-                <div class="flex items-center gap-3 pt-2 md:pt-0 md:pl-4">
-                    <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="flex items-center gap-2.5 pt-1.5 md:pt-0 md:pl-4">
+                    <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                         </svg>
                     </div>
                     <div>
-                        <h4 class="text-xs font-bold text-slate-900">100% Original</h4>
+                        <h4 class="text-xs font-bold text-slate-900 leading-snug">100% Original</h4>
                         <p class="text-[11px] text-slate-500">Garansi uang kembali 100%</p>
                     </div>
                 </div>
 
-                <div class="flex items-center gap-3 pt-2 md:pt-0 md:pl-4">
-                    <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="flex items-center gap-2.5 pt-1.5 md:pt-0 md:pl-4">
+                    <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
                     </div>
                     <div>
-                        <h4 class="text-xs font-bold text-slate-900">Proses Kilat</h4>
+                        <h4 class="text-xs font-bold text-slate-900 leading-snug">Proses Kilat</h4>
                         <p class="text-[11px] text-slate-500">Pengiriman di hari yang sama</p>
                     </div>
                 </div>
 
-                <div class="flex items-center gap-3 pt-2 md:pt-0 md:pl-4">
-                    <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="flex items-center gap-2.5 pt-1.5 md:pt-0 md:pl-4">
+                    <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/>
                         </svg>
                     </div>
                     <div>
-                        <h4 class="text-xs font-bold text-slate-900">Layanan CS 24/7</h4>
+                        <h4 class="text-xs font-bold text-slate-900 leading-snug">Layanan CS 24/7</h4>
                         <p class="text-[11px] text-slate-500">Siap bantu kapan saja</p>
                     </div>
                 </div>
@@ -153,9 +154,9 @@
 
     <!-- KATALOG SECTION -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 space-y-4">
+        <div class="bg-white rounded-xl p-3.5 sm:p-4 border border-slate-200 space-y-3">
             <div class="flex items-center justify-between">
-                <h2 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                <h2 class="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
                     Kategori Pilihan
                 </h2>
                 @if(isset($selectedCategory) && $selectedCategory)
@@ -167,35 +168,33 @@
 
             <!-- Active Category Notification Banner -->
             @if(isset($selectedCategory) && $selectedCategory)
-                <div class="bg-blue-50/80 border border-blue-200 rounded-lg p-3 flex items-center justify-between text-xs sm:text-sm text-blue-900">
+                <div class="bg-blue-50/80 border border-blue-200 rounded-lg p-2.5 flex items-center justify-between text-xs text-blue-900">
                     <div class="flex items-center gap-2">
                         <svg class="w-4 h-4 text-blue-700 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
                         </svg>
                         <span>Menampilkan produk untuk kategori: <strong class="text-blue-700 font-extrabold">{{ $selectedCategory }}</strong></span>
                     </div>
-                    <a href="{{ route('home') }}" class="text-xs bg-blue-700 hover:bg-blue-800 text-white font-bold px-3 py-1.5 rounded-md transition-colors">
+                    <a href="{{ route('home') }}" class="text-xs bg-blue-700 hover:bg-blue-800 text-white font-bold px-3 py-1 rounded-md transition-colors">
                         Tampilkan Semua
                     </a>
                 </div>
             @endif
 
-            <div class="grid grid-cols-5 gap-3 sm:gap-6 justify-items-center">
+            <div class="grid grid-cols-5 gap-2.5 sm:gap-4 justify-items-center">
                 @foreach($categories as $category)
                     @php $isActive = isset($selectedCategory) && strcasecmp($selectedCategory, $category['name']) === 0; @endphp
-                    <a href="{{ route('catalog', ['category' => strtolower($category['name'])]) }}" class="flex flex-col items-center group cursor-pointer w-full">
-                        <div class="w-11 h-11 sm:w-13 sm:h-13 rounded-xl sm:rounded-2xl border transition-all duration-300 transform group-hover:-translate-y-0.5 group-hover:scale-105 flex items-center justify-center mb-1.5 {{ $isActive ? 'bg-blue-700 text-white border-blue-700 ring-3 ring-blue-700/20 shadow-sm' : ($category['bgLight'] ?? 'bg-blue-50/70 text-blue-700 border-slate-200/80 group-hover:bg-blue-700 group-hover:text-white') }}">
-                            @if(isset($category['icon']))
-                                <svg class="w-5 h-5 sm:w-5 sm:h-5 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="{{ $category['icon'] }}"/>
-                                </svg>
-                            @else
-                                <svg class="w-5 h-5 sm:w-5 sm:h-5 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                                </svg>
-                            @endif
+                    <a href="{{ route('catalog', ['category' => strtolower($category['slug'] ?? $category['name'])]) }}" class="flex flex-col items-center group cursor-pointer w-full text-center">
+                        <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-slate-50 border transition-all duration-300 transform group-hover:-translate-y-1 group-hover:scale-105 flex items-center justify-center p-1 overflow-hidden mb-1.5 shadow-2xs group-hover:shadow-md {{ $isActive ? 'border-blue-700 ring-2 ring-blue-700/25 bg-blue-50/50' : 'border-slate-200/90 group-hover:border-blue-600' }}">
+                            <img 
+                                src="{{ $category['image'] ?? 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300' }}" 
+                                alt="{{ $category['name'] }}" 
+                                class="w-full h-full object-cover rounded-xl group-hover:scale-110 transition-transform duration-300"
+                                loading="lazy"
+                                onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300';"
+                            >
                         </div>
-                        <span class="text-[11px] sm:text-xs font-semibold transition-colors text-center truncate w-full {{ $isActive ? 'text-blue-700 font-extrabold' : 'text-slate-700 group-hover:text-blue-700 font-bold' }}">
+                        <span class="text-[11px] sm:text-xs font-bold transition-colors text-center line-clamp-1 w-full {{ $isActive ? 'text-blue-700 font-extrabold' : 'text-slate-800 group-hover:text-blue-700' }}">
                             {{ $category['name'] }}
                         </span>
                     </a>
@@ -210,14 +209,14 @@
         <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
             
             <!-- Header Bar -->
-            <div class="bg-blue-700 px-4 sm:px-5 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2.5">
+            <div class="bg-blue-700 px-3.5 sm:px-4 py-2 sm:py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2">
                 <div class="flex items-center gap-2">
                     <span class="p-1 bg-white/10 rounded text-white">
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.57l-7 10A1 1 0 018 18v-5H4a1 1 0 01.82-1.57l7-10a1 1 0 011.12-.384z" clip-rule="evenodd"/>
                         </svg>
                     </span>
-                    <h2 class="text-base sm:text-lg font-bold text-white uppercase tracking-tight">
+                    <h2 class="text-sm sm:text-base font-bold text-white uppercase tracking-tight">
                         Flash Sale
                     </h2>
                 </div>
@@ -236,8 +235,8 @@
             </div>
 
             <!-- Grid of 5 Product Cards -->
-            <div class="p-4 sm:p-5">
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+            <div class="p-3 sm:p-4">
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 sm:gap-3.5">
                     @foreach($flashSaleProducts as $product)
                         <x-product-card 
                             :id="$product['id']"
@@ -264,26 +263,26 @@
         <div class="rounded-xl overflow-hidden border border-slate-200 shadow-xs">
             
             <!-- Header Bar Blue Solid -->
-            <div class="bg-blue-700 px-4 sm:px-6 py-3.5 flex items-center justify-between text-white">
+            <div class="bg-blue-700 px-3.5 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between text-white">
                 <div class="space-y-0.5">
-                    <h2 class="text-base sm:text-xl font-extrabold uppercase tracking-tight">
+                    <h2 class="text-sm sm:text-base font-extrabold uppercase tracking-tight">
                         Produk Terlaris Minggu Ini
                     </h2>
-                    <p class="text-xs text-blue-100 hidden sm:block">
-                        Produk favorit pilihan 10.000+ pembeli dengan rating tertinggi minggu ini
+                    <p class="text-[11px] text-blue-100 hidden sm:block">
+                        Produk favorit pilihan pembeli dengan rating tertinggi minggu ini
                     </p>
                 </div>
                 <a href="{{ route('catalog') }}" class="text-xs font-extrabold text-blue-100 hover:text-white flex items-center gap-1 transition-colors shrink-0">
-                    Lihat Semua Katalog
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    Lihat Semua
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
                 </a>
             </div>
 
-            <!-- Best Sellers Product Cards Grid (5 Columns) -->
-            <div class="bg-white p-4 sm:p-5">
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+            <!-- Best Sellers Product Cards Grid (6 Columns) -->
+            <div class="bg-white p-3 sm:p-4">
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 sm:gap-3.5">
                     @foreach($bestSellerProducts as $product)
                         <x-product-card 
                             :id="$product['id']"
@@ -309,16 +308,16 @@
 
     <!-- MID-PAGE SPECIAL CAMPAIGN BANNER -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="bg-blue-700 rounded-xl p-6 sm:p-8 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xs">
-            <div class="space-y-1.5 text-center md:text-left">
-                <h3 class="text-xl sm:text-2xl font-extrabold tracking-tight">
+        <div class="bg-blue-700 rounded-xl p-4 sm:py-4.5 sm:px-6 text-white flex flex-col md:flex-row items-center justify-between gap-3.5 shadow-xs">
+            <div class="space-y-1 text-center md:text-left">
+                <h3 class="text-base sm:text-lg font-extrabold tracking-tight">
                     Gratis Ongkir Rp0 & Extra Cashback s.d. 100RB
                 </h3>
-                <p class="text-xs sm:text-sm text-blue-100 max-w-xl">
+                <p class="text-xs text-blue-100 max-w-xl">
                     Klaim voucher promo khusus hari ini dan nikmati pengiriman ekspres tanpa batas minimal belanja.
                 </p>
             </div>
-            <a href="{{ route('promo') }}" class="bg-white hover:bg-blue-50 text-blue-800 font-extrabold text-xs sm:text-sm px-6 py-3 rounded-lg transition-colors shrink-0 shadow-2xs">
+            <a href="{{ route('promo') }}" class="bg-white hover:bg-blue-50 text-blue-800 font-extrabold text-xs px-5 py-2.5 rounded-lg transition-colors shrink-0 shadow-2xs">
                 Klaim Voucher Sekarang &gt;
             </a>
         </div>
@@ -326,10 +325,10 @@
 
     <!-- RECOMMENDATIONS SECTION -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-2">
-                <div class="w-1.5 h-5 bg-blue-700 rounded-full"></div>
-                <h2 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                <div class="w-1.5 h-4.5 bg-blue-700 rounded-full"></div>
+                <h2 class="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
                     Rekomendasi Untukmu
                 </h2>
             </div>
@@ -342,7 +341,7 @@
         </div>
 
         <!-- 6-Column Grid of Products -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 sm:gap-3.5">
             @foreach($recommendedProducts as $product)
                 <x-product-card 
                     :id="$product['id']"
@@ -359,13 +358,13 @@
         </div>
 
         <!-- Tombol Lihat Semua Produk (Clean E-Commerce Style) -->
-        <div class="mt-8 flex justify-center">
+        <div class="mt-5 flex justify-center">
             <a 
                 href="{{ route('catalog') }}" 
-                class="w-full sm:w-80 inline-flex items-center justify-center gap-2 px-8 py-3 bg-white hover:bg-slate-50 text-slate-800 hover:text-blue-700 font-bold text-xs sm:text-sm rounded-xl border border-slate-300 hover:border-slate-400 shadow-2xs hover:shadow-xs transition-all duration-150 cursor-pointer group"
+                class="w-full sm:w-72 inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-white hover:bg-slate-50 text-slate-800 hover:text-blue-700 font-bold text-xs sm:text-xs rounded-xl border border-slate-300 hover:border-slate-400 shadow-2xs hover:shadow-xs transition-all duration-150 cursor-pointer group"
             >
                 <span>Lihat Selengkapnya di Katalog</span>
-                <svg class="w-4 h-4 text-slate-400 group-hover:text-blue-700 group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-700 group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                 </svg>
             </a>

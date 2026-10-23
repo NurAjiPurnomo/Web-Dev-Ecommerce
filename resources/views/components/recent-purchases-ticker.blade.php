@@ -1,5 +1,14 @@
-@if(!empty($recentPurchases) && count($recentPurchases) > 0)
-<div class="bg-blue-900 border-b border-blue-950 text-white text-xs py-2 px-3 sm:px-4 shadow-xs relative z-50 overflow-hidden select-none">
+@php
+    if (empty($recentPurchases)) {
+        try {
+            $recentPurchases = \App\Services\RecentPurchasesService::getRecentPurchases();
+        } catch (\Throwable $e) {
+            $recentPurchases = [];
+        }
+    }
+@endphp
+
+<div class="bg-blue-900 border-b border-blue-950 text-white text-xs py-1.5 px-3 sm:px-4 shadow-2xs relative z-50 overflow-hidden select-none">
     <style>
         @keyframes runningSlowMarquee {
             0% { transform: translate3d(0, 0, 0); }
@@ -8,21 +17,21 @@
         .animate-running-slow {
             display: flex;
             width: max-content;
-            animation: runningSlowMarquee 75s linear infinite;
+            animation: runningSlowMarquee 65s linear infinite;
             will-change: transform;
         }
         .animate-running-slow:hover {
             animation-play-state: paused !important;
         }
         .ticker-fade-mask {
-            mask-image: linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
-            -webkit-mask-image: linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
+            mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
         }
     </style>
 
     <!-- LEFT & RIGHT GRADIENT FADE OVERLAYS FOR SMOOTH EDGE TRANSITION -->
-    <div class="absolute left-0 top-0 bottom-0 w-10 sm:w-16 bg-gradient-to-r from-blue-900 via-blue-900/80 to-transparent z-20 pointer-events-none"></div>
-    <div class="absolute right-0 top-0 bottom-0 w-10 sm:w-16 bg-gradient-to-l from-blue-900 via-blue-900/80 to-transparent z-20 pointer-events-none"></div>
+    <div class="absolute left-0 top-0 bottom-0 w-8 sm:w-14 bg-gradient-to-r from-blue-900 via-blue-900/80 to-transparent z-20 pointer-events-none"></div>
+    <div class="absolute right-0 top-0 bottom-0 w-8 sm:w-14 bg-gradient-to-l from-blue-900 via-blue-900/80 to-transparent z-20 pointer-events-none"></div>
 
     <div class="max-w-7xl mx-auto flex items-center relative">
         <!-- SCROLLING SLOW MARQUEE TRACK WITH GRADIENT EDGE MASK -->
@@ -65,4 +74,3 @@
         </div>
     </div>
 </div>
-@endif

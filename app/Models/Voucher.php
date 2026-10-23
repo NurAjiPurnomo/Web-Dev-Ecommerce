@@ -12,6 +12,8 @@ class Voucher extends Model
     protected $fillable = [
         'code',
         'type',
+        'target',
+        'user_id',
         'discount_value',
         'min_spend',
         'max_discount',
@@ -34,6 +36,11 @@ class Voucher extends Model
     public function getFormattedMinSpendAttribute()
     {
         return 'Rp ' . number_format($this->min_spend, 0, ',', '.');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function users()

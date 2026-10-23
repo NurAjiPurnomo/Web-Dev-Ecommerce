@@ -156,6 +156,11 @@ class CheckoutController extends Controller
                     $query->whereNull('expires_at')
                           ->orWhere('expires_at', '>=', now());
                 })
+                ->where(function ($q) use ($user) {
+                    $q->where('target', 'semua')
+                      ->orWhereNull('target')
+                      ->orWhere('user_id', $user->id);
+                })
                 ->get();
         } else {
             $dbVouchers = collect([]);
@@ -376,6 +381,9 @@ class CheckoutController extends Controller
         if (!empty($shippingVoucherCode)) {
             if (!in_array($shippingVoucherCode, $userUsedVouchers)) {
                 $sVoucher = \App\Models\Voucher::where('code', $shippingVoucherCode)->where('status', 'aktif')->first();
+                if ($sVoucher && ($sVoucher->target === 'pelanggan' && $sVoucher->user_id && (!$user || $sVoucher->user_id != $user->id))) {
+                    $sVoucher = null;
+                }
                 if ($sVoucher && $sVoucher->type === 'gratis_ongkir' && $subtotal >= $sVoucher->min_spend) {
                     $shippingDiscountAmount = min((int) $sVoucher->discount_value, $shippingCost);
                 }
@@ -388,6 +396,9 @@ class CheckoutController extends Controller
         if (!empty($discountVoucherCode)) {
             if (!in_array($discountVoucherCode, $userUsedVouchers)) {
                 $dVoucher = \App\Models\Voucher::where('code', $discountVoucherCode)->where('status', 'aktif')->first();
+                if ($dVoucher && ($dVoucher->target === 'pelanggan' && $dVoucher->user_id && (!$user || $dVoucher->user_id != $user->id))) {
+                    $dVoucher = null;
+                }
                 if ($dVoucher && in_array($dVoucher->type, ['diskon_nominal', 'diskon_persen']) && $subtotal >= $dVoucher->min_spend) {
                     if ($dVoucher->type === 'diskon_nominal') {
                         $productDiscountAmount = min((int) $dVoucher->discount_value, $subtotal);
@@ -406,6 +417,9 @@ class CheckoutController extends Controller
         if (empty($shippingDiscountAmount) && empty($productDiscountAmount) && !empty($generalVoucherCode)) {
             if (!in_array($generalVoucherCode, $userUsedVouchers)) {
                 $gVoucher = \App\Models\Voucher::where('code', $generalVoucherCode)->where('status', 'aktif')->first();
+                if ($gVoucher && ($gVoucher->target === 'pelanggan' && $gVoucher->user_id && (!$user || $gVoucher->user_id != $user->id))) {
+                    $gVoucher = null;
+                }
                 if ($gVoucher && $subtotal >= $gVoucher->min_spend) {
                     if ($gVoucher->type === 'gratis_ongkir') {
                         $shippingDiscountAmount = min((int) $gVoucher->discount_value, $shippingCost);

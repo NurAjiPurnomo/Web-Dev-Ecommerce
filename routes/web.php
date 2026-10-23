@@ -139,6 +139,7 @@ Route::middleware([AdminMiddleware::class])->prefix('admin')->group(function () 
     Route::get('/vouchers', [AdminController::class, 'vouchers'])->name('admin.vouchers');
     Route::post('/vouchers', [AdminController::class, 'storeVoucher'])->name('admin.vouchers.store');
     Route::post('/vouchers/{id}/toggle', [AdminController::class, 'toggleVoucher'])->name('admin.vouchers.toggle');
+    Route::post('/vouchers/{id}/delete', [AdminController::class, 'deleteVoucher'])->name('admin.vouchers.delete');
 
     // Customer Returns & Complaints Management (Photo & Video Unboxing Proof)
     Route::get('/returns', [AdminController::class, 'returns'])->name('admin.returns');
@@ -152,7 +153,9 @@ Route::middleware([AdminMiddleware::class])->prefix('admin')->group(function () 
     // Notifications Management
     Route::get('/notifications', [AdminController::class, 'notifications'])->name('admin.notifications');
     Route::post('/notifications', [AdminController::class, 'storeNotification'])->name('admin.notifications.store');
+    Route::post('/notifications/bulk', [AdminController::class, 'bulkNotificationAction'])->name('admin.notifications.bulk');
     Route::post('/notifications/{id}/toggle', [AdminController::class, 'toggleNotification'])->name('admin.notifications.toggle');
+    Route::post('/notifications/{id}/delete', [AdminController::class, 'deleteNotification'])->name('admin.notifications.delete');
 
     // Product Reviews Management
     Route::get('/reviews', [AdminController::class, 'reviews'])->name('admin.reviews');

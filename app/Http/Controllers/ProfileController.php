@@ -22,7 +22,10 @@ class ProfileController extends Controller
             return redirect()->route('login');
         }
 
-        $claimedVouchers = $user->vouchers()->withPivot('is_used', 'used_at')->get();
+        $claimedVouchers = $user->vouchers()
+            ->withPivot('is_used', 'used_at', 'created_at')
+            ->orderByDesc('user_vouchers.id')
+            ->get();
 
         $usableVouchersCount = $claimedVouchers->filter(function($v) {
             $isUsed = (bool) ($v->pivot->is_used ?? false);

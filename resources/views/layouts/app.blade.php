@@ -70,14 +70,14 @@
     @endphp
 
     @if(!$isAuthPage)
-        <!-- STICKY TOP HEADER CONTAINER -->
-        <div class="sticky top-0 z-50">
+        <!-- STICKY TOP HEADER (Running Ticker + Navbar) -->
+        <header class="sticky top-0 z-50">
             <!-- RECENT PURCHASES RUNNING TICKER BANNER -->
             @include('components.recent-purchases-ticker')
 
             <!-- Navbar Component -->
             @include('components.navbar')
-        </div>
+        </header>
     @endif
 
     <!-- Main Content Yield -->

@@ -1,18 +1,18 @@
 @extends('layouts.app')
 
 @section('content')
-<div x-data="checkoutApp()" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+<div x-data="checkoutApp()" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
 
     <!-- Header & Breadcrumb -->
-    <div class="mb-6 space-y-1">
-        <nav class="flex text-xs text-slate-500 gap-2 items-center">
+    <div class="mb-4 space-y-0.5">
+        <nav class="flex text-xs text-slate-500 gap-1.5 items-center">
             <a href="{{ route('home') }}" class="hover:text-blue-700">Beranda</a>
             <span>/</span>
             <a href="{{ route('cart') }}" class="hover:text-blue-700">Keranjang</a>
             <span>/</span>
             <span class="text-slate-900 font-bold">Ringkasan Checkout</span>
         </nav>
-        <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+        <h1 class="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
             Ringkasan Checkout &amp; Pembayaran
         </h1>
     </div>
@@ -21,37 +21,37 @@
         @csrf
         <input type="hidden" name="is_direct" value="{{ ($isDirectBuy ?? false) ? 1 : 0 }}">
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
 
             <!-- LEFT COLUMN (~65% / 8 cols) -->
-            <div class="lg:col-span-8 space-y-6">
+            <div class="lg:col-span-8 space-y-4">
 
                 <!-- 1. ALAMAT PENGIRIMAN -->
-                <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
-                    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                        <div class="flex items-center gap-2.5">
-                            <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
+                <div class="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-xs space-y-3">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                        <div class="flex items-center gap-2">
+                            <div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                                 </svg>
                             </div>
-                            <h2 class="text-base sm:text-lg font-bold text-slate-900">Alamat Tujuan Pengiriman (Rumah Anda)</h2>
+                            <h2 class="text-sm sm:text-base font-bold text-slate-900">Alamat Tujuan Pengiriman</h2>
                         </div>
                         <div class="flex items-center gap-2">
-                            <span class="bg-blue-100 text-blue-700 text-[11px] font-bold px-2.5 py-0.5 rounded-full">{{ $address['address_label'] }}</span>
+                            <span class="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{{ $address['address_label'] }}</span>
                             <a 
                                 href="{{ route('profile') }}" 
-                                class="text-xs font-bold text-blue-700 hover:text-blue-800 hover:underline border border-blue-200 px-3 py-1 rounded-lg transition-colors cursor-pointer"
+                                class="text-xs font-bold text-blue-700 hover:text-blue-800 hover:underline border border-blue-200 px-2.5 py-0.5 rounded-lg transition-colors cursor-pointer"
                             >
                                 Ubah Alamat
                             </a>
                         </div>
                     </div>
 
-                    <div class="space-y-1.5 text-xs sm:text-sm text-slate-700 leading-relaxed">
+                    <div class="space-y-1 text-xs sm:text-sm text-slate-700 leading-relaxed">
                         <div class="flex items-center gap-2">
-                            <span class="font-bold text-slate-900 text-sm sm:text-base">{{ $address['recipient_name'] }}</span>
+                            <span class="font-bold text-slate-900 text-sm">{{ $address['recipient_name'] }}</span>
                             <span class="text-slate-400">•</span>
                             <span class="font-semibold text-slate-700">{{ $address['phone'] }}</span>
                         </div>
@@ -70,15 +70,15 @@
                 </div>
 
                 <!-- 2. RINCIAN PRODUK YANG DIBELI -->
-                <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
-                    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                        <div class="flex items-center gap-2.5">
-                            <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
+                <div class="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-xs space-y-3">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                        <div class="flex items-center gap-2">
+                            <div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                                 </svg>
                             </div>
-                            <h2 class="text-base sm:text-lg font-bold text-slate-900">Produk Yang Dibeli ({{ count($checkoutItems) }})</h2>
+                            <h2 class="text-sm sm:text-base font-bold text-slate-900">Produk Yang Dibeli ({{ count($checkoutItems) }})</h2>
                         </div>
                     </div>
 
@@ -111,22 +111,22 @@
                 </div>
 
                 <!-- 3. PILIH METODE PENGIRIMAN REALTIME BITESHIP -->
-                <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4 relative">
-                    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                        <div class="flex items-center gap-2.5">
-                            <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
+                <div class="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-xs space-y-3 relative">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                        <div class="flex items-center gap-2">
+                            <div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                                 </svg>
                             </div>
                             <div>
-                                <h2 class="text-base sm:text-lg font-bold text-slate-900">Pilih Jasa Pengiriman</h2>
+                                <h2 class="text-sm sm:text-base font-bold text-slate-900">Pilih Jasa Pengiriman</h2>
                                 <p class="text-[11px] text-slate-500">Pilih kurir ekspedisi untuk pengiriman paket Anda</p>
                             </div>
                         </div>
                         <template x-if="loadingShipping">
-                            <div class="flex items-center gap-1.5 text-xs text-blue-700 font-bold bg-blue-50 px-2.5 py-1 rounded-lg">
-                                <svg class="w-4 h-4 animate-spin text-blue-700" fill="none" viewBox="0 0 24 24">
+                            <div class="flex items-center gap-1.5 text-xs text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-lg">
+                                <svg class="w-3.5 h-3.5 animate-spin text-blue-700" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
@@ -136,9 +136,9 @@
                     </div>
 
                     <!-- Real-Time Biteship Error Alert -->
-                    <div x-show="shippingErrorMsg && couriers.length === 0" class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs">
-                        <div class="font-bold text-sm mb-1 flex items-center gap-1.5">
-                            <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div x-show="shippingErrorMsg && couriers.length === 0" class="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs">
+                        <div class="font-bold text-xs mb-1 flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                             </svg>
                             <span>Respons Error Real-Time Biteship API:</span>
@@ -147,13 +147,13 @@
                     </div>
 
                     <!-- Dynamic List Couriers from Biteship -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         <template x-for="courier in couriers" :key="courier.id">
                             <label 
-                                class="border rounded-xl p-3.5 flex items-center justify-between cursor-pointer transition-all hover:border-blue-700" 
+                                class="border rounded-xl p-3 flex items-center justify-between cursor-pointer transition-all hover:border-blue-700" 
                                 :class="selectedCourier === courier.id ? 'border-2 border-blue-700 bg-blue-50/50 shadow-2xs' : 'border-slate-200 bg-white'"
                             >
-                                <div class="flex items-center gap-3">
+                                <div class="flex items-center gap-2.5">
                                     <input 
                                         type="radio" 
                                         name="courier_id" 
@@ -162,7 +162,7 @@
                                         @change="selectedCourierCost = courier.price; selectedCourierName = courier.name" 
                                         class="w-4 h-4 text-blue-700 border-slate-300 focus:ring-blue-700 cursor-pointer shrink-0"
                                     >
-                                    <div class="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200 p-1 flex items-center justify-center shrink-0 overflow-hidden">
+                                    <div class="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 p-1 flex items-center justify-center shrink-0 overflow-hidden">
                                         <img 
                                             :src="courier.logo" 
                                             :alt="courier.name" 
@@ -171,31 +171,29 @@
                                         >
                                     </div>
                                     <div>
-                                        <div class="font-bold text-xs sm:text-sm text-slate-900" x-text="courier.name"></div>
-                                        <div class="text-[11px] text-slate-500" x-text="'Estimasi: ' + courier.etd"></div>
-                                        <div class="text-[10px] text-slate-400" x-text="courier.description || ''"></div>
+                                        <div class="font-bold text-xs text-slate-900" x-text="courier.name"></div>
+                                        <div class="text-[10px] text-slate-500" x-text="'Estimasi: ' + courier.etd"></div>
                                     </div>
                                 </div>
-                                <div class="text-xs font-extrabold text-blue-700 shrink-0" x-text="formatRupiah(courier.price)"></div>
+                                <div class="text-xs font-bold text-blue-700 shrink-0" x-text="formatRupiah(courier.price)"></div>
                             </label>
                         </template>
                     </div>
                 </div>
 
                 <!-- 4. PILIH METODE PEMBAYARAN -->
-                <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
-                    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                        <div class="flex items-center gap-2.5">
-                            <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold shadow-2xs">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-xs space-y-3.5">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                        <div class="flex items-center gap-2">
+                            <div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                                 </svg>
                             </div>
                             <div>
-                                <h2 class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">Metode Pembayaran</h2>
+                                <h2 class="text-sm sm:text-base font-bold text-slate-900">Metode Pembayaran</h2>
                                 <p class="text-[11px] text-slate-500">Pilih opsi pembayaran yang Anda inginkan</p>
                             </div>
-                        </div>
                     </div>
 
                     <!-- ACCORDION KATEGORI PEMBAYARAN -->
@@ -289,23 +287,23 @@
 
             <!-- RIGHT COLUMN (~35% / 4 cols - Ringkasan Pembayaran Sticky) -->
             <div class="lg:col-span-4 lg:sticky lg:top-20">
-                <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-5">
+                <div class="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-xs space-y-3">
                     
-                    <h2 class="text-base sm:text-lg font-extrabold text-slate-900 border-b border-slate-100 pb-3">
+                    <h2 class="text-sm sm:text-base font-bold text-slate-900 border-b border-slate-100 pb-2.5">
                         Ringkasan Pembayaran
                     </h2>
 
                     <!-- KOTAK VOUCHER DISKON -->
-                    <div class="pt-3 pb-3 border-t border-b border-slate-100 space-y-3">
+                    <div class="pt-2 pb-2 border-t border-b border-slate-100 space-y-2">
                         <div class="flex items-center justify-between">
                             <label class="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                                <svg class="w-4 h-4 text-blue-700 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-3.5 h-3.5 text-blue-700 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 011 1.732 2 2 0 01-1 1.732V17a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 01-1-1.732 2 2 0 011-1.732V7a2 2 0 00-2-2H5z"/>
                                 </svg>
                                 <span>Voucher Toko Online</span>
                             </label>
                             <template x-if="totalDiscount > 0">
-                                <span class="text-[11px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full" x-text="'Hemat ' + formatRupiah(totalDiscount)"></span>
+                                <span class="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full" x-text="'Hemat ' + formatRupiah(totalDiscount)"></span>
                             </template>
                         </div>
 
@@ -313,10 +311,10 @@
                         <button 
                             type="button" 
                             @click="openVoucherModal()" 
-                            class="w-full bg-blue-50/80 border-2 border-dashed border-blue-600 hover:bg-blue-100/70 text-blue-700 font-bold py-2.5 px-3 rounded-xl flex items-center justify-between transition-all shadow-2xs cursor-pointer group"
+                            class="w-full bg-blue-50/80 border border-dashed border-blue-600 hover:bg-blue-100/70 text-blue-700 font-bold py-2 px-3 rounded-lg flex items-center justify-between transition-all shadow-2xs cursor-pointer group"
                         >
                             <div class="flex items-center gap-2 text-xs">
-                                <svg class="w-4 h-4 text-blue-700 group-hover:scale-110 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-3.5 h-3.5 text-blue-700 group-hover:scale-110 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 11h.01M7 15h.01M13 7h.01M13 11h.01M13 15h.01M17 7h.01M17 11h.01M17 15h.01"/>
                                 </svg>
                                 <span x-text="(appliedShippingVoucher || appliedDiscountVoucher) ? 'Ubah / Lihat Voucher Toko' : 'Pilih Voucher Toko Online'"></span>
@@ -330,16 +328,16 @@
                         <div x-show="appliedShippingVoucher || appliedDiscountVoucher" class="space-y-1.5 pt-0.5">
                             <!-- Badge Voucher Gratis Ongkir -->
                             <template x-if="appliedShippingVoucher">
-                                <div class="p-2 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-900 shadow-2xs">
+                                <div class="p-1.5 px-2 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-between text-xs text-emerald-900 shadow-2xs">
                                     <div class="flex items-center gap-1.5 truncate">
-                                        <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
-                                        <div class="truncate">
+                                        <svg class="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
+                                        <div class="truncate text-[11px]">
                                             <span class="font-bold">Gratis Ongkir:</span>
-                                            <span class="font-mono bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-extrabold text-[10px] ml-1" x-text="appliedShippingVoucher.code"></span>
-                                            <span class="text-[10px] font-semibold text-emerald-700 ml-1" x-text="'(-' + formatRupiah(shippingDiscountAmount) + ')'"></span>
+                                            <span class="font-mono bg-emerald-100 text-emerald-800 px-1 py-0.5 rounded font-extrabold text-[10px] ml-0.5" x-text="appliedShippingVoucher.code"></span>
+                                            <span class="text-[10px] font-semibold text-emerald-700 ml-0.5" x-text="'(-' + formatRupiah(shippingDiscountAmount) + ')'"></span>
                                         </div>
                                     </div>
-                                    <button type="button" @click="removeShippingVoucher()" class="text-red-600 hover:text-red-800 font-bold text-[11px] shrink-0 ml-1.5 cursor-pointer">
+                                    <button type="button" @click="removeShippingVoucher()" class="text-red-600 hover:text-red-800 font-bold text-[10px] shrink-0 ml-1.5 cursor-pointer">
                                         Hapus
                                     </button>
                                 </div>
@@ -347,16 +345,16 @@
 
                             <!-- Badge Voucher Diskon Produk -->
                             <template x-if="appliedDiscountVoucher">
-                                <div class="p-2 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between text-xs text-blue-900 shadow-2xs">
+                                <div class="p-1.5 px-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between text-xs text-blue-900 shadow-2xs">
                                     <div class="flex items-center gap-1.5 truncate">
-                                        <svg class="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-                                        <div class="truncate">
-                                            <span class="font-bold">Diskon Produk:</span>
-                                            <span class="font-mono bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-extrabold text-[10px] ml-1" x-text="appliedDiscountVoucher.code"></span>
-                                            <span class="text-[10px] font-semibold text-blue-700 ml-1" x-text="'(-' + formatRupiah(productDiscountAmount) + ')'"></span>
+                                        <svg class="w-3.5 h-3.5 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                                        <div class="truncate text-[11px]">
+                                            <span class="font-bold">Diskon:</span>
+                                            <span class="font-mono bg-blue-100 text-blue-800 px-1 py-0.5 rounded font-extrabold text-[10px] ml-0.5" x-text="appliedDiscountVoucher.code"></span>
+                                            <span class="text-[10px] font-semibold text-blue-700 ml-0.5" x-text="'(-' + formatRupiah(productDiscountAmount) + ')'"></span>
                                         </div>
                                     </div>
-                                    <button type="button" @click="removeDiscountVoucher()" class="text-red-600 hover:text-red-800 font-bold text-[11px] shrink-0 ml-1.5 cursor-pointer">
+                                    <button type="button" @click="removeDiscountVoucher()" class="text-red-600 hover:text-red-800 font-bold text-[10px] shrink-0 ml-1.5 cursor-pointer">
                                         Hapus
                                     </button>
                                 </div>
@@ -372,8 +370,8 @@
                     <input type="hidden" name="shipping_cost" :value="selectedCourierCost">
                     <input type="hidden" name="courier_name" :value="selectedCourierName">
 
-                    <!-- Rincian Biaya -->
-                    <div class="space-y-2.5 text-xs sm:text-sm">
+                    <!-- Rincian Biaya (Rapat & Proporsional) -->
+                    <div class="space-y-2 text-xs sm:text-[13px]">
                         <div class="flex items-center justify-between text-slate-600">
                             <span>Subtotal Produk ({{ count($checkoutItems) }})</span>
                             <span class="font-bold text-slate-900">Rp {{ number_format(array_sum(array_map(fn($i) => $i['price'] * $i['qty'], $checkoutItems)), 0, ',', '.') }}</span>
@@ -387,7 +385,7 @@
                         <template x-if="appliedShippingVoucher && shippingDiscountAmount > 0">
                             <div class="flex items-center justify-between text-emerald-700 font-medium">
                                 <span class="flex items-center gap-1">
-                                    <svg class="w-4 h-4 text-emerald-600 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
+                                    <svg class="w-3.5 h-3.5 text-emerald-600 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
                                     <span>Potongan Ongkir</span>
                                 </span>
                                 <span class="font-bold" x-text="'- ' + formatRupiah(shippingDiscountAmount)"></span>
@@ -398,7 +396,7 @@
                         <template x-if="appliedDiscountVoucher && productDiscountAmount > 0">
                             <div class="flex items-center justify-between text-blue-700 font-medium">
                                 <span class="flex items-center gap-1">
-                                    <svg class="w-4 h-4 text-blue-600 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                                    <svg class="w-3.5 h-3.5 text-blue-600 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
                                     <span>Diskon Produk</span>
                                 </span>
                                 <span class="font-bold" x-text="'- ' + formatRupiah(productDiscountAmount)"></span>
@@ -410,8 +408,8 @@
                             <span class="font-bold text-emerald-600">GRATIS</span>
                         </div>
 
-                        <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
-                            <span class="text-sm sm:text-base font-extrabold text-slate-900">Total Tagihan</span>
+                        <div class="pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                            <span class="text-xs sm:text-sm font-bold text-slate-900">Total Tagihan</span>
                             <span class="text-lg sm:text-xl font-black text-blue-700" x-text="formatRupiah(grandTotal)"></span>
                         </div>
                     </div>
@@ -419,13 +417,13 @@
                     <!-- Submit Button -->
                     <button 
                         type="submit" 
-                        class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold text-sm py-3.5 rounded-xl transition-all shadow-md cursor-pointer flex items-center justify-center gap-2"
+                        class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs sm:text-sm py-2.5 sm:py-3 rounded-xl transition-all shadow-2xs hover:shadow-xs cursor-pointer flex items-center justify-center gap-2"
                     >
                         <span>Konfirmasi &amp; Bayar Pesanan</span>
                     </button>
 
-                    <div class="text-center text-[11px] text-slate-400 flex items-center justify-center gap-1 pt-1">
-                        <svg class="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="text-center text-[10px] text-slate-400 flex items-center justify-center gap-1 pt-0.5">
+                        <svg class="w-3 h-3 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
                         <span>Transaksi 100% Aman &amp; Terenkripsi</span>

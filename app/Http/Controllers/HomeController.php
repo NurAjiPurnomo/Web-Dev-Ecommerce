@@ -78,45 +78,58 @@ class HomeController extends Controller
             [
                 'name'    => 'Pakaian & Fashion',
                 'slug'    => 'Pakaian',
-                'icon'    => 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z',
-                'emoji'   => '👕',
-                'bgLight' => 'bg-blue-50 text-blue-700 border-blue-200 group-hover:bg-blue-700 group-hover:text-white group-hover:border-blue-700 shadow-2xs'
+                'image'   => 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=300&auto=format&fit=crop&q=80',
             ],
             [
                 'name'    => 'Sepatu & Sneakers',
                 'slug'    => 'Sepatu',
-                'icon'    => 'M3 17a3 3 0 003 3h12a3 3 0 003-3v-3a2 2 0 00-2-2H5a2 2 0 00-2 2v3zM14 7l-4 5m0-5l4 5',
-                'emoji'   => '👟',
-                'bgLight' => 'bg-emerald-50 text-emerald-700 border-emerald-200 group-hover:bg-emerald-600 group-hover:text-white group-hover:border-emerald-600 shadow-2xs'
+                'image'   => 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&auto=format&fit=crop&q=80',
             ],
             [
                 'name'    => 'Aksesoris',
                 'slug'    => 'Aksesoris',
-                'icon'    => 'M2 10a4 4 0 014-4h2a4 4 0 014 4v1a4 4 0 01-4 4H6a4 4 0 01-4-4v-1zm10 0a4 4 0 014-4h2a4 4 0 014 4v1a4 4 0 01-4 4h-2a4 4 0 01-4-4v-1zm-2 0h2',
-                'emoji'   => '🕶️',
-                'bgLight' => 'bg-purple-50 text-purple-700 border-purple-200 group-hover:bg-purple-600 group-hover:text-white group-hover:border-purple-600 shadow-2xs'
+                'image'   => 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&auto=format&fit=crop&q=80',
             ],
             [
                 'name'    => 'Gadget',
                 'slug'    => 'Gadget',
-                'icon'    => 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z',
-                'emoji'   => '📱',
-                'bgLight' => 'bg-amber-50 text-amber-700 border-amber-200 group-hover:bg-amber-500 group-hover:text-white group-hover:border-amber-500 shadow-2xs'
+                'image'   => 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&auto=format&fit=crop&q=80',
             ],
             [
                 'name'    => 'Rumah Tangga',
                 'slug'    => 'Rumah Tangga',
-                'icon'    => 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
-                'emoji'   => '🏠',
-                'bgLight' => 'bg-rose-50 text-rose-700 border-rose-200 group-hover:bg-rose-600 group-hover:text-white group-hover:border-rose-600 shadow-2xs'
+                'image'   => 'https://images.unsplash.com/photo-1585515320310-259814833e62?w=300&auto=format&fit=crop&q=80',
             ]
         ];
 
+        // Otomatis gunakan gambar produk asli terlaris dari katalog jika tersedia
+        foreach ($categories as &$cat) {
+            $rep = Product::where('status', 'aktif')
+                ->where(function($q) use ($cat) {
+                    $q->where('category', $cat['slug'])
+                      ->orWhere('category', 'like', $cat['slug'] . '%');
+                })
+                ->whereNotNull('image')
+                ->orderByDesc('sold')
+                ->first();
+
+            if ($rep && !empty($rep->image)) {
+                $cat['image'] = $rep->image;
+            }
+        }
+        unset($cat);
+
         $storeSettings     = \App\Models\StoreSetting::getSettings();
-        $flashSaleEndTime  = $storeSettings->flash_sale_end_time ? $storeSettings->flash_sale_end_time->format('Y-m-d\TH:i:s') : null;
         $flashSaleIsActive = $storeSettings->flash_sale_is_active ?? true;
 
-        // MANUAL FLASH SALE PRODUCTS: Diatur khusus secara manual oleh Admin di menu Promo & Flash Sale
+        if ($storeSettings->flash_sale_end_time && $storeSettings->flash_sale_end_time->isFuture()) {
+            $flashSaleEndTime = $storeSettings->flash_sale_end_time->format('Y-m-d\TH:i:s');
+        } else {
+            $flashSaleEndTime = now()->endOfDay()->format('Y-m-d\TH:i:s');
+        }
+
+        // FLASH SALE PRODUCTS:
+        // 1. Ambil produk manual yang diatur oleh Admin jika ada
         $selectedFlashSaleIds = $storeSettings->flash_sale_product_ids ?? [];
         if (!is_array($selectedFlashSaleIds)) {
             $selectedFlashSaleIds = json_decode($selectedFlashSaleIds, true) ?: [];
@@ -134,14 +147,49 @@ class HomeController extends Controller
             $promoModels = collect();
         }
 
-        $flashSaleProducts = $promoModels->values()->map(function($p) {
+        // 2. Fallback Otomatis: jika produk manual belum diatur atau kurang dari 6, isi dengan produk diskon aktif
+        if ($promoModels->count() < 6 && $flashSaleIsActive) {
+            $needed = 6 - $promoModels->count();
+            $existingIds = $promoModels->pluck('id')->toArray();
+
+            $autoDiscounted = Product::where('status', 'aktif')
+                ->withAvg('reviews', 'rating')
+                ->whereNotIn('id', $existingIds)
+                ->where(function($q) {
+                    $q->where(function($sub) {
+                        $sub->whereNotNull('original_price')->whereColumn('original_price', '>', 'price');
+                    })->orWhere(function($sub) {
+                        $sub->whereNotNull('discount')->where('discount', '!=', '');
+                    });
+                })
+                ->latest('updated_at')
+                ->take($needed)
+                ->get();
+
+            // Jika masih kurang dari 6, tambahkan produk aktif terpopuler
+            if ($promoModels->count() + $autoDiscounted->count() < 6) {
+                $stillNeeded = 6 - ($promoModels->count() + $autoDiscounted->count());
+                $usedIds = array_merge($existingIds, $autoDiscounted->pluck('id')->toArray());
+                $filler = Product::where('status', 'aktif')
+                    ->withAvg('reviews', 'rating')
+                    ->whereNotIn('id', $usedIds)
+                    ->latest()
+                    ->take($stillNeeded)
+                    ->get();
+                $autoDiscounted = $autoDiscounted->concat($filler);
+            }
+
+            $promoModels = $promoModels->concat($autoDiscounted);
+        }
+
+        $flashSaleProducts = $promoModels->take(6)->values()->map(function($p) {
             return [
                 'id'            => $p->id,
                 'title'         => $p->name,
                 'category'      => $p->category,
                 'price'         => $p->formatted_price,
                 'originalPrice' => $p->formatted_original_price,
-                'discount'      => $p->discount,
+                'discount'      => $p->discount ?: '20%',
                 'image'         => $p->image,
                 'rating'        => $p->average_rating,
                 'sold'          => $p->formatted_sold,
@@ -232,7 +280,10 @@ class HomeController extends Controller
         }
 
         if ($selectedCategory && $selectedCategory !== 'all') {
-            $query->where('category', $selectedCategory);
+            $query->where(function($q) use ($selectedCategory) {
+                $q->where('category', $selectedCategory)
+                  ->orWhere('category', 'like', explode(' ', $selectedCategory)[0] . '%');
+            });
         }
 
         // Filter Rentang Harga (Min - Max)
@@ -644,9 +695,20 @@ class HomeController extends Controller
 
         $allProducts = $paginatedPromo;
 
-        $dbVouchers = \App\Models\Voucher::where('status', 'aktif')->get();
-
         $user = \Illuminate\Support\Facades\Auth::user();
+
+        $dbVouchers = \App\Models\Voucher::where('status', 'aktif')
+            ->where(function($q) use ($user) {
+                $q->where('target', 'semua')
+                  ->orWhereNull('target');
+                if ($user) {
+                    $q->orWhere(function($sub) use ($user) {
+                        $sub->where('target', 'pelanggan')->where('user_id', $user->id);
+                    });
+                }
+            })
+            ->get();
+
         $claimedVoucherIds = $user ? $user->vouchers()->pluck('voucher_id')->toArray() : [];
 
         $vouchers = $dbVouchers->filter(function($v) use ($claimedVoucherIds) {

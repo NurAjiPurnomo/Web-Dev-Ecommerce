@@ -18,6 +18,11 @@ class VoucherController extends Controller
         }
 
         $user = Auth::user();
+
+        // Check if targeted to specific user
+        if ($voucher->target === 'pelanggan' && $voucher->user_id && $voucher->user_id !== $user->id) {
+            return back()->with('error', 'Voucher ini bersifat khusus dan tidak ditujukan untuk akun Anda.');
+        }
         
         // Check if already claimed
         if ($user->vouchers()->where('voucher_id', $id)->exists()) {

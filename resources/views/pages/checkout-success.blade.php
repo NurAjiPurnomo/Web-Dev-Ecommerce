@@ -121,25 +121,25 @@ function checkoutSuccessApp() {
 <div 
     x-data="checkoutSuccessApp()" 
     x-init="initTimer()"
-    class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12"
+    class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7"
 >
 
     <!-- MAIN WRAPPER -->
-    <div class="space-y-6">
+    <div class="space-y-3.5 sm:space-y-4">
 
         <!-- 1. STATUS & TAGIHAN CARD (CLEAN PROFESSIONAL E-COMMERCE LAYOUT) -->
-        <div class="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
+        <div class="bg-white border border-slate-200/90 rounded-xl shadow-2xs overflow-hidden">
             
             <!-- A. WAITING PAYMENT STATE -->
             <template x-if="!isPaid && !isExpired">
-                <div class="p-5 sm:p-6">
-                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div class="p-4 sm:p-5">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div class="space-y-1 text-left">
                             <div class="flex items-center gap-2">
                                 <span class="w-2 h-2 rounded-full bg-amber-500"></span>
                                 <span class="text-xs font-bold text-amber-700 tracking-wider uppercase">Menunggu Pembayaran</span>
                             </div>
-                            <h1 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                            <h1 class="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
                                 Selesaikan Pembayaran
                             </h1>
                             <p class="text-xs text-slate-500 max-w-lg leading-relaxed">
@@ -148,9 +148,9 @@ function checkoutSuccessApp() {
                         </div>
 
                         <!-- Sisa Waktu Countdown -->
-                        <div class="bg-slate-50 border border-slate-200/80 rounded-xl px-4 py-2.5 sm:text-right shrink-0">
-                            <span class="text-xs text-slate-500 block">Sisa Waktu Pembayaran</span>
-                            <div class="font-sans tabular-nums text-base sm:text-lg font-bold text-slate-900 tracking-tight mt-0.5">
+                        <div class="bg-slate-50 border border-slate-200/80 rounded-lg px-3.5 py-2 sm:text-right shrink-0">
+                            <span class="text-[11px] text-slate-500 block">Sisa Waktu Pembayaran</span>
+                            <div class="font-sans tabular-nums text-sm sm:text-base font-bold text-slate-900 tracking-tight mt-0.5">
                                 <span x-text="String(hours).padStart(2, '0')">23</span><span class="text-slate-400 mx-1">:</span><span x-text="String(minutes).padStart(2, '0')">50</span><span class="text-slate-400 mx-1">:</span><span x-text="String(seconds).padStart(2, '0')">57</span>
                             </div>
                         </div>
@@ -160,8 +160,8 @@ function checkoutSuccessApp() {
 
             <!-- B. PAID STATE -->
             <template x-if="isPaid">
-                <div class="p-5 sm:p-6">
-                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div class="p-4 sm:p-5">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div class="space-y-1 text-left">
                             <div class="flex items-center gap-2">
                                 <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
@@ -169,14 +169,14 @@ function checkoutSuccessApp() {
                                     {{ $isCod ? 'Pesanan Terkonfirmasi' : 'Pembayaran Berhasil' }}
                                 </span>
                             </div>
-                            <h1 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                            <h1 class="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
                                 Pesanan Sedang Diproses
                             </h1>
                             <p class="text-xs text-slate-500 max-w-lg leading-relaxed">
                                 {{ $isCod ? 'Pesanan COD berhasil dikonfirmasi. Pembayaran dilakukan secara tunai saat kurir tiba.' : 'Pembayaran Anda telah terverifikasi. Pesanan sedang disiapkan oleh penjual.' }}
                             </p>
                         </div>
-                        <div class="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 px-3 py-1.5 rounded-lg font-semibold text-xs shrink-0">
+                        <div class="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 px-2.5 py-1 rounded-md font-semibold text-xs shrink-0">
                             <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
                             </svg>
@@ -188,14 +188,14 @@ function checkoutSuccessApp() {
 
             <!-- C. EXPIRED STATE -->
             <template x-if="!isPaid && isExpired">
-                <div class="p-5 sm:p-6">
-                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div class="p-4 sm:p-5">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div class="space-y-1 text-left">
                             <div class="flex items-center gap-2">
                                 <span class="h-2 w-2 rounded-full bg-rose-500"></span>
                                 <span class="text-xs font-bold text-rose-700 tracking-wider uppercase">Waktu Pembayaran Habis</span>
                             </div>
-                            <h1 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                            <h1 class="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
                                 Transaksi Kedaluwarsa
                             </h1>
                             <p class="text-xs text-slate-500 max-w-lg leading-relaxed">
@@ -203,7 +203,7 @@ function checkoutSuccessApp() {
                             </p>
                         </div>
                         <div class="shrink-0">
-                            <a href="{{ route('home') }}" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors">
+                            <a href="{{ route('home') }}" class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors">
                                 Belanja Lagi
                             </a>
                         </div>
@@ -212,10 +212,10 @@ function checkoutSuccessApp() {
             </template>
 
             <!-- BOTTOM ROW: TOTAL TAGIHAN & SALIN NOMINAL -->
-            <div class="bg-slate-50/80 border-t border-slate-100 px-5 py-3.5 sm:px-6 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-left">
+            <div class="bg-slate-50/80 border-t border-slate-100 px-4 py-2.5 sm:px-5 sm:py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 text-left">
                 <div>
-                    <span class="text-xs text-slate-500 block">Total Tagihan</span>
-                    <div class="text-xl sm:text-2xl font-bold text-blue-600 tracking-tight mt-0.5">
+                    <span class="text-[11px] text-slate-500 block">Total Tagihan</span>
+                    <div class="text-lg sm:text-xl font-bold text-blue-600 tracking-tight mt-0.5">
                         Rp {{ number_format($order['total_amount'] ?? 0, 0, ',', '.') }}
                     </div>
                 </div>
@@ -224,7 +224,7 @@ function checkoutSuccessApp() {
                     <button 
                         type="button" 
                         @click="copyText('{{ $order['total_amount'] ?? 0 }}', 'nominal')"
-                        class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-xs font-semibold transition-all shadow-2xs cursor-pointer shrink-0"
+                        class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-xs font-semibold transition-all shadow-2xs cursor-pointer shrink-0"
                         title="Salin Jumlah Tagihan"
                     >
                         <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -239,7 +239,7 @@ function checkoutSuccessApp() {
 
         <!-- 2. PAYMENT INSTRUCTIONS CARD -->
         <template x-if="!isPaid && !isExpired">
-            <div class="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
+            <div class="bg-white border border-slate-200/90 rounded-xl p-4 sm:p-5 shadow-2xs space-y-3">
 
                 <!-- Header with Real Brand Logo -->
                 <div class="flex items-center justify-between border-b border-slate-100 pb-4">
@@ -790,9 +790,9 @@ function checkoutSuccessApp() {
         </template>
 
         <!-- 3. INVOICE & SHIPPING DETAILS CARD -->
-        <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs text-left text-xs sm:text-sm space-y-4">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+        <div class="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-2xs text-left text-xs space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                <h3 class="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
                     <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>
@@ -800,16 +800,16 @@ function checkoutSuccessApp() {
                 </h3>
 
                 <div class="flex items-center gap-2">
-                    <span class="font-sans tabular-nums font-bold text-blue-700 text-xs bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg">
+                    <span class="font-sans tabular-nums font-bold text-blue-700 text-xs bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
                         {{ str_replace('/', '-', $order['order_id'] ?? ($order['invoice_number'] ?? '-')) }}
                     </span>
                     <button 
                         type="button" 
                         @click="copyText('{{ str_replace('/', '-', $order['order_id'] ?? ($order['invoice_number'] ?? '')) }}', 'invoice')"
-                        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-xs font-semibold transition-all shadow-2xs cursor-pointer"
+                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-[11px] font-semibold transition-all shadow-2xs cursor-pointer"
                         title="Salin Nomor Invoice"
                     >
-                        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                         </svg>
                         <span x-text="copiedInvoice ? 'Tersalin!' : 'Salin'">Salin</span>
@@ -817,15 +817,15 @@ function checkoutSuccessApp() {
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                <div class="space-y-1">
-                    <div class="text-slate-400 font-medium">Penerima &amp; Alamat</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div class="space-y-0.5">
+                    <div class="text-slate-400 font-medium text-[11px]">Penerima &amp; Alamat</div>
                     <div class="font-bold text-slate-900">{{ $order['user_name'] ?? ($order['recipient_name'] ?? 'Pelanggan') }}</div>
                     <div class="text-slate-600">{{ $order['user_phone'] ?? ($order['recipient_phone'] ?? '-') }} • {{ $order['user_email'] ?? ($order['customer_email'] ?? '-') }}</div>
                 </div>
 
-                <div class="space-y-1">
-                    <div class="text-slate-400 font-medium">Ekspedisi Pengiriman</div>
+                <div class="space-y-0.5">
+                    <div class="text-slate-400 font-medium text-[11px]">Ekspedisi Pengiriman</div>
                     <div class="font-bold text-slate-900">{{ $order['courier_name'] ?? ($order['courier'] ?? '-') }}</div>
                     <div class="text-slate-600">Ongkir: Rp {{ number_format($order['shipping_cost'] ?? 0, 0, ',', '.') }}</div>
                 </div>
@@ -834,8 +834,8 @@ function checkoutSuccessApp() {
 
         <!-- 4. PRODUCTS LIST -->
         @if(isset($order['items']) && count($order['items']) > 0)
-            <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs text-left space-y-3">
-                <h3 class="font-bold text-slate-900 text-sm border-b border-slate-100 pb-3 flex items-center gap-2">
+            <div class="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-2xs text-left space-y-2.5">
+                <h3 class="font-bold text-slate-900 text-xs sm:text-sm border-b border-slate-100 pb-2.5 flex items-center gap-1.5">
                     <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                     </svg>
@@ -844,15 +844,15 @@ function checkoutSuccessApp() {
 
                 <div class="divide-y divide-slate-100">
                     @foreach($order['items'] as $item)
-                        <div class="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between gap-4">
-                            <div class="flex items-center gap-3 min-w-0">
-                                <img src="{{ $item['image'] }}" alt="{{ $item['name'] }}" class="w-12 h-12 object-cover rounded-lg border border-slate-200 shrink-0">
+                        <div class="py-2 first:pt-0 last:pb-0 flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-2.5 min-w-0">
+                                <img src="{{ $item['image'] }}" alt="{{ $item['name'] }}" class="w-11 h-11 object-cover rounded-lg border border-slate-200 shrink-0">
                                 <div class="min-w-0">
-                                    <h4 class="font-bold text-slate-900 text-xs sm:text-sm line-clamp-1">{{ $item['name'] }}</h4>
+                                    <h4 class="font-bold text-slate-900 text-xs line-clamp-1">{{ $item['name'] }}</h4>
                                     <div class="text-[11px] text-slate-500 mt-0.5">{{ $item['qty'] }} barang x Rp {{ number_format($item['price'], 0, ',', '.') }}</div>
                                 </div>
                             </div>
-                            <div class="font-bold text-slate-900 text-xs sm:text-sm shrink-0">
+                            <div class="font-bold text-slate-900 text-xs shrink-0">
                                 Rp {{ number_format($item['price'] * $item['qty'], 0, ',', '.') }}
                             </div>
                         </div>
@@ -862,11 +862,11 @@ function checkoutSuccessApp() {
         @endif
 
         <!-- 5. ACTION BUTTONS (STANDARD E-COMMERCE UX FLOW) -->
-        <div class="pt-4">
-            <div class="flex flex-col-reverse sm:flex-row items-center justify-center gap-3">
+        <div class="pt-2 sm:pt-3">
+            <div class="flex flex-col-reverse sm:flex-row items-center justify-center gap-2.5">
                 <a 
                     href="{{ route('home') }}" 
-                    class="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 font-semibold text-xs sm:text-sm px-6 py-3 rounded-xl transition-all border border-slate-200 shadow-2xs text-center flex items-center justify-center gap-2 cursor-pointer"
+                    class="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 font-bold text-xs px-5 py-2.5 rounded-lg transition-all border border-slate-200 shadow-2xs text-center flex items-center justify-center gap-2 cursor-pointer"
                 >
                     <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 001 1m-6 0h6"/>
@@ -876,7 +876,7 @@ function checkoutSuccessApp() {
 
                 <a 
                     href="{{ route('orders', ['order_id' => $order['order_id'] ?? ($order['invoice_number'] ?? ($order['id'] ?? ''))]) }}" 
-                    class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs sm:text-sm px-6 py-3 rounded-xl transition-all shadow-xs text-center flex items-center justify-center gap-2 cursor-pointer"
+                    class="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs px-5 py-2.5 rounded-lg transition-all shadow-2xs text-center flex items-center justify-center gap-2 cursor-pointer"
                 >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>

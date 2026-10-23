@@ -3,48 +3,48 @@
 @section('content')
 
 
-<div x-data="orderManagerApp()" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+<div x-data="orderManagerApp()" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
 
     <!-- ==================== MODE 1: LIST VIEW (FULL WIDTH) ==================== -->
-    <div x-show="viewMode === 'list'" x-cloak class="space-y-6">
+    <div x-show="viewMode === 'list'" x-cloak class="space-y-3.5 sm:space-y-4">
 
         <!-- Page Header & Breadcrumb -->
         <div class="space-y-1">
-            <nav class="flex text-xs text-slate-500 gap-2 items-center">
+            <nav class="flex text-xs text-slate-500 gap-1.5 items-center">
                 <a href="{{ route('home') }}" class="hover:text-blue-700">Beranda</a>
                 <span>/</span>
                 <a href="{{ route('profile') }}" class="hover:text-blue-700">Profil Saya</a>
                 <span>/</span>
                 <span class="text-slate-900 font-bold">Manajer Pesanan</span>
             </nav>
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-1">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 pt-0.5">
                 <div>
-                    <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-                        <svg class="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <h1 class="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                        <svg class="w-5 h-5 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                         </svg>
                         <span>Manajer Pesanan</span>
                     </h1>
-                    <p class="text-xs sm:text-sm text-slate-500">Kelola, lacak status, dan lihat rincian transaksi belanja Anda</p>
+                    <p class="text-xs text-slate-500">Kelola, lacak status, dan lihat rincian transaksi belanja Anda</p>
                 </div>
                 
                 <div class="flex items-center gap-2">
                     <span class="text-xs text-slate-500 font-medium">Total Pesanan:</span>
-                    <span class="bg-blue-50 text-blue-700 font-bold text-xs px-3.5 py-1.5 rounded-full border border-blue-200" x-text="filteredOrders.length + ' Transaksi'"></span>
+                    <span class="bg-blue-50 text-blue-700 font-bold text-xs px-3 py-1 rounded-full border border-blue-200" x-text="filteredOrders.length + ' Transaksi'"></span>
                 </div>
             </div>
         </div>
 
         <!-- Filter Status Tabs (Shopee Style with Icons) -->
-        <div class="bg-white border border-slate-200 rounded-2xl p-2 shadow-xs">
+        <div class="bg-white border border-slate-200 rounded-xl p-1.5 shadow-2xs">
             <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-1 text-xs">
                 <button 
                     type="button" 
                     @click="activeFilter = 'semua'; selectedOrderIndex = 0" 
                     :class="activeFilter === 'semua' ? 'bg-blue-700 text-white font-bold shadow-2xs' : 'text-slate-600 hover:bg-slate-100 font-medium'"
-                    class="w-full px-3 py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    class="w-full px-2.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
                     </svg>
                     <span>Semua</span>
@@ -54,9 +54,9 @@
                     type="button" 
                     @click="activeFilter = 'belum_bayar'; selectedOrderIndex = 0" 
                     :class="activeFilter === 'belum_bayar' ? 'bg-blue-700 text-white font-bold shadow-2xs' : 'text-slate-600 hover:bg-slate-100 font-medium'"
-                    class="w-full px-3 py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    class="w-full px-2.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
                     </svg>
                     <span>Belum Bayar</span>
@@ -66,9 +66,9 @@
                     type="button" 
                     @click="activeFilter = 'diproses'; selectedOrderIndex = 0" 
                     :class="activeFilter === 'diproses' ? 'bg-blue-700 text-white font-bold shadow-2xs' : 'text-slate-600 hover:bg-slate-100 font-medium'"
-                    class="w-full px-3 py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    class="w-full px-2.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                     </svg>
                     <span>Diproses</span>
@@ -78,9 +78,9 @@
                     type="button" 
                     @click="activeFilter = 'dikirim'; selectedOrderIndex = 0" 
                     :class="activeFilter === 'dikirim' ? 'bg-blue-700 text-white font-bold shadow-2xs' : 'text-slate-600 hover:bg-slate-100 font-medium'"
-                    class="w-full px-3 py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    class="w-full px-2.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
                     </svg>
@@ -91,9 +91,9 @@
                     type="button" 
                     @click="activeFilter = 'selesai'; selectedOrderIndex = 0" 
                     :class="activeFilter === 'selesai' ? 'bg-blue-700 text-white font-bold shadow-2xs' : 'text-slate-600 hover:bg-slate-100 font-medium'"
-                    class="w-full px-3 py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    class="w-full px-2.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                     <span>Selesai</span>
@@ -103,9 +103,9 @@
                     type="button" 
                     @click="activeFilter = 'retur'; selectedOrderIndex = 0" 
                     :class="activeFilter === 'retur' ? 'bg-blue-700 text-white font-bold shadow-2xs' : 'text-slate-600 hover:bg-slate-100 font-medium'"
-                    class="w-full px-3 py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    class="w-full px-2.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                     </svg>
                     <span>Pengembalian</span>
@@ -115,9 +115,9 @@
                     type="button" 
                     @click="activeFilter = 'batal'; selectedOrderIndex = 0" 
                     :class="activeFilter === 'batal' ? 'bg-blue-700 text-white font-bold shadow-2xs' : 'text-slate-600 hover:bg-slate-100 font-medium'"
-                    class="w-full px-3 py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    class="w-full px-2.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                     <span>Dibatalkan</span>
@@ -132,23 +132,23 @@
                 type="text" 
                 x-model="searchQuery" 
                 placeholder="Cari No. Invoice / Nama Barang..." 
-                class="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 shadow-2xs"
+                class="w-full bg-white border border-slate-200 rounded-lg pl-9 pr-4 py-2 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 shadow-2xs"
             >
-            <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
             </svg>
         </div>
 
         <!-- Full Width List of Order Cards -->
-        <div class="space-y-4">
+        <div class="space-y-3 sm:space-y-3.5">
             <template x-for="(order, idx) in filteredOrders" :key="idx + '_' + (order.id || order.raw_id || idx)">
                 <div 
-                    class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4 group"
+                    class="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-4 shadow-2xs space-y-3 group"
                 >
                     <!-- Card Header: ID & Status Badge -->
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-b border-slate-100 pb-2.5">
                         <div class="flex items-center gap-2">
-                            <span class="font-extrabold text-slate-900 text-sm sm:text-base group-hover:text-blue-700 transition-colors" x-text="order.id"></span>
+                            <span class="font-extrabold text-slate-900 text-xs sm:text-sm group-hover:text-blue-700 transition-colors" x-text="order.id"></span>
                             <span class="text-xs text-slate-300">•</span>
                             <span class="text-xs text-slate-500" x-text="order.date"></span>
                         </div>
@@ -156,56 +156,56 @@
                         <!-- Status Badges -->
                         <div class="flex items-center gap-2">
                             <template x-if="order.status === 'belum_bayar' || order.status === 'belum_dibayar'">
-                                <span class="bg-amber-100 text-amber-800 text-xs font-extrabold px-3 py-1 rounded-full border border-amber-200">
+                                <span class="bg-amber-100 text-amber-800 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border border-amber-200">
                                     Belum Bayar
                                 </span>
                             </template>
                             <template x-if="order.status === 'diproses'">
-                                <span class="bg-yellow-100 text-yellow-800 text-xs font-extrabold px-3 py-1 rounded-full border border-yellow-200">
+                                <span class="bg-yellow-100 text-yellow-800 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border border-yellow-200">
                                     Diproses
                                 </span>
                             </template>
                             <template x-if="order.status === 'dikirim'">
-                                <span class="bg-blue-100 text-blue-800 text-xs font-extrabold px-3 py-1 rounded-full border border-blue-200 flex items-center gap-1.5">
-                                    <span class="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+                                <span class="bg-blue-100 text-blue-800 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border border-blue-200 flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
                                     <span>Dikirim</span>
                                 </span>
                             </template>
                             <template x-if="order.status === 'selesai'">
-                                <span class="bg-emerald-100 text-emerald-800 text-xs font-extrabold px-3 py-1 rounded-full border border-emerald-200">
+                                <span class="bg-emerald-100 text-emerald-800 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border border-emerald-200">
                                     Selesai
                                 </span>
                             </template>
                             <template x-if="order.status === 'retur' || order.status === 'komplain'">
-                                <span class="bg-amber-100 text-amber-900 text-xs font-extrabold px-3 py-1 rounded-full border border-amber-300 flex items-center gap-1.5">
-                                    <span class="w-2 h-2 rounded-full bg-amber-600 animate-pulse"></span>
+                                <span class="bg-amber-100 text-amber-900 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border border-amber-300 flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse"></span>
                                     <span>Retur Diajukan</span>
                                 </span>
                             </template>
                             <template x-if="order.status === 'retur_proses'">
-                                <span class="bg-sky-100 text-sky-900 text-xs font-extrabold px-3 py-1 rounded-full border border-sky-300 flex items-center gap-1.5">
-                                    <span class="w-2 h-2 rounded-full bg-sky-600 animate-pulse"></span>
+                                <span class="bg-sky-100 text-sky-900 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border border-sky-300 flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-sky-600 animate-pulse"></span>
                                     <span>Retur Disetujui (Kirim Barang)</span>
                                 </span>
                             </template>
                             <template x-if="order.status === 'retur_disetujui'">
-                                <span class="bg-emerald-100 text-emerald-900 text-xs font-extrabold px-3 py-1 rounded-full border border-emerald-300 flex items-center gap-1.5">
+                                <span class="bg-emerald-100 text-emerald-900 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1">
                                     <span>✓ Retur Selesai</span>
                                 </span>
                             </template>
                             <template x-if="order.status === 'retur_ditolak'">
-                                <span class="bg-rose-100 text-rose-900 text-xs font-extrabold px-3 py-1 rounded-full border border-rose-300 flex items-center gap-1.5">
+                                <span class="bg-rose-100 text-rose-900 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border border-rose-300 flex items-center gap-1">
                                     <span>✕ Retur Ditolak</span>
                                 </span>
                             </template>
                             <template x-if="order.status === 'pengajuan_batal'">
-                                <span class="bg-amber-100 text-amber-900 text-xs font-extrabold px-3 py-1 rounded-full border border-amber-300 flex items-center gap-1.5">
-                                    <span class="w-2 h-2 rounded-full bg-amber-600 animate-pulse"></span>
+                                <span class="bg-amber-100 text-amber-900 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border border-amber-300 flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse"></span>
                                     <span>Menunggu Konfirmasi Batal</span>
                                 </span>
                             </template>
                             <template x-if="order.status === 'batal'">
-                                <span class="bg-red-100 text-red-800 text-xs font-extrabold px-3 py-1 rounded-full border border-red-200">
+                                <span class="bg-red-100 text-red-800 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border border-red-200">
                                     Dibatalkan
                                 </span>
                             </template>
@@ -213,40 +213,49 @@
                     </div>
 
                     <!-- Products List inside Card -->
-                    <div class="space-y-3">
+                    <div class="divide-y divide-slate-100">
                         <template x-for="(item, itemIdx) in (order.items || [])" :key="itemIdx">
-                            <div class="flex items-center gap-4 py-1">
-                                <div class="w-16 h-16 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
-                                    <img 
-                                        :src="item.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600'" 
-                                        :alt="item.name"
-                                        class="w-full h-full object-cover"
-                                    >
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <h4 class="text-xs sm:text-sm font-bold text-slate-900 line-clamp-1 leading-snug" x-text="item.name"></h4>
-                                    <p class="text-xs text-slate-500 mt-0.5" x-text="item.variant"></p>
-                                    <div class="flex items-center gap-2 mt-1">
-                                        <span class="text-xs text-slate-500" x-text="item.qty + ' barang x '"></span>
-                                        <span class="text-xs font-bold text-slate-800" x-text="formatRupiah(item.price)"></span>
+                            <div class="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                                <div class="flex items-center gap-3 min-w-0 flex-1">
+                                    <!-- Rigid Thumbnail Box -->
+                                    <div class="w-16 h-16 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 flex-shrink-0" style="width: 64px; height: 64px; min-width: 64px; min-height: 64px;">
+                                        <img 
+                                            :src="item.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600'" 
+                                            :alt="item.name"
+                                            class="w-full h-full object-cover block"
+                                            style="width: 64px; height: 64px; min-width: 64px; min-height: 64px; object-fit: cover;"
+                                            loading="lazy"
+                                        >
                                     </div>
+                                    <div class="flex-1 min-w-0">
+                                        <h4 class="text-xs sm:text-sm font-bold text-slate-900 line-clamp-1 leading-snug" x-text="item.name"></h4>
+                                        <p class="text-[11px] text-slate-500 mt-0.5" x-text="item.variant ? 'Variasi: ' + item.variant : ''"></p>
+                                        <div class="flex items-center gap-1.5 mt-0.5 text-xs">
+                                            <span class="text-slate-500 font-medium" x-text="'x' + item.qty"></span>
+                                            <span class="text-slate-300">•</span>
+                                            <span class="text-slate-600 font-medium" x-text="formatRupiah(item.price)"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-right shrink-0 pl-2">
+                                    <span class="text-xs sm:text-sm font-extrabold text-slate-900 block" x-text="formatRupiah(item.price * item.qty)"></span>
                                 </div>
                             </div>
                         </template>
                     </div>
 
                     <!-- Card Footer: Total & Action -->
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2.5 border-t border-slate-100">
                         <div>
-                            <span class="text-xs text-slate-500 font-medium block">Total Tagihan Pesanan:</span>
-                            <span class="font-black text-blue-700 text-base sm:text-lg" x-text="formatRupiah(order.total_amount)"></span>
+                            <span class="text-[11px] text-slate-500 font-medium block">Total Tagihan Pesanan:</span>
+                            <span class="font-black text-blue-700 text-sm sm:text-base" x-text="formatRupiah(order.total_amount)"></span>
                         </div>
                         <div class="flex items-center gap-2">
                             <template x-if="order.status === 'belum_bayar' || order.status === 'belum_dibayar' || order.status === 'diproses' || order.status === 'dikemas'">
                                 <button 
                                     type="button" 
                                     @click="openCancelModal(order.raw_id || order.id)"
-                                    class="text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 px-3.5 py-2.5 rounded-xl transition-all cursor-pointer"
+                                    class="text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded-lg transition-all cursor-pointer"
                                 >
                                     Batalkan
                                 </button>
@@ -255,10 +264,10 @@
                             <button 
                                 type="button" 
                                 @click="selectOrder(idx)" 
-                                class="w-full sm:w-auto text-xs sm:text-sm font-bold text-white bg-blue-700 hover:bg-blue-800 px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                                class="w-full sm:w-auto text-xs font-bold text-white bg-blue-700 hover:bg-blue-800 px-3.5 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-sm"
                             >
                                 <span>Lihat Rincian Pesanan</span>
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                             </button>
                         </div>
                     </div>
@@ -267,14 +276,14 @@
 
             <!-- Empty State -->
             <template x-if="filteredOrders.length === 0">
-                <div class="bg-white border border-slate-200 rounded-2xl p-12 text-center space-y-4">
-                    <div class="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="bg-white border border-slate-200 rounded-xl p-8 sm:p-10 text-center space-y-3">
+                    <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
                         </svg>
                     </div>
-                    <h3 class="text-base font-bold text-slate-800">Tidak ada pesanan ditemukan</h3>
-                    <p class="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">Coba pilih tab status filter di atas atau cari dengan kata kunci nama produk / no invoice yang lain.</p>
+                    <h3 class="text-sm font-bold text-slate-800">Tidak ada pesanan ditemukan</h3>
+                    <p class="text-xs text-slate-500 max-w-md mx-auto">Coba pilih tab status filter di atas atau cari dengan kata kunci nama produk / no invoice yang lain.</p>
                 </div>
             </template>
         </div>
@@ -282,20 +291,20 @@
     </div>
 
     <!-- ==================== MODE 2: DETAIL VIEW (FULL PAGE) ==================== -->
-    <div x-show="viewMode === 'detail'" x-cloak class="space-y-6">
+    <div x-show="viewMode === 'detail'" x-cloak class="space-y-4">
 
         <!-- Back Button & Breadcrumb Header -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <button 
                 type="button" 
                 @click="goBackToList()" 
-                class="inline-flex items-center gap-2 text-xs sm:text-sm font-extrabold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-4 py-2.5 rounded-xl transition-all shadow-2xs cursor-pointer w-fit"
+                class="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3.5 py-1.5 rounded-lg transition-all shadow-2xs cursor-pointer w-fit"
             >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                 <span>Kembali ke Manajer Pesanan</span>
             </button>
 
-            <nav class="flex text-xs text-slate-500 gap-2 items-center">
+            <nav class="flex text-xs text-slate-500 gap-1.5 items-center">
                 <a href="{{ route('home') }}" class="hover:text-blue-700">Beranda</a>
                 <span>/</span>
                 <span>Manajer Pesanan</span>
@@ -306,13 +315,13 @@
 
         <!-- Full Width Order Details Container -->
         <template x-if="activeOrder">
-            <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-8 shadow-sm space-y-6">
+            <div class="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-2xs space-y-4 sm:space-y-5">
 
                 <!-- 1. Header: Order ID, Timestamp & Action Menu -->
-                <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                     <div>
                         <div class="flex items-center gap-2">
-                            <h2 class="text-lg sm:text-xl font-extrabold text-slate-900" x-text="activeOrder.id"></h2>
+                            <h2 class="text-base sm:text-lg font-extrabold text-slate-900" x-text="activeOrder.id"></h2>
                             <span class="text-xs text-slate-400">|</span>
                             <span class="text-xs text-slate-400 font-medium" x-text="activeOrder.raw_id"></span>
                         </div>
@@ -796,7 +805,9 @@
                                     <img 
                                         :src="item.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600'" 
                                         :alt="item.name"
-                                        class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover border border-slate-200 shrink-0 bg-slate-50"
+                                        class="w-16 h-16 rounded-xl object-cover border border-slate-200 shrink-0 bg-slate-50"
+                                        style="width: 64px; height: 64px; min-width: 64px; min-height: 64px; object-fit: cover;"
+                                        loading="lazy"
                                     >
                                     <div class="space-y-1">
                                         <h4 class="text-xs sm:text-sm font-bold text-slate-900 leading-snug" x-text="item.name"></h4>
