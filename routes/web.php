@@ -188,7 +188,6 @@ Route::middleware([AdminMiddleware::class])->prefix('admin')->group(function () 
     // Store Settings & Biteship Couriers Management
     Route::get('/store-settings', [AdminController::class, 'storeSettings'])->name('admin.storeSettings');
     Route::post('/store-settings', [AdminController::class, 'updateStoreSettings'])->name('admin.storeSettings.update');
-    Route::post('/orders/{id}/create-biteship', [AdminController::class, 'createBiteshipOrder'])->name('admin.orders.createBiteship');
 });
 
 // Dynamic Pages Route (must be at the end to avoid conflicts)

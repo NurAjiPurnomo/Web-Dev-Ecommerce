@@ -31,46 +31,6 @@ class CartController extends Controller
             $isLoggedIn = false;
         }
 
-        // Jika keranjang di session masih kosong, kita inisialisasi dengan data contoh default jika user sudah login
-        if (empty($cart) && $isLoggedIn && !session()->has('cart_initialized')) {
-            $cart = [
-                '1_default' => [
-                    'id'             => '1_default',
-                    'product_id'     => 1,
-                    'variant_id'     => 'v1',
-                    'image_id'       => 'img1',
-                    'name'           => 'Kemeja Linen Casual Premium Slim Fit - Navy',
-                    'variant'        => 'Ukuran: L, Warna: Navy',
-                    'color'          => 'Navy',
-                    'size'           => 'L',
-                    'price'          => 149000,
-                    'original_price' => 249000,
-                    'discount'       => '40%',
-                    'qty'            => 1,
-                    'selected'       => true,
-                    'image'          => 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=600&auto=format&fit=crop&q=80',
-                ],
-                '2_default' => [
-                    'id'             => '2_default',
-                    'product_id'     => 2,
-                    'variant_id'     => 'v2',
-                    'image_id'       => 'img2',
-                    'name'           => 'Sepatu Sneakers Running Lightweight Air Breathable',
-                    'variant'        => 'Ukuran: 42, Warna: Red Chili',
-                    'color'          => 'Red Chili',
-                    'size'           => '42',
-                    'price'          => 215000,
-                    'original_price' => 350000,
-                    'discount'       => '39%',
-                    'qty'            => 1,
-                    'selected'       => true,
-                    'image'          => 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=80',
-                ],
-            ];
-            session()->put('cart', $cart);
-            session()->put('cart_initialized', true);
-        }
-
         return is_array($cart) ? $cart : [];
     }
 

@@ -57,39 +57,6 @@ class RecentPurchasesService
                     $minutesOffset += rand(4, 9);
                 }
             }
-
-            // 2. If fewer than 8 purchases, complement with real catalog products to keep ticker rich & engaging
-            if (count($purchases) < 8) {
-                $dummyBuyers = [
-                    'Budi S*** (Jakarta)',
-                    'Rina W*** (Bandung)',
-                    'Dimas P*** (Surabaya)',
-                    'Siti A*** (Medan)',
-                    'Fajar M*** (Semarang)',
-                    'Lestari K*** (Yogyakarta)',
-                    'Hendra T*** (Tangerang)',
-                    'Novi R*** (Bekasi)',
-                ];
-
-                $catalogProducts = Product::inRandomOrder()->take(8)->get();
-                $buyerIdx = 0;
-                foreach ($catalogProducts as $prod) {
-                    if (count($purchases) >= $limit) break;
-                    $buyer = $dummyBuyers[$buyerIdx % count($dummyBuyers)];
-                    $buyerIdx++;
-
-                    $purchases[] = [
-                        'name'          => $buyer,
-                        'product_name'  => $prod->name,
-                        'quantity'      => 1,
-                        'time_ago'      => ($minutesOffset) . ' menit lalu',
-                        'product_url'   => route('product.detail', $prod->id),
-                        'product_image' => $prod->image,
-                        'is_real'       => false,
-                    ];
-                    $minutesOffset += rand(3, 8);
-                }
-            }
         } catch (\Throwable $e) {
             // Silence errors
         }
