@@ -398,5 +398,11 @@ class DatabaseSeeder extends Seeder
                 'status' => 'ditayangkan'
             ]
         );
+
+        // Seed Static Pages & Articles
+        $this->call([
+            PageSeeder::class,
+            ArticleSeeder::class,
+        ]);
     }
 }
