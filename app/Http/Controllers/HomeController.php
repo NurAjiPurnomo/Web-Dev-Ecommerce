@@ -473,9 +473,6 @@ class HomeController extends Controller
                 return $v['size'] ?? null;
             }, $dbProduct->variants))));
         }
-        if (empty($productSizes)) {
-            $productSizes = ['S', 'M', 'L', 'XL'];
-        }
 
         // Dynamic colors
         $productColors = (!empty($dbProduct->colors) && is_array($dbProduct->colors))
@@ -487,9 +484,6 @@ class HomeController extends Controller
             $productColors = array_values(array_unique(array_filter(array_map(function($v) {
                 return $v['color'] ?? null;
             }, $dbProduct->variants))));
-        }
-        if (empty($productColors)) {
-            $productColors = ['Navy Blue', 'Hitam', 'Silver / White'];
         }
 
         $product = [

@@ -1141,7 +1141,13 @@ function productDetailApp() {
                         this.activeImage = matchVar.image;
                     }
                 } else {
-                    this.remainingStock = 0;
+                    if (Array.isArray(this.variantsList) && this.variantsList.length > 0) {
+                        this.remainingStock = 0;
+                    } else {
+                        this.remainingStock = this.totalStock;
+                        this.unitPrice = this.baseUnitPrice;
+                        this.originalUnitPrice = this.baseOriginalUnitPrice;
+                    }
                 }
 
                 if (this.remainingStock <= 0) {
