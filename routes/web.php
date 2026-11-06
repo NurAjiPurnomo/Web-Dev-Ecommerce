@@ -202,6 +202,18 @@ Route::get('/storage/{path}', function ($path) {
 // Dynamic Pages Route (must be at the end to avoid conflicts)
 Route::get('/page/{slug}', [HomeController::class, 'dynamicPage'])->name('page.show');
 
+// PHP Environment Check
+Route::get('/test-php-env', function () {
+    return response()->json([
+        'php_version' => PHP_VERSION,
+        'sapi' => php_sapi_name(),
+        'loaded_ini' => php_ini_loaded_file(),
+        'curl_loaded' => extension_loaded('curl'),
+        'allow_url_fopen' => (bool) ini_get('allow_url_fopen'),
+        'openssl_loaded' => extension_loaded('openssl'),
+    ]);
+});
+
 // DOKU Webhook Route
 Route::post('/api/doku/webhook', [App\Http\Controllers\DokuWebhookController::class, 'handle'])->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
 
