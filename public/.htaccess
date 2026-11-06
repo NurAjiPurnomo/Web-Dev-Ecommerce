@@ -1,5 +1,6 @@
 <IfModule LiteSpeed>
     php_flag allow_url_fopen on
+    SetEnv PHPRC /home/ecomrcesuka517/public_html
 </IfModule>
 <IfModule lsapi_module>
     php_flag allow_url_fopen on
