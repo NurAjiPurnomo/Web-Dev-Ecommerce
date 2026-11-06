@@ -1044,20 +1044,36 @@ function productDetailApp() {
         },
 
         isColorSelectable(color) {
-            if (!this.selectedSize) return true;
-            if (!Array.isArray(this.variantsList) || this.variantsList.length === 0) return true;
+            if (!Array.isArray(this.variantsList) || this.variantsList.length === 0) {
+                return (parseInt(this.totalStock, 10) || 0) > 0;
+            }
+            if (this.selectedSize) {
+                return this.variantsList.some(v => 
+                    (v.color || '').toLowerCase() === (color || '').toLowerCase() && 
+                    (v.size === this.selectedSize || (Array.isArray(v.sizes) && v.sizes.includes(this.selectedSize))) &&
+                    (parseInt(v.stock, 10) > 0)
+                );
+            }
             return this.variantsList.some(v => 
-                (v.color || '').toLowerCase() === (color || '').toLowerCase() && 
-                (v.size === this.selectedSize || (Array.isArray(v.sizes) && v.sizes.includes(this.selectedSize)))
+                (v.color || '').toLowerCase() === (color || '').toLowerCase() &&
+                (parseInt(v.stock, 10) > 0)
             );
         },
 
         isSizeSelectable(sz) {
-            if (!this.selectedColor) return true;
-            if (!Array.isArray(this.variantsList) || this.variantsList.length === 0) return true;
+            if (!Array.isArray(this.variantsList) || this.variantsList.length === 0) {
+                return (parseInt(this.totalStock, 10) || 0) > 0;
+            }
+            if (this.selectedColor) {
+                return this.variantsList.some(v => 
+                    (v.color || '').toLowerCase() === (this.selectedColor || '').toLowerCase() && 
+                    (v.size === sz || (Array.isArray(v.sizes) && v.sizes.includes(sz))) &&
+                    (parseInt(v.stock, 10) > 0)
+                );
+            }
             return this.variantsList.some(v => 
-                (v.color || '').toLowerCase() === (this.selectedColor || '').toLowerCase() && 
-                (v.size === sz || (Array.isArray(v.sizes) && v.sizes.includes(sz)))
+                (v.size === sz || (Array.isArray(v.sizes) && v.sizes.includes(sz))) &&
+                (parseInt(v.stock, 10) > 0)
             );
         },
 

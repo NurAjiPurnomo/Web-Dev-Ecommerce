@@ -564,26 +564,42 @@
                                 </div>
                                 
                                 <!-- Nested Sizes -->
-                                <div class="bg-slate-50 rounded-lg p-2 border border-slate-200 space-y-2">
-                                    <div class="flex items-center justify-between">
-                                        <label class="block text-[10px] font-bold text-slate-500 uppercase">Daftar Ukuran & Harga</label>
-                                        <button type="button" @click="varItem.sizes.push({name: '', price: 0, stock: 10})" class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-[10px] font-bold hover:bg-blue-200 transition-colors cursor-pointer">
-                                            + Tambah Ukuran
-                                        </button>
+                                <div class="bg-slate-50 rounded-lg p-2.5 border border-slate-200 space-y-2">
+                                    <div class="flex items-center justify-between flex-wrap gap-1">
+                                        <div>
+                                            <label class="block text-[11px] font-bold text-slate-700 uppercase">Daftar Ukuran, Harga &amp; Stok</label>
+                                            <p class="text-[10px] text-slate-400">Atur ukuran, harga (isi 0 jika sama dengan harga pokok), dan stok.</p>
+                                        </div>
+                                        <div class="flex items-center gap-1.5">
+                                            <button type="button" @click="varItem.sizes = [{name: 'S', price: 0, stock: 10}, {name: 'M', price: 0, stock: 10}, {name: 'L', price: 0, stock: 10}, {name: 'XL', price: 0, stock: 10}]" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-[10px] font-bold transition-colors cursor-pointer" title="Otomatis isi S, M, L, XL">
+                                                ⚡ Otomatis (S, M, L, XL)
+                                            </button>
+                                            <button type="button" @click="varItem.sizes.push({name: '', price: 0, stock: 10})" class="px-2.5 py-1 bg-blue-100 text-blue-700 rounded text-[10px] font-bold hover:bg-blue-200 transition-colors cursor-pointer">
+                                                + Tambah Ukuran
+                                            </button>
+                                        </div>
                                     </div>
                                     
+                                    <!-- Table Column Headers -->
+                                    <div x-show="varItem.sizes && varItem.sizes.length > 0" class="flex items-center gap-2 px-1 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200 pb-1">
+                                        <div class="flex-1">Nama Ukuran <span class="font-normal text-[9px] text-slate-400 normal-case">(S/M/L)</span></div>
+                                        <div class="flex-1">Harga (Rp) <span class="font-normal text-[9px] text-slate-400 normal-case">(0 = Harga Pokok)</span></div>
+                                        <div class="w-20">Stok <span class="font-normal text-[9px] text-slate-400 normal-case">(0 = Habis)</span></div>
+                                        <div class="w-6 text-center text-slate-400">✕</div>
+                                    </div>
+
                                     <template x-for="(sz, szIndex) in varItem.sizes" :key="szIndex">
                                         <div class="flex items-center gap-2">
                                             <div class="flex-1">
-                                                <input type="text" :name="'variants[' + index + '][sizes][' + szIndex + '][name]'" x-model="sz.name" placeholder="Ukuran (S/40)" class="w-full bg-white border border-slate-200 rounded text-xs px-2 py-1 focus:border-blue-700 focus:outline-none font-bold">
+                                                <input type="text" :name="'variants[' + index + '][sizes][' + szIndex + '][name]'" x-model="sz.name" placeholder="Ukuran (S/40)" class="w-full bg-white border border-slate-200 rounded text-xs px-2 py-1.5 focus:border-blue-700 focus:outline-none font-bold text-slate-800">
                                             </div>
                                             <div class="flex-1">
-                                                <input type="number" min="0" :name="'variants[' + index + '][sizes][' + szIndex + '][price]'" x-model.number="sz.price" placeholder="Harga" class="w-full bg-white border border-slate-200 rounded text-xs px-2 py-1 focus:border-blue-700 focus:outline-none font-bold">
+                                                <input type="number" min="0" :name="'variants[' + index + '][sizes][' + szIndex + '][price]'" x-model.number="sz.price" placeholder="0 = Ikut Harga Pokok" class="w-full bg-white border border-slate-200 rounded text-xs px-2 py-1.5 focus:border-blue-700 focus:outline-none font-bold text-slate-800">
                                             </div>
                                             <div class="w-20">
-                                                <input type="number" min="0" :name="'variants[' + index + '][sizes][' + szIndex + '][stock]'" x-model.number="sz.stock" placeholder="Stok" class="w-full bg-white border border-slate-200 rounded text-xs px-2 py-1 focus:border-blue-700 focus:outline-none font-bold">
+                                                <input type="number" min="0" :name="'variants[' + index + '][sizes][' + szIndex + '][stock]'" x-model.number="sz.stock" placeholder="0 = Habis" class="w-full bg-white border border-slate-200 rounded text-xs px-2 py-1.5 focus:border-blue-700 focus:outline-none font-bold text-slate-800">
                                             </div>
-                                            <button type="button" @click="varItem.sizes.splice(szIndex, 1)" class="text-red-500 hover:text-red-700 p-1 cursor-pointer">
+                                            <button type="button" @click="varItem.sizes.splice(szIndex, 1)" class="text-red-500 hover:text-red-700 p-1 cursor-pointer w-6 flex items-center justify-center rounded hover:bg-red-50" title="Hapus Ukuran">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                             </button>
                                         </div>
@@ -797,26 +813,42 @@
                                 </div>
                                 
                                 <!-- Nested Sizes -->
-                                <div class="bg-slate-50 rounded-lg p-2 border border-slate-200 space-y-2">
-                                    <div class="flex items-center justify-between">
-                                        <label class="block text-[10px] font-bold text-slate-500 uppercase">Daftar Ukuran & Harga</label>
-                                        <button type="button" @click="varItem.sizes.push({name: '', price: 0, stock: 10})" class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-[10px] font-bold hover:bg-blue-200 transition-colors cursor-pointer">
-                                            + Tambah Ukuran
-                                        </button>
+                                <div class="bg-slate-50 rounded-lg p-2.5 border border-slate-200 space-y-2">
+                                    <div class="flex items-center justify-between flex-wrap gap-1">
+                                        <div>
+                                            <label class="block text-[11px] font-bold text-slate-700 uppercase">Daftar Ukuran, Harga &amp; Stok</label>
+                                            <p class="text-[10px] text-slate-400">Atur ukuran, harga (isi 0 jika sama dengan harga pokok), dan stok.</p>
+                                        </div>
+                                        <div class="flex items-center gap-1.5">
+                                            <button type="button" @click="varItem.sizes = [{name: 'S', price: 0, stock: 10}, {name: 'M', price: 0, stock: 10}, {name: 'L', price: 0, stock: 10}, {name: 'XL', price: 0, stock: 10}]" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-[10px] font-bold transition-colors cursor-pointer" title="Otomatis isi S, M, L, XL">
+                                                ⚡ Otomatis (S, M, L, XL)
+                                            </button>
+                                            <button type="button" @click="varItem.sizes.push({name: '', price: 0, stock: 10})" class="px-2.5 py-1 bg-blue-100 text-blue-700 rounded text-[10px] font-bold hover:bg-blue-200 transition-colors cursor-pointer">
+                                                + Tambah Ukuran
+                                            </button>
+                                        </div>
                                     </div>
                                     
+                                    <!-- Table Column Headers -->
+                                    <div x-show="varItem.sizes && varItem.sizes.length > 0" class="flex items-center gap-2 px-1 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200 pb-1">
+                                        <div class="flex-1">Nama Ukuran <span class="font-normal text-[9px] text-slate-400 normal-case">(S/M/L)</span></div>
+                                        <div class="flex-1">Harga (Rp) <span class="font-normal text-[9px] text-slate-400 normal-case">(0 = Harga Pokok)</span></div>
+                                        <div class="w-20">Stok <span class="font-normal text-[9px] text-slate-400 normal-case">(0 = Habis)</span></div>
+                                        <div class="w-6 text-center text-slate-400">✕</div>
+                                    </div>
+
                                     <template x-for="(sz, szIndex) in varItem.sizes" :key="szIndex">
                                         <div class="flex items-center gap-2">
                                             <div class="flex-1">
-                                                <input type="text" :name="'variants[' + index + '][sizes][' + szIndex + '][name]'" x-model="sz.name" placeholder="Ukuran (S/40)" class="w-full bg-white border border-slate-200 rounded text-xs px-2 py-1 focus:border-blue-700 focus:outline-none font-bold">
+                                                <input type="text" :name="'variants[' + index + '][sizes][' + szIndex + '][name]'" x-model="sz.name" placeholder="Ukuran (S/40)" class="w-full bg-white border border-slate-200 rounded text-xs px-2 py-1.5 focus:border-blue-700 focus:outline-none font-bold text-slate-800">
                                             </div>
                                             <div class="flex-1">
-                                                <input type="number" min="0" :name="'variants[' + index + '][sizes][' + szIndex + '][price]'" x-model.number="sz.price" placeholder="Harga" class="w-full bg-white border border-slate-200 rounded text-xs px-2 py-1 focus:border-blue-700 focus:outline-none font-bold">
+                                                <input type="number" min="0" :name="'variants[' + index + '][sizes][' + szIndex + '][price]'" x-model.number="sz.price" placeholder="0 = Ikut Harga Pokok" class="w-full bg-white border border-slate-200 rounded text-xs px-2 py-1.5 focus:border-blue-700 focus:outline-none font-bold text-slate-800">
                                             </div>
                                             <div class="w-20">
-                                                <input type="number" min="0" :name="'variants[' + index + '][sizes][' + szIndex + '][stock]'" x-model.number="sz.stock" placeholder="Stok" class="w-full bg-white border border-slate-200 rounded text-xs px-2 py-1 focus:border-blue-700 focus:outline-none font-bold">
+                                                <input type="number" min="0" :name="'variants[' + index + '][sizes][' + szIndex + '][stock]'" x-model.number="sz.stock" placeholder="0 = Habis" class="w-full bg-white border border-slate-200 rounded text-xs px-2 py-1.5 focus:border-blue-700 focus:outline-none font-bold text-slate-800">
                                             </div>
-                                            <button type="button" @click="varItem.sizes.splice(szIndex, 1)" class="text-red-500 hover:text-red-700 p-1 cursor-pointer">
+                                            <button type="button" @click="varItem.sizes.splice(szIndex, 1)" class="text-red-500 hover:text-red-700 p-1 cursor-pointer w-6 flex items-center justify-center rounded hover:bg-red-50" title="Hapus Ukuran">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                             </button>
                                         </div>
