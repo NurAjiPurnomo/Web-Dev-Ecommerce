@@ -1,3 +1,10 @@
+<IfModule LiteSpeed>
+    php_flag allow_url_fopen on
+</IfModule>
+<IfModule lsapi_module>
+    php_flag allow_url_fopen on
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
