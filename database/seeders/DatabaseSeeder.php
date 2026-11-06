@@ -388,6 +388,51 @@ class DatabaseSeeder extends Seeder
         }
 
 
+
+        // Seed Default Banners
+        $defaultBanners = [
+            [
+                'title' => 'Koleksi Fashion & Gaya Terkini',
+                'subtitle' => 'SPESIAL PROMO',
+                'highlight_text' => 'DISKON S.D 70%',
+                'description' => 'Temukan koleksi pakaian dan fashion berkualitas premium dengan penawaran terbaik hari ini.',
+                'image' => 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1200&auto=format&fit=crop&q=80',
+                'button_text' => 'Belanja Sekarang',
+                'button_url' => '/catalog',
+                'category_tag' => 'Fashion',
+                'status' => 'aktif',
+                'order_column' => 1,
+            ],
+            [
+                'title' => 'Sepatu Sneakers Running & Casual',
+                'subtitle' => 'NEW ARRIVALS',
+                'highlight_text' => 'CASHBACK HINGGA 50RB',
+                'description' => 'Langkah lebih nyaman dan percaya diri dengan sepatu ringan anti-slip untuk aktivitas harian.',
+                'image' => 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=1200&auto=format&fit=crop&q=80',
+                'button_text' => 'Lihat Koleksi',
+                'button_url' => '/catalog?category=Sepatu',
+                'category_tag' => 'Sepatu',
+                'status' => 'aktif',
+                'order_column' => 2,
+            ],
+            [
+                'title' => 'Gadget & Aksesoris Modern',
+                'subtitle' => 'PENAWARAN TERBAIK',
+                'highlight_text' => 'GRATIS ONGKIR SE-INDONESIA',
+                'description' => 'Lengkapi kebutuhan teknologi dan aksesoris harian Anda dengan garansi resmi dan pengiriman aman.',
+                'image' => 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=1200&auto=format&fit=crop&q=80',
+                'button_text' => 'Klaim Promo',
+                'button_url' => '/promo',
+                'category_tag' => 'Gadget',
+                'status' => 'aktif',
+                'order_column' => 3,
+            ],
+        ];
+
+        foreach ($defaultBanners as $b) {
+            \App\Models\Banner::updateOrCreate(['title' => $b['title']], $b);
+        }
+
         // Seed Announcements
         \App\Models\Announcement::updateOrCreate(
             ['title' => 'Promo Spesial Super August Sale Diskon s.d 70%'],
