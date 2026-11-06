@@ -190,6 +190,15 @@ Route::middleware([AdminMiddleware::class])->prefix('admin')->group(function () 
     Route::post('/store-settings', [AdminController::class, 'updateStoreSettings'])->name('admin.storeSettings.update');
 });
 
+// Fallback Route: Serve uploaded public storage files directly if symlink (public/storage) is missing
+Route::get('/storage/{path}', function ($path) {
+    $filePath = storage_path('app/public/' . $path);
+    if (!file_exists($filePath)) {
+        abort(404);
+    }
+    return response()->file($filePath);
+})->where('path', '.*');
+
 // Dynamic Pages Route (must be at the end to avoid conflicts)
 Route::get('/page/{slug}', [HomeController::class, 'dynamicPage'])->name('page.show');
 

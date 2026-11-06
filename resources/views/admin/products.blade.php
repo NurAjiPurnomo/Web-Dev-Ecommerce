@@ -190,7 +190,7 @@
                             <!-- Info Produk -->
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-3">
-                                    <img src="{{ $p->image }}" alt="{{ $p->name }}" class="w-11 h-11 rounded-lg object-cover border border-slate-200 bg-slate-100 shrink-0">
+                                    <img src="{{ $p->image }}" alt="{{ $p->name }}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&auto=format&fit=crop&q=80';" class="w-11 h-11 rounded-lg object-cover border border-slate-200 bg-slate-100 shrink-0">
                                     <div class="min-w-0 max-w-[220px] lg:max-w-[260px] xl:max-w-xs">
                                         <h4 class="font-medium text-slate-900 truncate text-xs sm:text-sm" title="{{ $p->name }}">{{ $p->name }}</h4>
                                         <div class="flex items-center gap-1.5 text-[11px] text-slate-400 mt-0.5 flex-wrap">
@@ -323,7 +323,7 @@
             @forelse($products as $p)
                 <div class="p-4 space-y-3">
                     <div class="flex items-start gap-3">
-                        <img src="{{ $p->image }}" alt="{{ $p->name }}" class="w-16 h-16 rounded-lg object-cover border border-slate-200 bg-slate-100 shrink-0">
+                        <img src="{{ $p->image }}" alt="{{ $p->name }}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&auto=format&fit=crop&q=80';" class="w-16 h-16 rounded-lg object-cover border border-slate-200 bg-slate-100 shrink-0">
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center justify-between gap-1">
                                 <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-normal bg-slate-100 text-slate-700 border border-slate-200">{{ $p->category }}</span>
