@@ -26,7 +26,7 @@
                     <img 
                         :src="activeImage" 
                         alt="{{ $product['title'] }}" 
-                        @error="$event.target.src='https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&auto=format&fit=crop&q=80'"
+                        onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&auto=format&fit=crop&q=80';"
                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     >
                     @php
@@ -63,7 +63,7 @@
                             class="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer border-2 transition-all p-0.5 focus:outline-none"
                             :class="activeImage === img ? 'border-blue-700 ring-2 ring-blue-700/20' : 'border-slate-200 hover:border-slate-300'"
                         >
-                            <img :src="img" alt="Thumbnail" @error="$event.target.src='https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&auto=format&fit=crop&q=80'" class="w-full h-full object-cover rounded-md">
+                            <img :src="img" alt="Thumbnail" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&auto=format&fit=crop&q=80';" class="w-full h-full object-cover rounded-md">
                         </button>
                     </template>
                 </div>
