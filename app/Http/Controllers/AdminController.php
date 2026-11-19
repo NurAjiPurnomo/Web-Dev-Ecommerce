@@ -870,32 +870,29 @@ class AdminController extends Controller
      */
     public function storeCategory(Request $request)
     {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('categories')) {
+            try {
+                \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Auto migration categories failed: ' . $e->getMessage());
+            }
+        }
+
         $validated = $request->validate([
-            'name'        => 'required|string|max:100|unique:categories,name',
-            'slug'        => 'nullable|string|max:100|unique:categories,slug',
-            'description' => 'nullable|string',
-            'order'       => 'nullable|integer|min:0',
-            'icon'        => 'nullable|image|mimes:jpeg,png,jpg,webp,svg|max:2048',
-            'icon_url'    => 'nullable|url|max:500',
+            'name' => 'required|string|max:100|unique:categories,name',
+            'icon' => 'nullable|image|mimes:jpeg,png,jpg,webp,svg|max:2048',
         ]);
 
-        $validated['slug'] = !empty($validated['slug']) 
-            ? \Illuminate\Support\Str::slug($validated['slug']) 
-            : \Illuminate\Support\Str::slug($validated['name']);
-
-        $validated['order'] = !empty($validated['order']) ? (int)$validated['order'] : 0;
-        $validated['is_active'] = $request->has('is_active') ? (bool)$request->is_active : true;
+        $validated['slug'] = \Illuminate\Support\Str::slug($validated['name']);
+        $validated['order'] = 0;
+        $validated['is_active'] = true;
 
         if ($request->hasFile('icon')) {
             $path = $request->file('icon')->store('categories', 'public');
             $validated['icon'] = '/storage/' . $path;
-        } elseif (!empty($validated['icon_url'])) {
-            $validated['icon'] = $validated['icon_url'];
         } else {
             $validated['icon'] = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&auto=format&fit=crop&q=80';
         }
-
-        unset($validated['icon_url']);
 
         \App\Models\Category::create($validated);
 
@@ -952,29 +949,17 @@ class AdminController extends Controller
         $category = \App\Models\Category::findOrFail($id);
 
         $validated = $request->validate([
-            'name'        => 'required|string|max:100|unique:categories,name,' . $id,
-            'slug'        => 'nullable|string|max:100|unique:categories,slug,' . $id,
-            'description' => 'nullable|string',
-            'order'       => 'nullable|integer|min:0',
-            'icon'        => 'nullable|image|mimes:jpeg,png,jpg,webp,svg|max:2048',
-            'icon_url'    => 'nullable|url|max:500',
+            'name' => 'required|string|max:100|unique:categories,name,' . $id,
+            'icon' => 'nullable|image|mimes:jpeg,png,jpg,webp,svg|max:2048',
         ]);
 
         $oldName = $category->name;
-        $validated['slug'] = !empty($validated['slug']) 
-            ? \Illuminate\Support\Str::slug($validated['slug']) 
-            : \Illuminate\Support\Str::slug($validated['name']);
-
-        $validated['order'] = !empty($validated['order']) ? (int)$validated['order'] : $category->order;
+        $validated['slug'] = \Illuminate\Support\Str::slug($validated['name']);
 
         if ($request->hasFile('icon')) {
             $path = $request->file('icon')->store('categories', 'public');
             $validated['icon'] = '/storage/' . $path;
-        } elseif (!empty($validated['icon_url'])) {
-            $validated['icon'] = $validated['icon_url'];
         }
-
-        unset($validated['icon_url']);
 
         $category->update($validated);
 
