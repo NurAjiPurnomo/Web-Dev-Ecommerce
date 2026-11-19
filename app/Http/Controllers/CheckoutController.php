@@ -289,7 +289,7 @@ class CheckoutController extends Controller
                 $courierType = strtoupper($p['type'] ?? $p['service_type'] ?? '');
                 $rawPrice = (int) ($p['price'] ?? 15000);
                 $price = \App\Models\StoreSetting::applyCustomRates($rawPrice, $subtotal, $store);
-                $duration = $p['duration'] ?? ($p['etd'] ?? '1-3 Hari');
+                $duration = str_ireplace(['days', 'day'], ['hari', 'hari'], $p['duration'] ?? ($p['etd'] ?? '1-3 hari'));
                 $logoUrl = $p['courier_logo_url'] ?? $p['logo'] ?? $this->getCourierLogoUrl($courierCode);
 
                 $couriers[] = [
