@@ -919,13 +919,29 @@
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
                                 </svg>
-                                <span>Selesaikan Pembayaran Sekarang</span>
+                                <span>Petunjuk Pembayaran</span>
                             </a>
 
                             <button 
                                 type="button"
+                                @click="checkOrderStatus(activeOrder.id)"
+                                :disabled="checkingStatusId === activeOrder.id"
+                                class="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white font-bold text-xs sm:text-sm px-4 py-3.5 rounded-xl transition-colors cursor-pointer text-center flex items-center justify-center gap-1.5 shadow-2xs"
+                            >
+                                <svg x-show="checkingStatusId === activeOrder.id" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <svg x-show="checkingStatusId !== activeOrder.id" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                </svg>
+                                <span x-text="checkingStatusId === activeOrder.id ? 'Memeriksa...' : 'Cek Status Bayar'">Cek Status Bayar</span>
+                            </button>
+
+                            <button 
+                                type="button"
                                 @click="openCancelModal(activeOrder.raw_id)"
-                                class="w-full sm:w-auto bg-white hover:bg-red-50 text-red-600 border border-slate-300 hover:border-red-200 font-semibold text-xs sm:text-sm px-5 py-3.5 rounded-xl transition-colors cursor-pointer text-center"
+                                class="w-full sm:w-auto bg-white hover:bg-red-50 text-red-600 border border-slate-300 hover:border-red-200 font-semibold text-xs sm:text-sm px-4 py-3.5 rounded-xl transition-colors cursor-pointer text-center"
                             >
                                 Batalkan Pesanan
                             </button>
@@ -1537,6 +1553,7 @@ function orderManagerApp() {
         reviewComment: '',
         isAnonymous: false,
         dismissedReviews: {},
+        checkingStatusId: null,
         nowTimestamp: Math.floor(Date.now() / 1000),
         copiedResi: false,
 
@@ -1688,6 +1705,27 @@ function orderManagerApp() {
                 this.showCancelModal = false;
                 alert('⚠️ ' + err.message);
             });
+        },
+
+        async checkOrderStatus(orderId) {
+            if (!orderId) return;
+            const cleanId = String(orderId).replace(/\//g, '-');
+            this.checkingStatusId = orderId;
+            try {
+                const response = await fetch('/checkout/check-status/' + encodeURIComponent(cleanId));
+                const data = await response.json();
+                if (data && data.is_paid) {
+                    alert('✓ Pembayaran Berhasil Terverifikasi! Pesanan Anda sedang disiapkan oleh penjual dan email konfirmasi pembayaran telah dikirim.');
+                    window.location.reload();
+                } else {
+                    alert('Status: Pembayaran belum terdeteksi di sistem. Jika Anda baru saja melakukan transfer / simulasi bayar di DOKU, silakan tunggu beberapa saat lalu coba lagi.');
+                }
+            } catch (err) {
+                console.error('Error checking order status:', err);
+                alert('Gagal mengecek status pembayaran. Silakan coba sesaat lagi.');
+            } finally {
+                this.checkingStatusId = null;
+            }
         },
 
         openCompleteConfirmModal(order) {

@@ -46,11 +46,34 @@ class DokuWebhookController extends Controller
 
         $payload = $request->all();
 
-        // Ambil data invoice dan status
-        // Format notifikasi DOKU bisa berbeda tergantung metode (VA, Credit Card, dll). 
-        // Secara umum ada order.invoice_number dan transaction.status
-        $invoiceNumber = $payload['order']['invoice_number'] ?? null;
-        $status = $payload['transaction']['status'] ?? null;
+        // Cari nomor invoice di berbagai variasi struktur notifikasi DOKU (Jokul VA, SNAP, Checkout, O2O)
+        $invoiceNumber = $payload['order']['invoice_number'] 
+            ?? $payload['order']['invoice'] 
+            ?? $payload['originalPartnerReferenceNo'] 
+            ?? $payload['partnerReferenceNo'] 
+            ?? $payload['order_id'] 
+            ?? $payload['invoice_number'] 
+            ?? $payload['trxId'] 
+            ?? null;
+
+        // Cari status pembayaran dari berbagai standar DOKU
+        $rawStatus = $payload['transaction']['status'] 
+            ?? ($payload['status']['code'] ?? null) 
+            ?? ($payload['order']['status'] ?? null) 
+            ?? ($payload['transactionStatusDesc'] ?? null) 
+            ?? ($payload['resultMsg'] ?? null) 
+            ?? ($payload['latestTransactionStatus'] ?? null)
+            ?? ($payload['status'] ?? null);
+
+        if (is_array($rawStatus)) {
+            $rawStatus = $rawStatus['code'] ?? ($rawStatus['status'] ?? null);
+        }
+
+        $rawStatusStr = strtoupper((string)$rawStatus);
+        $isSuccess = in_array($rawStatusStr, ['SUCCESS', 'PAID', 'COMPLETED', '00', '0000', 'SUCCESSFUL', 'SETTLEMENT']);
+        $isFailed = in_array($rawStatusStr, ['FAILED', 'EXPIRED', 'CANCELLED', '06', 'REJECTED']);
+
+        Log::info("DOKU Webhook Parsed: invoice={$invoiceNumber}, status={$rawStatusStr}, isSuccess=" . ($isSuccess ? 'YES' : 'NO'));
 
         if ($invoiceNumber) {
             $slashInvoice = str_replace('-', '/', $invoiceNumber);
@@ -60,10 +83,9 @@ class DokuWebhookController extends Controller
                 ->orWhere('invoice_number', $dashInvoice)
                 ->first();
 
-
             if ($order) {
-                // Jika pembayaran sukses (SUCCESS)
-                if (in_array(strtoupper($status), ['SUCCESS', 'PAID'])) {
+                // Jika pembayaran sukses
+                if ($isSuccess) {
                     // Update status pesanan ke 'diproses' (hanya jika posisi awal belum bayar)
                     if (in_array($order->status, ['belum_bayar', 'belum_dibayar'])) {
                         $order->update([
@@ -74,15 +96,18 @@ class DokuWebhookController extends Controller
                     
                     // Kirim Email Pembayaran Sukses (jika belum dikirim)
                     try {
-                        $userEmail = $order->user->email ?? null;
+                        $userEmail = $order->user->email 
+                            ?? ($payload['customer']['email'] ?? ($payload['virtualAccountEmail'] ?? null));
                         if ($userEmail) {
                             Mail::to($userEmail)->send(new PaymentSuccess($order));
                             Log::info("DOKU Webhook: PaymentSuccess email sent to {$userEmail}");
+                        } else {
+                            Log::warning("DOKU Webhook: Email user tidak ditemukan untuk Order {$invoiceNumber}");
                         }
                     } catch (\Exception $e) {
                         Log::error("DOKU Webhook: Gagal mengirim email PaymentSuccess: " . $e->getMessage());
                     }
-                } else if (in_array(strtoupper($status), ['FAILED', 'EXPIRED'])) {
+                } else if ($isFailed) {
                     // Jika gagal atau kedaluwarsa
                     $order->update([
                         'status' => 'dibatalkan'

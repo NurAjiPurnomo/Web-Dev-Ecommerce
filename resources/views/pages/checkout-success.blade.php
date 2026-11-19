@@ -70,9 +70,11 @@ function checkoutSuccessApp() {
             this.minutes = String(m).padStart(2, '0');
             this.seconds = String(s).padStart(2, '0');
         },
+        isChecking: false,
+        checkStatusMsg: '',
         startAutoPolling() {
             if (this.isPaid) return;
-            const orderIdStr = "{{ str_replace('/', '-', $order['order_id'] ?? '') }}";
+            const orderIdStr = "{{ str_replace('/', '-', $order['order_id'] ?? ($order['invoice_number'] ?? '')) }}";
             if (!orderIdStr) return;
 
             const pollInterval = setInterval(async () => {
@@ -81,7 +83,7 @@ function checkoutSuccessApp() {
                     return;
                 }
                 try {
-                    const response = await fetch('/checkout/check-status/' + orderIdStr);
+                    const response = await fetch('/checkout/check-status/' + encodeURIComponent(orderIdStr));
                     const data = await response.json();
                     if (data && data.is_paid) {
                         this.isPaid = true;
@@ -94,6 +96,33 @@ function checkoutSuccessApp() {
                     console.error('Auto polling status error:', err);
                 }
             }, 3000);
+        },
+        async manualCheckStatus() {
+            if (this.isChecking) return;
+            this.isChecking = true;
+            this.checkStatusMsg = '';
+            const orderIdStr = "{{ str_replace('/', '-', $order['order_id'] ?? ($order['invoice_number'] ?? '')) }}";
+            try {
+                const response = await fetch('/checkout/check-status/' + encodeURIComponent(orderIdStr));
+                const data = await response.json();
+                if (data && data.is_paid) {
+                    this.isPaid = true;
+                    this.checkStatusMsg = 'Pembayaran terverifikasi! Memuat ulang...';
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 600);
+                } else {
+                    this.checkStatusMsg = 'Pembayaran belum terdeteksi. Silakan coba kembali dalam beberapa detik.';
+                    setTimeout(() => {
+                        this.checkStatusMsg = '';
+                    }, 4000);
+                }
+            } catch (err) {
+                console.error('Manual check status error:', err);
+                this.checkStatusMsg = 'Gagal mengecek status pembayaran.';
+            } finally {
+                this.isChecking = false;
+            }
         },
 
         initTimer() {
@@ -145,6 +174,24 @@ function checkoutSuccessApp() {
                             <p class="text-xs text-slate-500 max-w-lg leading-relaxed">
                                 Lakukan transfer sebelum batas waktu berakhir agar pesanan dapat langsung diverifikasi dan diproses.
                             </p>
+                            <div class="pt-2 flex items-center gap-2 flex-wrap">
+                                <button 
+                                    type="button" 
+                                    @click="manualCheckStatus()"
+                                    :disabled="isChecking"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                                >
+                                    <svg x-show="isChecking" class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <svg x-show="!isChecking" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                    </svg>
+                                    <span x-text="isChecking ? 'Mengecek Pembayaran...' : 'Cek Status Pembayaran'">Cek Status Pembayaran</span>
+                                </button>
+                                <span x-show="checkStatusMsg" x-text="checkStatusMsg" class="text-xs font-medium text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200"></span>
+                            </div>
                         </div>
 
                         <!-- Sisa Waktu Countdown -->

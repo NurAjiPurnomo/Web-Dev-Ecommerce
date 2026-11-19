@@ -936,13 +936,28 @@ class CheckoutController extends Controller
                 ])->get($url);
 
                 if ($response->successful()) {
-                    $dokuStatus = $response->json('transaction.status');
-                    if (in_array(strtoupper($dokuStatus), ['SUCCESS', 'PAID'])) {
+                    $json = $response->json();
+                    $dokuStatus = $json['transaction']['status'] 
+                        ?? ($json['status']['code'] ?? null) 
+                        ?? ($json['order']['status'] ?? null) 
+                        ?? ($json['transactionStatusDesc'] ?? null) 
+                        ?? ($json['resultMsg'] ?? null) 
+                        ?? ($json['latestTransactionStatus'] ?? null)
+                        ?? ($json['status'] ?? null);
+
+                    if (is_array($dokuStatus)) {
+                        $dokuStatus = $dokuStatus['code'] ?? ($dokuStatus['status'] ?? null);
+                    }
+
+                    $dokuStatusStr = strtoupper((string)$dokuStatus);
+                    $isSuccess = in_array($dokuStatusStr, ['SUCCESS', 'PAID', 'COMPLETED', '00', '0000', 'SUCCESSFUL', 'SETTLEMENT']);
+
+                    if ($isSuccess) {
                         $order->update(['status' => 'diproses']);
                         $isPaid = true;
 
                         try {
-                            $userEmail = $order->user->email ?? null;
+                            $userEmail = $order->user->email ?? ($json['customer']['email'] ?? null);
                             if ($userEmail) {
                                 Mail::to($userEmail)->send(new \App\Mail\PaymentSuccess($order));
                                 Log::info("checkStatus DOKU API: Order {$dokuInvoice} status SUCCESS. Email sent to {$userEmail}");
