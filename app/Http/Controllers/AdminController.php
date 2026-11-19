@@ -822,6 +822,14 @@ class AdminController extends Controller
      */
     public function categories(Request $request)
     {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('categories')) {
+            try {
+                \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Auto migration categories failed: ' . $e->getMessage());
+            }
+        }
+
         $search = $request->query('search');
 
         $query = \App\Models\Category::query();
@@ -899,6 +907,14 @@ class AdminController extends Controller
      */
     public function quickStoreCategory(Request $request)
     {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('categories')) {
+            try {
+                \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Auto migration categories failed: ' . $e->getMessage());
+            }
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:100',
         ]);
