@@ -405,10 +405,14 @@ class AdminController extends Controller
         $totalStockCount     = (int)Product::sum('stock');
         $totalSoldCount     = (int)Product::sum('sold');
 
-        // Dynamic Categories
-        $categories = Product::distinct()->whereNotNull('category')->pluck('category')->filter()->values()->toArray();
+        // Dynamic Categories from Master Table & Products
+        $masterCategories = \Illuminate\Support\Facades\Schema::hasTable('categories')
+            ? \App\Models\Category::where('is_active', true)->orderBy('order')->orderBy('name')->pluck('name')->toArray()
+            : [];
+        $productCategories = Product::distinct()->whereNotNull('category')->pluck('category')->filter()->values()->toArray();
+        $categories = array_values(array_unique(array_filter(array_merge($masterCategories, $productCategories))));
         if (empty($categories)) {
-            $categories = ['Pakaian', 'Sepatu', 'Aksesoris', 'Gadget', 'Rumah Tangga'];
+            $categories = ['Pakaian', 'Sepatu', 'Aksesoris', 'Gadget', 'Rumah Tangga', 'ATK'];
         }
 
         return view('admin.products', compact(
@@ -586,6 +590,13 @@ class AdminController extends Controller
         $validated['status'] = 'aktif';
         $validated['sold']   = 0;
 
+        if (\Illuminate\Support\Facades\Schema::hasTable('categories')) {
+            $catModel = \App\Models\Category::where('name', $validated['category'])->first();
+            if ($catModel) {
+                $validated['category_id'] = $catModel->id;
+            }
+        }
+
         Product::create($validated);
 
         return redirect()->route('admin.products')->with('success', 'Produk baru "' . $validated['name'] . '" berhasil ditambahkan!');
@@ -755,6 +766,13 @@ class AdminController extends Controller
         }
         $validated['specs'] = !empty($specs) ? $specs : null;
 
+        if (\Illuminate\Support\Facades\Schema::hasTable('categories')) {
+            $catModel = \App\Models\Category::where('name', $validated['category'])->first();
+            if ($catModel) {
+                $validated['category_id'] = $catModel->id;
+            }
+        }
+
         $product->update($validated);
 
         return redirect()->route('admin.products')->with('success', 'Data produk "' . $product->name . '" berhasil diperbarui!');
@@ -797,6 +815,194 @@ class AdminController extends Controller
             $product->update(['status' => 'nonaktif', 'stock' => 0]);
             return redirect()->route('admin.products')->with('info', 'Produk "' . $name . '" diubah menjadi Nonaktif karena terdapat riwayat pesanan.');
         }
+    }
+
+    /**
+     * Manajemen Master Kategori Produk
+     */
+    public function categories(Request $request)
+    {
+        $search = $request->query('search');
+
+        $query = \App\Models\Category::query();
+
+        if ($search) {
+            $cleanSearch = trim($search);
+            $query->where(function($q) use ($cleanSearch) {
+                $q->where('name', 'like', "%{$cleanSearch}%")
+                  ->orWhere('description', 'like', "%{$cleanSearch}%")
+                  ->orWhere('slug', 'like', "%{$cleanSearch}%");
+            });
+        }
+
+        $categories = $query->orderBy('order', 'asc')->orderBy('name', 'asc')->paginate(12)->withQueryString();
+
+        // Calculate dynamic product counts for each category
+        foreach ($categories as $cat) {
+            $cat->products_count = Product::where('category', $cat->name)
+                ->orWhere('category_id', $cat->id)
+                ->count();
+        }
+
+        $totalCategoriesCount     = \App\Models\Category::count();
+        $activeCategoriesCount    = \App\Models\Category::where('is_active', true)->count();
+        $totalCategorizedProducts = Product::whereNotNull('category')->where('category', '!=', '')->count();
+
+        return view('admin.categories', compact(
+            'categories',
+            'search',
+            'totalCategoriesCount',
+            'activeCategoriesCount',
+            'totalCategorizedProducts'
+        ));
+    }
+
+    /**
+     * Simpan Kategori Baru
+     */
+    public function storeCategory(Request $request)
+    {
+        $validated = $request->validate([
+            'name'        => 'required|string|max:100|unique:categories,name',
+            'slug'        => 'nullable|string|max:100|unique:categories,slug',
+            'description' => 'nullable|string',
+            'order'       => 'nullable|integer|min:0',
+            'icon'        => 'nullable|image|mimes:jpeg,png,jpg,webp,svg|max:2048',
+            'icon_url'    => 'nullable|url|max:500',
+        ]);
+
+        $validated['slug'] = !empty($validated['slug']) 
+            ? \Illuminate\Support\Str::slug($validated['slug']) 
+            : \Illuminate\Support\Str::slug($validated['name']);
+
+        $validated['order'] = !empty($validated['order']) ? (int)$validated['order'] : 0;
+        $validated['is_active'] = $request->has('is_active') ? (bool)$request->is_active : true;
+
+        if ($request->hasFile('icon')) {
+            $path = $request->file('icon')->store('categories', 'public');
+            $validated['icon'] = '/storage/' . $path;
+        } elseif (!empty($validated['icon_url'])) {
+            $validated['icon'] = $validated['icon_url'];
+        } else {
+            $validated['icon'] = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&auto=format&fit=crop&q=80';
+        }
+
+        unset($validated['icon_url']);
+
+        \App\Models\Category::create($validated);
+
+        return redirect()->route('admin.categories')->with('success', 'Kategori "' . $validated['name'] . '" berhasil ditambahkan!');
+    }
+
+    /**
+     * Simpan Kategori Cepat (AJAX dari Modal Tambah/Edit Produk)
+     */
+    public function quickStoreCategory(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:100',
+        ]);
+
+        $name = trim($validated['name']);
+        $slug = \Illuminate\Support\Str::slug($name);
+
+        $category = \App\Models\Category::firstOrCreate(
+            ['name' => $name],
+            [
+                'slug'        => $slug,
+                'description' => 'Kategori produk ' . $name,
+                'order'       => 10,
+                'is_active'   => true,
+                'icon'        => 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=300&auto=format&fit=crop&q=80',
+            ]
+        );
+
+        return response()->json([
+            'status'   => 'success',
+            'message'  => 'Kategori "' . $category->name . '" berhasil ditambahkan!',
+            'category' => [
+                'id'   => $category->id,
+                'name' => $category->name,
+                'slug' => $category->slug,
+            ]
+        ]);
+    }
+
+    /**
+     * Update Kategori
+     */
+    public function updateCategory(Request $request, $id)
+    {
+        $category = \App\Models\Category::findOrFail($id);
+
+        $validated = $request->validate([
+            'name'        => 'required|string|max:100|unique:categories,name,' . $id,
+            'slug'        => 'nullable|string|max:100|unique:categories,slug,' . $id,
+            'description' => 'nullable|string',
+            'order'       => 'nullable|integer|min:0',
+            'icon'        => 'nullable|image|mimes:jpeg,png,jpg,webp,svg|max:2048',
+            'icon_url'    => 'nullable|url|max:500',
+        ]);
+
+        $oldName = $category->name;
+        $validated['slug'] = !empty($validated['slug']) 
+            ? \Illuminate\Support\Str::slug($validated['slug']) 
+            : \Illuminate\Support\Str::slug($validated['name']);
+
+        $validated['order'] = !empty($validated['order']) ? (int)$validated['order'] : $category->order;
+
+        if ($request->hasFile('icon')) {
+            $path = $request->file('icon')->store('categories', 'public');
+            $validated['icon'] = '/storage/' . $path;
+        } elseif (!empty($validated['icon_url'])) {
+            $validated['icon'] = $validated['icon_url'];
+        }
+
+        unset($validated['icon_url']);
+
+        $category->update($validated);
+
+        // Jika nama kategori berubah, sinkronkan nama di tabel products
+        if ($oldName !== $validated['name']) {
+            Product::where('category', $oldName)->update([
+                'category'    => $validated['name'],
+                'category_id' => $category->id,
+            ]);
+        }
+
+        return redirect()->route('admin.categories')->with('success', 'Kategori "' . $validated['name'] . '" berhasil diperbarui!');
+    }
+
+    /**
+     * Toggle Status Aktif Kategori
+     */
+    public function toggleCategoryStatus($id)
+    {
+        $category = \App\Models\Category::findOrFail($id);
+        $category->is_active = !$category->is_active;
+        $category->save();
+
+        $statusText = $category->is_active ? 'diaktifkan' : 'dinonaktifkan';
+        return redirect()->route('admin.categories')->with('success', 'Kategori "' . $category->name . '" berhasil ' . $statusText . '!');
+    }
+
+    /**
+     * Hapus Kategori
+     */
+    public function deleteCategory($id)
+    {
+        $category = \App\Models\Category::findOrFail($id);
+        $name = $category->name;
+
+        // Reset products category to 'Umum' if they belong to this category
+        Product::where('category', $name)->orWhere('category_id', $category->id)->update([
+            'category'    => 'Umum',
+            'category_id' => null,
+        ]);
+
+        $category->delete();
+
+        return redirect()->route('admin.categories')->with('success', 'Kategori "' . $name . '" berhasil dihapus!');
     }
 
     /**

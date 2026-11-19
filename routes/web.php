@@ -122,6 +122,14 @@ Route::middleware([AdminMiddleware::class])->prefix('admin')->group(function () 
     Route::post('/products/{id}/toggle-status', [AdminController::class, 'toggleProductStatus'])->name('admin.products.toggleStatus');
     Route::match(['post', 'delete'], '/products/{id}/delete', [AdminController::class, 'deleteProduct'])->name('admin.products.delete');
 
+    // Categories CRUD (Manajemen Master Kategori Produk)
+    Route::get('/categories', [AdminController::class, 'categories'])->name('admin.categories');
+    Route::post('/categories', [AdminController::class, 'storeCategory'])->name('admin.categories.store');
+    Route::post('/categories/quick-store', [AdminController::class, 'quickStoreCategory'])->name('admin.categories.quickStore');
+    Route::post('/categories/{id}/update', [AdminController::class, 'updateCategory'])->name('admin.categories.update');
+    Route::post('/categories/{id}/toggle', [AdminController::class, 'toggleCategoryStatus'])->name('admin.categories.toggle');
+    Route::match(['post', 'delete'], '/categories/{id}/delete', [AdminController::class, 'deleteCategory'])->name('admin.categories.delete');
+
     // Users Management
     Route::get('/users', [AdminController::class, 'users'])->name('admin.users');
     Route::get('/users/export', [AdminController::class, 'exportUsers'])->name('admin.users.export');

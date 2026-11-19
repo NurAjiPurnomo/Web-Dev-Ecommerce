@@ -485,8 +485,18 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Kategori <span class="text-red-500">*</span></label>
-                        <select name="category" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none">
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-xs font-bold text-slate-700">Kategori <span class="text-red-500">*</span></label>
+                            <button 
+                                type="button" 
+                                @click="openQuickAddCategory()"
+                                class="text-[11px] font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer flex items-center gap-1"
+                            >
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                                <span>+ Kategori Baru</span>
+                            </button>
+                        </div>
+                        <select name="category" x-ref="addCategorySelect" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none">
                             @foreach($categories as $cat)
                                 <option value="{{ $cat }}">{{ $cat }}</option>
                             @endforeach
@@ -708,8 +718,18 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Kategori <span class="text-red-500">*</span></label>
-                        <select name="category" x-model="editModalData.category" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none">
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-xs font-bold text-slate-700">Kategori <span class="text-red-500">*</span></label>
+                            <button 
+                                type="button" 
+                                @click="openQuickAddCategory()"
+                                class="text-[11px] font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer flex items-center gap-1"
+                            >
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                                <span>+ Kategori Baru</span>
+                            </button>
+                        </div>
+                        <select name="category" x-model="editModalData.category" x-ref="editCategorySelect" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:border-blue-700 focus:outline-none">
                             @foreach($categories as $cat)
                                 <option value="{{ $cat }}">{{ $cat }}</option>
                             @endforeach
@@ -935,6 +955,58 @@
         </div>
     </div>
 
+    <!-- QUICK ADD CATEGORY MODAL -->
+    <div 
+        x-show="showQuickCategoryModal" 
+        x-cloak
+        class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+    >
+        <div 
+            @click.outside="showQuickCategoryModal = false"
+            class="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-sm w-full p-5 space-y-4"
+        >
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-blue-600"></span>
+                    <span>Tambah Kategori Baru</span>
+                </h3>
+                <button type="button" @click="showQuickCategoryModal = false" class="text-slate-400 hover:text-slate-600">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Nama Kategori <span class="text-red-500">*</span></label>
+                <input 
+                    type="text" 
+                    x-model="newCategoryName" 
+                    placeholder="Contoh: ATK, Kosmetik, Makanan..."
+                    @keydown.enter.prevent="saveQuickCategory()"
+                    class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:border-blue-600 focus:outline-none"
+                >
+                <span class="text-[11px] text-slate-400 mt-1 block">Kategori ini otomatis tersimpan di sistem dan langsung terpilih.</span>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button 
+                    type="button" 
+                    @click="showQuickCategoryModal = false"
+                    class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                    Batal
+                </button>
+                <button 
+                    type="button" 
+                    @click="saveQuickCategory()"
+                    :disabled="savingCategory"
+                    class="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold text-xs shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                    <span x-text="savingCategory ? 'Menyimpan...' : 'Simpan Kategori'">Simpan Kategori</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <script id="products-data" type="application/json">
@@ -958,6 +1030,9 @@ function productManager() {
         productsList: productsList,
         showAddModal: false,
         showEditModal: false,
+        showQuickCategoryModal: false,
+        newCategoryName: '',
+        savingCategory: false,
         addCustomSpecs: [],
         editCustomSpecs: [],
         addVariants: [
@@ -1098,6 +1173,60 @@ function productManager() {
                 if (textarea) {
                     textarea.value = (textarea.value || '').trim() + tpl;
                 }
+            }
+        },
+        openQuickAddCategory() {
+            this.newCategoryName = '';
+            this.showQuickCategoryModal = true;
+        },
+        async saveQuickCategory() {
+            if (!this.newCategoryName || !this.newCategoryName.trim()) {
+                alert('Silakan masukkan nama kategori!');
+                return;
+            }
+            this.savingCategory = true;
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+                const response = await fetch('{{ route("admin.categories.quickStore") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ name: this.newCategoryName.trim() })
+                });
+
+                const data = await response.json();
+                if (data.status === 'success' && data.category) {
+                    const catName = data.category.name;
+                    
+                    const addSelect = this.$refs.addCategorySelect;
+                    if (addSelect) {
+                        const opt = new Option(catName, catName, true, true);
+                        addSelect.add(opt);
+                        addSelect.value = catName;
+                    }
+
+                    const editSelect = this.$refs.editCategorySelect;
+                    if (editSelect) {
+                        const opt = new Option(catName, catName, true, true);
+                        editSelect.add(opt);
+                        if (this.showEditModal) {
+                            this.editModalData.category = catName;
+                        }
+                    }
+
+                    this.showQuickCategoryModal = false;
+                    alert('✓ Kategori "' + catName + '" berhasil dibuat dan dipilih!');
+                } else {
+                    alert(data.message || 'Gagal menambahkan kategori.');
+                }
+            } catch (err) {
+                console.error('Quick category error:', err);
+                alert('Terjadi kesalahan saat menambahkan kategori.');
+            } finally {
+                this.savingCategory = false;
             }
         }
     }

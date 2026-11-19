@@ -74,33 +74,52 @@ class HomeController extends Controller
             ];
         })->all();
 
-        $categories = [
-            [
-                'name'    => 'Pakaian & Fashion',
-                'slug'    => 'Pakaian',
-                'image'   => 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=300&auto=format&fit=crop&q=80',
-            ],
-            [
-                'name'    => 'Sepatu & Sneakers',
-                'slug'    => 'Sepatu',
-                'image'   => 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&auto=format&fit=crop&q=80',
-            ],
-            [
-                'name'    => 'Aksesoris',
-                'slug'    => 'Aksesoris',
-                'image'   => 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&auto=format&fit=crop&q=80',
-            ],
-            [
-                'name'    => 'Gadget',
-                'slug'    => 'Gadget',
-                'image'   => 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&auto=format&fit=crop&q=80',
-            ],
-            [
-                'name'    => 'Rumah Tangga',
-                'slug'    => 'Rumah Tangga',
-                'image'   => 'https://images.unsplash.com/photo-1585515320310-259814833e62?w=300&auto=format&fit=crop&q=80',
-            ]
-        ];
+        $categoriesFromDb = \Illuminate\Support\Facades\Schema::hasTable('categories')
+            ? \App\Models\Category::where('is_active', true)->orderBy('order')->orderBy('name')->get()
+            : collect([]);
+
+        if ($categoriesFromDb->isNotEmpty()) {
+            $categories = $categoriesFromDb->map(function($c) {
+                return [
+                    'name'    => $c->name,
+                    'slug'    => $c->name,
+                    'image'   => $c->icon ?: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&auto=format&fit=crop&q=80',
+                ];
+            })->toArray();
+        } else {
+            $categories = [
+                [
+                    'name'    => 'Pakaian & Fashion',
+                    'slug'    => 'Pakaian',
+                    'image'   => 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=300&auto=format&fit=crop&q=80',
+                ],
+                [
+                    'name'    => 'Sepatu & Sneakers',
+                    'slug'    => 'Sepatu',
+                    'image'   => 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&auto=format&fit=crop&q=80',
+                ],
+                [
+                    'name'    => 'Aksesoris',
+                    'slug'    => 'Aksesoris',
+                    'image'   => 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&auto=format&fit=crop&q=80',
+                ],
+                [
+                    'name'    => 'Gadget',
+                    'slug'    => 'Gadget',
+                    'image'   => 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&auto=format&fit=crop&q=80',
+                ],
+                [
+                    'name'    => 'Rumah Tangga',
+                    'slug'    => 'Rumah Tangga',
+                    'image'   => 'https://images.unsplash.com/photo-1585515320310-259814833e62?w=300&auto=format&fit=crop&q=80',
+                ],
+                [
+                    'name'    => 'ATK & Buku',
+                    'slug'    => 'ATK',
+                    'image'   => 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=300&auto=format&fit=crop&q=80',
+                ]
+            ];
+        }
 
         // Otomatis gunakan gambar produk asli terlaris dari katalog jika tersedia
         foreach ($categories as &$cat) {
@@ -343,13 +362,17 @@ class HomeController extends Controller
 
         $catalogProducts = $paginatedProducts;
 
-        $categories = Product::where('status', 'aktif')
+        $dbCategories = \Illuminate\Support\Facades\Schema::hasTable('categories')
+            ? \App\Models\Category::where('is_active', true)->orderBy('order')->orderBy('name')->pluck('name')->toArray()
+            : [];
+        $prodCategories = Product::where('status', 'aktif')
             ->select('category')
             ->distinct()
             ->pluck('category')
             ->filter()
             ->values()
             ->all();
+        $categories = array_values(array_unique(array_filter(array_merge($dbCategories, $prodCategories))));
 
         return view('pages.catalog', compact(
             'catalogProducts', 
