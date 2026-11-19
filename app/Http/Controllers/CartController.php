@@ -65,10 +65,15 @@ class CartController extends Controller
         if ($user) {
             $dbVouchers = $user->vouchers()
                 ->wherePivot('is_used', false)
-                ->where('status', 'aktif')
+                ->where('vouchers.status', 'aktif')
                 ->where(function ($query) {
-                    $query->whereNull('expires_at')
-                          ->orWhere('expires_at', '>=', now());
+                    $query->whereNull('vouchers.expires_at')
+                          ->orWhere('vouchers.expires_at', '>=', now());
+                })
+                ->where(function ($q) use ($user) {
+                    $q->where('vouchers.target', 'semua')
+                      ->orWhereNull('vouchers.target')
+                      ->orWhere('vouchers.user_id', $user->id);
                 })
                 ->get();
         } else {
