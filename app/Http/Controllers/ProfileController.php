@@ -229,28 +229,39 @@ class ProfileController extends Controller
     {
         $user = Auth::user();
 
-        $request->validate([
-            'current_password'      => ['required'],
+        $rules = [
             'password'              => ['required', 'min:6', 'confirmed'],
             'password_confirmation' => ['required'],
-        ], [
+        ];
+
+        // Jika user sebelumnya sudah punya password (bukan akun Google tanpa password),
+        // maka wajib mengisi dan mencocokkan kata sandi saat ini.
+        if (!empty($user->password)) {
+            $rules['current_password'] = ['required'];
+        }
+
+        $request->validate($rules, [
             'current_password.required'      => 'Kata sandi saat ini wajib diisi.',
             'password.required'              => 'Kata sandi baru wajib diisi.',
             'password.min'                   => 'Kata sandi baru minimal 6 karakter.',
-            'password.confirmed'             => 'Konfirmasi kata sandi tidak cocok.',
+            'password.confirmed'             => 'Konfirmasi kata sandi tidak cocok. Pastikan kedua kata sandi sama.',
             'password_confirmation.required' => 'Konfirmasi kata sandi baru wajib diisi.',
         ]);
 
-        if ($user->password && !Hash::check($request->current_password, $user->password)) {
+        if (!empty($user->password) && !Hash::check($request->current_password, $user->password)) {
             return back()->withErrors(['current_password' => 'Kata sandi saat ini salah.'])->with('active_tab', 'keamanan');
         }
+
+        $isFirstPassword = empty($user->password);
 
         $user->update([
             'password' => Hash::make($request->password),
         ]);
 
         return redirect()->back()
-            ->with('success', 'Kata sandi akun Anda berhasil diperbarui!')
+            ->with('success', $isFirstPassword 
+                ? 'Kata sandi baru berhasil dibuat! Anda sekarang juga dapat masuk menggunakan email & kata sandi ini.' 
+                : 'Kata sandi akun Anda berhasil diperbarui!')
             ->with('active_tab', 'keamanan');
     }
 }

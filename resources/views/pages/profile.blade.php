@@ -625,18 +625,18 @@ function avatarCropHandler() {
                     <div 
                         class="space-y-4" 
                         x-data="{ 
-                            activeLabel: '{{ old('address_label', $user->address_label ?: 'Rumah') }}',
-                            recipientName: '{{ old('recipient_name', $user->recipient_name ?: $user->name) }}',
-                            recipientPhone: '{{ old('recipient_phone', $user->recipient_phone ?: $user->phone) }}',
-                            addressDetail: `{{ old('address', $user->address && $user->address !== 'denpasar' ? $user->address : '') }}`,
-                            searchQuery: '{{ old('city', $user->city) ? (($user->district ? $user->district . ', ' : '') . $user->city . ', ' . ($user->province ?? '') . ($user->postal_code ? '. ' . $user->postal_code : '')) : '' }}',
+                            activeLabel: {{ Js::from(old('address_label', $user->address_label ?: 'Rumah')) }},
+                            recipientName: {{ Js::from(old('recipient_name', $user->recipient_name ?: $user->name)) }},
+                            recipientPhone: {{ Js::from(old('recipient_phone', $user->recipient_phone ?: $user->phone)) }},
+                            addressDetail: {{ Js::from(old('address', $user->address && $user->address !== 'denpasar' ? $user->address : '')) }},
+                            searchQuery: {{ Js::from(old('city', $user->city) ? (($user->district ? $user->district . ', ' : '') . $user->city . ', ' . ($user->province ?? '') . ($user->postal_code ? '. ' . $user->postal_code : '')) : '') }},
                             selectedArea: {
-                                id: '{{ old('biteship_area_id', $user->biteship_area_id ?: $user->city_id) }}',
-                                district: '{{ old('district', $user->district) }}',
-                                village: '{{ old('village', $user->village) }}',
-                                city: '{{ old('city', $user->city) }}',
-                                province: '{{ old('province', $user->province) }}',
-                                postal_code: '{{ old('postal_code', $user->postal_code) }}'
+                                id: {{ Js::from(old('biteship_area_id', $user->biteship_area_id ?: $user->city_id) ?? '') }},
+                                district: {{ Js::from(old('district', $user->district) ?? '') }},
+                                village: {{ Js::from(old('village', $user->village) ?? '') }},
+                                city: {{ Js::from(old('city', $user->city) ?? '') }},
+                                province: {{ Js::from(old('province', $user->province) ?? '') }},
+                                postal_code: {{ Js::from(old('postal_code', $user->postal_code) ?? '') }}
                             },
                             suggestions: [],
                             showDropdown: false,
@@ -1766,6 +1766,7 @@ function avatarCropHandler() {
                             @csrf
                             <input type="hidden" name="active_tab" value="keamanan">
 
+                            @if(!empty($user->password))
                             <!-- Kata Sandi Saat Ini -->
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 mb-1.5">
@@ -1800,6 +1801,22 @@ function avatarCropHandler() {
                                     </button>
                                 </div>
                             </div>
+                            @else
+                            <!-- Akun Google: Informasi Pembuatan Kata Sandi -->
+                            <div class="rounded-xl p-3 bg-blue-50/80 border border-blue-200 flex items-start gap-2.5 shadow-2xs">
+                                <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 mt-0.5">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                </div>
+                                <div class="space-y-0.5 text-xs text-blue-900">
+                                    <h4 class="font-bold">Akun Terhubung dengan Google</h4>
+                                    <p class="leading-relaxed text-blue-700 text-[11px]">
+                                        Akun Anda saat ini masuk lewat Google. Anda dapat membuat kata sandi di bawah ini jika ingin bisa masuk dengan email &amp; kata sandi biasa.
+                                    </p>
+                                </div>
+                            </div>
+                            @endif
 
                             <!-- Kata Sandi Baru -->
                             <div>
