@@ -78,7 +78,7 @@ function avatarCropHandler() {
 
                 // Send AJAX upload request so avatar persists in DB immediately
                 try {
-                    let form = document.getElementById('mainProfileForm');
+                    let form = document.getElementById('formBiodata') || document.getElementById('mainProfileForm');
                     let formData = form ? new FormData(form) : new FormData();
                     formData.set('_token', '{{ csrf_token() }}');
                     formData.set('avatar_base64', base64);
@@ -454,15 +454,13 @@ function avatarCropHandler() {
         <!-- RIGHT CONTENT AREA (~75% / 9 cols - Spatially Roomy) -->
         <div class="lg:col-span-9">
 
-            <form id="mainProfileForm" action="{{ route('profile.update') }}" method="POST" x-show="activeTab === 'biodata' || activeTab === 'alamat'">
+            <!-- TAB 1: BIODATA DIRI (Form Mandiri) -->
+            <form id="formBiodata" action="{{ route('profile.update') }}" method="POST" x-show="activeTab === 'biodata'">
                 @csrf
+                <input type="hidden" name="active_tab" value="biodata">
+                <input type="hidden" name="avatar_base64" id="mainFormAvatarBase64">
 
-                <!-- Hidden Input for Active Tab & Avatar Base64 Image -->
-                <input type="hidden" name="active_tab" :value="activeTab" hidden>
-                <input type="hidden" name="avatar_base64" id="mainFormAvatarBase64" hidden>
-
-                <!-- TAB 1: BIODATA DIRI -->
-                <div x-show="activeTab === 'biodata'" class="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-4">
+                <div class="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-4">
                     <div class="border-b border-slate-100 pb-3">
                         <h2 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Biodata Diri</h2>
                         <p class="text-xs text-slate-500 mt-0.5">Kelola informasi profil akun Anda untuk verifikasi &amp; kemudahan transaksi</p>
@@ -517,7 +515,7 @@ function avatarCropHandler() {
 
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 mb-1.5">
-                                    Nomor WhatsApp / HP <span class="text-red-500">*</span>
+                                    Nomor WhatsApp / HP @if(!$user->google_id)<span class="text-red-500">*</span>@else<span class="text-slate-400 font-normal text-[11px]">(opsional saat login Google)</span>@endif
                                 </label>
                                 <div class="relative">
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -529,7 +527,7 @@ function avatarCropHandler() {
                                         type="text" 
                                         name="phone" 
                                         value="{{ old('phone', $user->phone) }}" 
-                                        required 
+                                        @if(!$user->google_id && empty($user->phone)) required @endif
                                         placeholder="081234567890"
                                         class="w-full bg-slate-50/70 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-xl pl-9 pr-3.5 py-2.5 text-xs sm:text-sm font-medium text-slate-900 transition-all placeholder:text-slate-400"
                                     >
@@ -611,9 +609,14 @@ function avatarCropHandler() {
                         <span class="text-[11px] text-slate-400">Terakhir diperbarui secara berkala</span>
                     </div>
                 </div>
+            </form>
 
-                <!-- TAB 2: ALAMAT TUJUAN PENGIRIMAN UTAMA -->
-                <div x-show="activeTab === 'alamat'" class="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-4">
+            <!-- TAB 2: ALAMAT TUJUAN PENGIRIMAN UTAMA (Form Mandiri) -->
+            <form id="formAlamat" action="{{ route('profile.update') }}" method="POST" x-show="activeTab === 'alamat'">
+                @csrf
+                <input type="hidden" name="active_tab" value="alamat">
+
+                <div class="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-4">
                     <div class="border-b border-slate-100 pb-3">
                         <h2 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Alamat Pengiriman Utama</h2>
                         <p class="text-xs text-slate-500 mt-0.5">Kelola informasi alamat tujuan lengkap untuk kemudahan checkout otomatis</p>
